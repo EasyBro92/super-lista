@@ -45,6 +45,7 @@
 
 <div class="dock">
   <div class="dock-in">
+    <div class="toast" id="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Deshacer</button></div>
     <div class="favs" id="favs" aria-label="Lo que compras a menudo"></div>
     <div class="status" id="status" aria-live="polite">Escribe o dicta: «apunta leche, huevos y oreos»</div>
     <form class="bar" id="bar" autocomplete="off">
@@ -65,6 +66,7 @@
 
 <dialog id="sheet" class="sheet">
   <div class="sheet-in">
+    <div class="grab" aria-hidden="true"></div>
     <div class="sheet-head">
       <h2 id="sheetTitle"></h2>
       <button class="icon" type="button" id="sheetClose" aria-label="Cerrar">

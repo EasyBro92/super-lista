@@ -14,6 +14,7 @@ const $ = (id) => document.getElementById(id);
 const uid = () => Math.random().toString(36).slice(2, 10);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const eur = (n) => n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
+const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
 const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>';
 
 // ---------- Estado ----------
@@ -121,6 +122,37 @@ async function handle(text) {
   setStatus(bits.join(" · ") || "No he encontrado eso en la lista.", !bits.length);
 }
 
+// ---------- Deshacer ----------
+let undoSnap = null, toastTimer = null;
+function snapshot() { return JSON.stringify({ lists: st.lists, history: st.history }); }
+function withUndo(msg, fn) {
+  const snap = snapshot();
+  fn();
+  save(); render();
+  undoSnap = snap;
+  const t = $("toast");
+  $("toastMsg").textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; undoSnap = null; }, 5000);
+}
+function undo() {
+  if (!undoSnap) return;
+  Object.assign(st, JSON.parse(undoSnap));
+  if (!st.lists.some((l) => l.id === st.current)) st.current = st.lists[0].id;
+  undoSnap = null; $("toast").hidden = true;
+  save(); render(); buzz();
+}
+const buzz = (ms = 12) => { try { navigator.vibrate?.(ms); } catch {} };
+function removeItem(id) {
+  const it = list().items.find((i) => i.id === id); if (!it) return;
+  withUndo(`Borrado: ${it.label}`, () => { list().items = list().items.filter((i) => i.id !== id); });
+}
+function toggleItem(id) {
+  const it = list().items.find((i) => i.id === id); if (!it) return;
+  it.done = !it.done; save(); render(); buzz();
+}
+
 function setStatus(t, err) { const s = $("status"); s.textContent = t; s.classList.toggle("err", !!err); }
 
 // ---------- Pintar ----------
@@ -168,6 +200,8 @@ function render() {
       const sub = p ? [p.n, p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "Toca la foto para elegir producto";
       const price = itemPrice(it);
       return `<li class="item${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}" data-id="${it.id}">
+        <div class="swipe-bg" aria-hidden="true"><span class="bg-done">${CHECK_SVG}${it.done ? "Pendiente" : "Comprado"}</span><span class="bg-del">Borrar${TRASH_SVG}</span></div>
+        <div class="row-in">
         <button class="thumb" type="button" data-pick="${it.id}" aria-label="Cambiar producto de ${esc(it.label)}">${thumbHTML(p, it.emoji)}</button>
         <span class="info"><span class="name">${esc(it.label)}</span><span class="sub">${esc(sub)}</span></span>
         <span class="right">
@@ -175,10 +209,11 @@ function render() {
           ${price != null ? `<span class="price">${eur(price)}</span>` : ""}
         </span>
         <span class="check" role="checkbox" aria-checked="${it.done}" aria-label="Comprado">${CHECK_SVG}</span>
+        </div>
       </li>`;
     }).join("");
     return `<section class="cat"><h2>${esc(c)}</h2><ul class="items">${rows}</ul></section>`;
-  }).join("");
+  }).join("") + (st.gestured ? "" : `<p class="hint">Consejo: desliza un producto a la izquierda para borrarlo, a la derecha para marcarlo como comprado, o mantenlo pulsado para ver más opciones.</p>`);
   fresh.clear();
 }
 function renderFavs() {
@@ -249,7 +284,7 @@ function openQty(id) {
     it.qty = t; it.count = /^\d+$/.test(t) ? +t : c;
     save(); render(); closeSheet();
   };
-  $("qDel").onclick = () => { list().items = list().items.filter((i) => i !== it); save(); render(); closeSheet(); };
+  $("qDel").onclick = () => { closeSheet(); removeItem(it.id); };
 }
 
 function openLists() {
@@ -301,12 +336,12 @@ function finishShopping() {
   const done = l.items.filter((i) => i.done);
   if (!done.length) return;
   const total = done.reduce((s, i) => s + (itemPrice(i) ?? 0), 0);
+  withUndo(`Compra guardada${total ? ` (${eur(total)})` : ""}`, () => {
   st.history.push({ date: Date.now(), list: l.name, store: l.store, total: Math.round(total * 100) / 100,
     items: done.map(({ label, qty, count, prod }) => ({ label, qty, count, prod })) });
   if (st.history.length > 100) st.history.shift();
   l.items = l.items.filter((i) => !i.done);
-  save(); render();
-  setStatus(`Compra guardada en el historial${total ? ` (${eur(total)})` : ""}.`);
+  });
 }
 
 // ---------- Modo tienda ----------
@@ -404,14 +439,108 @@ $("stores").addEventListener("click", (e) => {
     `Lo nuevo se buscará en ${STORE_NAME[b.dataset.s]}${m && !m.prices ? " (sin precios)" : ""}.`);
 });
 $("list").addEventListener("click", (e) => {
+  if (Date.now() < suppressClickUntil) { e.preventDefault(); e.stopPropagation(); return; }
   const t = e.target;
   const tryB = t.closest("[data-try]"); if (tryB) return handle(tryB.dataset.try);
   const pk = t.closest("[data-pick]"); if (pk) return openPicker(pk.dataset.pick);
   const q = t.closest("[data-qty]"); if (q) return openQty(q.dataset.qty);
   const li = t.closest("li.item"); if (!li) return;
-  const it = list().items.find((i) => i.id === li.dataset.id);
-  if (it) { it.done = !it.done; save(); render(); }
+  toggleItem(li.dataset.id);
 });
+$("toastUndo").addEventListener("click", undo);
+
+// ---------- Gestos ----------
+// Deslizar a la izquierda: borrar. A la derecha: marcar como comprado. Mantener pulsado: opciones.
+let suppressClickUntil = 0;
+let g = null;
+const SWIPE = 90;
+$("list").addEventListener("pointerdown", (e) => {
+  const row = e.target.closest(".row-in"); if (!row || e.button > 0) return;
+  const li = row.parentElement;
+  g = { row, li, id: li.dataset.id, x: e.clientX, y: e.clientY, dx: 0, mode: null, passed: false, pid: e.pointerId };
+  g.timer = setTimeout(() => {
+    if (!g || g.mode) return;
+    g.mode = "long"; buzz(25); st.gestured = true; suppressClickUntil = Date.now() + 600;
+    openOptions(g.id); g = null;
+  }, 520);
+});
+$("list").addEventListener("pointermove", (e) => {
+  if (!g || e.pointerId !== g.pid) return;
+  const dx = e.clientX - g.x, dy = e.clientY - g.y;
+  if (!g.mode) {
+    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { clearTimeout(g.timer); g = null; return; }
+    if (Math.abs(dx) > 10) { g.mode = "swipe"; clearTimeout(g.timer); g.row.setPointerCapture?.(e.pointerId); g.li.classList.add("swiping"); }
+    else return;
+  }
+  g.dx = dx;
+  g.row.style.transform = `translateX(${dx}px)`;
+  g.li.classList.toggle("to-del", dx < 0);
+  g.li.classList.toggle("to-done", dx > 0);
+  const passed = Math.abs(dx) > SWIPE;
+  if (passed !== g.passed) { g.passed = passed; g.li.classList.toggle("armed", passed); if (passed) buzz(); }
+});
+function endGesture(e) {
+  if (!g || (e && e.pointerId !== g.pid)) return;
+  clearTimeout(g.timer);
+  const { row, li, dx, mode, id } = g;
+  g = null;
+  if (mode !== "swipe") return;
+  st.gestured = true;
+  suppressClickUntil = Date.now() + 400;
+  li.classList.remove("swiping");
+  if (dx < -SWIPE) {
+    row.style.transform = `translateX(-110%)`;
+    li.classList.add("leaving");
+    setTimeout(() => removeItem(id), 180);
+  } else if (dx > SWIPE) {
+    row.style.transform = "";
+    toggleItem(id);
+  } else {
+    row.style.transform = "";
+    li.classList.remove("to-del", "to-done", "armed");
+  }
+}
+$("list").addEventListener("pointerup", endGesture);
+$("list").addEventListener("pointercancel", endGesture);
+$("list").addEventListener("contextmenu", (e) => { if (e.target.closest(".row-in")) e.preventDefault(); });
+
+function openOptions(id) {
+  const it = list().items.find((i) => i.id === id); if (!it) return;
+  openSheet(it.label, `<div class="menu">
+    <button type="button" data-o="done">${it.done ? "Marcar como pendiente" : "Marcar como comprado"}</button>
+    <button type="button" data-o="pick">Cambiar producto</button>
+    <button type="button" data-o="qty">Cambiar cantidad</button>
+    <button type="button" data-o="dup">Duplicar</button>
+    <button type="button" data-o="del" class="danger">Borrar</button></div>`);
+  $("sheetBody").querySelector(".menu").onclick = (e) => {
+    const o = e.target.closest("[data-o]")?.dataset.o; if (!o) return;
+    closeSheet();
+    if (o === "done") toggleItem(id);
+    else if (o === "pick") openPicker(id);
+    else if (o === "qty") openQty(id);
+    else if (o === "del") removeItem(id);
+    else if (o === "dup") { const c = { ...structuredClone(it), id: uid(), done: false, added: Date.now() }; list().items.push(c); fresh.add(c.id); save(); render(); }
+  };
+}
+
+// Deslizar hacia abajo una hoja la cierra.
+(() => {
+  let y0 = null, dy = 0;
+  const box = () => sheet;
+  sheet.addEventListener("pointerdown", (e) => { if (e.target.closest(".sheet-head")) { y0 = e.clientY; dy = 0; } });
+  sheet.addEventListener("pointermove", (e) => {
+    if (y0 == null) return;
+    dy = Math.max(0, e.clientY - y0);
+    box().style.transform = `translateY(${dy}px)`;
+  });
+  const end = () => {
+    if (y0 == null) return;
+    y0 = null; box().style.transform = "";
+    if (dy > 80) closeSheet();
+  };
+  sheet.addEventListener("pointerup", end);
+  sheet.addEventListener("pointercancel", end);
+})();
 $("favs").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-fav]"); if (!b) return;
   const f = st.freq[b.dataset.fav]; if (!f) return;

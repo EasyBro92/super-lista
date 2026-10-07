@@ -2,13 +2,15 @@
 :root{
   --bg:#f5f7f2; --surface:#ffffff; --fg:#1d2a22; --muted:#66756b; --line:#e2e8df;
   --accent:#1f7a4d; --accent-ink:#ffffff; --accent-soft:#e3f1e8; --done:#a5b0a8; --warn:#b4532a;
+  --danger:#c2412d; --danger-ink:#ffffff; --toast:#1d2a22; --toast-ink:#f5f7f2;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
   --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
   --bg:#111814; --surface:#18221c; --fg:#e7efe9; --muted:#93a399; --line:#26332b;
-  --accent:#4cc287; --accent-ink:#08150e; --accent-soft:#1c3327; --done:#5b6b61; --warn:#e58a5f; color-scheme:dark}}
+  --accent:#4cc287; --accent-ink:#08150e; --accent-soft:#1c3327; --done:#5b6b61; --warn:#e58a5f;
+  --danger:#d9563f; --danger-ink:#ffffff; --toast:#e7efe9; --toast-ink:#111814; color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;-webkit-font-smoothing:antialiased;
@@ -40,9 +42,20 @@ header{display:flex;flex-direction:column;gap:12px}
 section.cat{margin-top:22px}
 .cat h2{font:700 .72rem var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 8px 4px}
 ul.items{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-li.item{display:flex;align-items:center;gap:12px;padding:9px 6px 9px 10px;border-top:1px solid var(--line);cursor:pointer}
+li.item{position:relative;overflow:hidden;border-top:1px solid var(--line);cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 li.item:first-child{border-top:0}
-li.item:active{background:var(--accent-soft)}
+.row-in{position:relative;display:flex;align-items:center;gap:12px;padding:9px 6px 9px 10px;background:var(--surface);touch-action:pan-y;transition:transform .2s ease}
+li.swiping .row-in{transition:none}
+li.item:active .row-in{background:var(--accent-soft)}
+li.item.swiping .row-in{background:var(--surface)}
+.swipe-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding-inline:18px;font:700 .9rem var(--body)}
+.swipe-bg span{display:flex;align-items:center;gap:8px;opacity:.55;transition:opacity .15s,transform .15s}
+.swipe-bg svg{width:22px;height:22px}
+li.to-done .swipe-bg{background:var(--accent);color:var(--accent-ink)}
+li.to-del .swipe-bg{background:var(--danger);color:var(--danger-ink)}
+li.to-done .bg-del,li.to-del .bg-done{visibility:hidden}
+li.armed .swipe-bg span{opacity:1;transform:scale(1.08)}
+li.leaving{transition:opacity .18s;opacity:0}
 .thumb{flex:none;width:56px;height:56px;border-radius:12px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);padding:0;cursor:pointer}
 .thumb img{width:100%;height:100%;object-fit:contain}
 .thumb .emo{font-size:30px;line-height:1}
@@ -65,7 +78,7 @@ li.fresh{animation:pop .6s ease}
 /* Modo tienda: todo más grande y fácil de tocar con una mano */
 body.shop .name{font-size:1.2rem}
 body.shop .thumb{width:72px;height:72px}
-body.shop li.item{padding-block:12px}
+body.shop .row-in{padding-block:12px}
 body.shop .check{width:38px;height:38px}
 body.shop .favs{display:none}
 
@@ -122,3 +135,14 @@ form.bar input:focus{outline:none}
 .hist p{margin:0;font-size:.85rem;color:var(--muted)}
 .scan-box{width:100%;aspect-ratio:4/3;max-width:100%;border-radius:14px;overflow:hidden;background:#000}
 .note{font-size:.85rem;color:var(--muted);margin:0}
+
+.toast{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--toast);color:var(--toast-ink);border-radius:14px;padding:10px 10px 10px 16px;font-size:.92rem;box-shadow:0 8px 24px rgb(0 0 0 / .18)}
+.toast button{border:0;background:none;color:var(--toast-ink);font:700 .92rem var(--body);text-decoration:underline;text-underline-offset:3px;padding:6px 8px;cursor:pointer}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:-6px auto 0}
+.sheet{transition:transform .2s ease}
+.sheet-head{touch-action:none}
+.menu{display:flex;flex-direction:column;gap:6px}
+.menu button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:12px;padding:14px;text-align:left;font:600 1rem var(--body);cursor:pointer}
+.menu button.danger{color:var(--danger)}
+@media (prefers-reduced-motion:reduce){.row-in,.sheet{transition:none}}
+.hint{font-size:.82rem;color:var(--muted);margin:6px 0 0 4px}
