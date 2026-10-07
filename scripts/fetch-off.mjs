@@ -41,7 +41,7 @@ export async function fetchOffStore(slug) {
         seen.add(p.code);
         const brand = (p.brands || "").split(",")[0].trim();
         out.push(product({
-          name: brand && !norm(name).includes(norm(brand)) ? `${name} ${brand}` : name,
+          name: brand && brand.length <= 18 && !norm(name).includes(norm(brand)) ? `${name} ${brand}` : name,
           brand,
           format: p.quantity || "",
           img: p.image_front_small_url,
