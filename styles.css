@@ -56,7 +56,7 @@ li.to-del .swipe-bg{background:var(--danger);color:var(--danger-ink)}
 li.to-done .bg-del,li.to-del .bg-done{visibility:hidden}
 li.armed .swipe-bg span{opacity:1;transform:scale(1.08)}
 li.leaving{transition:opacity .18s;opacity:0}
-.thumb{flex:none;width:56px;height:56px;border-radius:12px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);padding:0;cursor:pointer}
+.thumb{flex:none;width:66px;height:66px;border-radius:12px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);padding:0;cursor:pointer}
 .thumb img{width:100%;height:100%;object-fit:contain}
 .thumb .emo{font-size:30px;line-height:1}
 .info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
@@ -77,7 +77,7 @@ li.fresh{animation:pop .6s ease}
 
 /* Modo tienda: todo más grande y fácil de tocar con una mano */
 body.shop .name{font-size:1.2rem}
-body.shop .thumb{width:72px;height:72px}
+body.shop .thumb{width:80px;height:80px}
 body.shop .row-in{padding-block:12px}
 body.shop .check{width:38px;height:38px}
 body.shop .favs{display:none}
@@ -146,3 +146,16 @@ form.bar input:focus{outline:none}
 .menu button.danger{color:var(--danger)}
 @media (prefers-reduced-motion:reduce){.row-in,.sheet{transition:none}}
 .hint{font-size:.82rem;color:var(--muted);margin:6px 0 0 4px}
+
+/* Vista previa al mantener pulsado, al estilo del «peek» de Instagram */
+.sheet.peeking{max-height:94vh;overflow:auto}
+.sheet.peeking::backdrop{background:rgb(0 0 0 / .45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.peek{margin:0;display:flex;flex-direction:column;gap:10px;animation:peekIn .22s cubic-bezier(.2,.9,.3,1.2)}
+.peek-ph{width:100%;max-width:100%;aspect-ratio:1;max-height:52vh;background:#fff;border-radius:18px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line)}
+.peek-ph img{width:100%;height:100%;object-fit:contain}
+.peek-ph .emo{font-size:120px;line-height:1}
+.peek figcaption{display:flex;flex-direction:column;gap:2px}
+.peek figcaption b{font-size:1.05rem}
+.peek figcaption span{font-size:.88rem;color:var(--muted);font-variant-numeric:tabular-nums}
+@keyframes peekIn{from{transform:scale(.88);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.peek{animation:none}}

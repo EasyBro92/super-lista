@@ -1,5 +1,5 @@
 // Permite abrir la app sin conexión (por ejemplo, dentro del súper sin cobertura).
-const VERSION = "v4";
+const VERSION = "v5";
 const SHELL = ["./", "index.html", "styles.css", "js/app.js", "js/parser.js", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {

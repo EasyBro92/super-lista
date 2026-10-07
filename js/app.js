@@ -226,7 +226,12 @@ function renderFavs() {
 
 // ---------- Hojas ----------
 const sheet = $("sheet");
-function openSheet(title, html) {
+// Versión grande de la foto: Mercadona (imgix) y Open Food Facts permiten pedir más resolución.
+function bigImg(u) {
+  return String(u).replace(/([?&])h=\d+&w=\d+/, "$1h=800&w=800").replace(/\.(100|200)\.jpg$/, ".400.jpg");
+}
+function openSheet(title, html, cls = "") {
+  sheet.className = `sheet ${cls}`.trim();
   $("sheetTitle").textContent = title;
   $("sheetBody").innerHTML = html;
   if (!sheet.open) sheet.showModal();
@@ -506,12 +511,18 @@ $("list").addEventListener("contextmenu", (e) => { if (e.target.closest(".row-in
 
 function openOptions(id) {
   const it = list().items.find((i) => i.id === id); if (!it) return;
-  openSheet(it.label, `<div class="menu">
+  const p = it.prod;
+  const info = p ? [p.f, p.p != null ? eur(p.p) : "", p.u, list().store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "";
+  openSheet(it.label, `<figure class="peek">
+      <div class="peek-ph">${p?.img ? `<img class="pimg" src="${esc(bigImg(p.img))}" alt="${esc(p.n)}" referrerpolicy="no-referrer" data-emoji="${esc(it.emoji)}">` : `<span class="emo">${esc(it.emoji || "🛒")}</span>`}</div>
+      <figcaption>${p ? `<b>${esc(p.n)}</b>${info ? `<span>${esc(info)}</span>` : ""}` : "<span>Sin producto concreto. Elige uno con «Cambiar producto».</span>"}</figcaption>
+    </figure>
+    <div class="menu">
     <button type="button" data-o="done">${it.done ? "Marcar como pendiente" : "Marcar como comprado"}</button>
     <button type="button" data-o="pick">Cambiar producto</button>
     <button type="button" data-o="qty">Cambiar cantidad</button>
     <button type="button" data-o="dup">Duplicar</button>
-    <button type="button" data-o="del" class="danger">Borrar</button></div>`);
+    <button type="button" data-o="del" class="danger">Borrar</button></div>`, "peeking");
   $("sheetBody").querySelector(".menu").onclick = (e) => {
     const o = e.target.closest("[data-o]")?.dataset.o; if (!o) return;
     closeSheet();
