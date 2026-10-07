@@ -159,3 +159,9 @@ form.bar input:focus{outline:none}
 .peek figcaption span{font-size:.88rem;color:var(--muted);font-variant-numeric:tabular-nums}
 @keyframes peekIn{from{transform:scale(.88);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.peek{animation:none}}
+
+/* Que mantener pulsada una foto no abra el menú del navegador («Guardar imagen», etc.) */
+img{-webkit-user-drag:none;user-drag:none}
+.pimg,.thumb img,.opt img,.fav img,.peek-ph img{pointer-events:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+body{-webkit-touch-callout:none}
+input,textarea{-webkit-touch-callout:default;-webkit-user-select:text;user-select:text}
