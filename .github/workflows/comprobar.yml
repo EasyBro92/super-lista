@@ -1,0 +1,21 @@
+name: Comprobar web
+
+on:
+  workflow_run:
+    workflows: ["Publicar web"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm i --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
+      - run: node tests/instalable.mjs
+        env:
+          SITE_URL: https://easybro92.github.io/super-lista/
