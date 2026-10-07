@@ -170,3 +170,26 @@ input,textarea{-webkit-touch-callout:default;-webkit-user-select:text;user-selec
 .photo-img{position:absolute;inset:0;background:center/contain no-repeat}
 .fav .photo{width:26px;height:26px;border-radius:50%;background:#fff;overflow:hidden}
 .peek-ph .photo .emo{font-size:120px}
+
+/* Catálogo para marcar productos */
+.sheet.browsing{height:94vh;max-height:94vh}
+.sheet.browsing .sheet-in{height:100%;padding-bottom:0}
+.sheet.browsing #sheetBody{display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+.bsearch{border:1px solid var(--line);border-radius:12px;padding:11px 14px;font:500 1rem var(--body);background:var(--bg);color:var(--fg);width:100%}
+.btabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;flex:none}
+.btabs::-webkit-scrollbar{display:none}
+.bgrid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:10px;align-content:start;padding:3px 3px 12px;-webkit-overflow-scrolling:touch}
+.tile{display:flex;flex-direction:column;gap:5px;border:0;background:none;padding:0;cursor:pointer;text-align:center;color:var(--fg)}
+.tph{position:relative;aspect-ratio:1;max-width:100%;background:#fff;border:2px solid var(--line);border-radius:16px;overflow:hidden;display:block}
+.tph .photo .emo{font-size:38px}
+.tph .photo-img{inset:6px}
+.tck{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;transform:scale(0);transition:transform .15s}
+.tck svg{width:14px;height:14px}
+.tile[aria-pressed="true"] .tph{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.tile[aria-pressed="true"] .tck{transform:scale(1)}
+.tile:active .tph{transform:scale(.96)}
+.tn{font-size:.82rem;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.ts{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.bfoot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);margin-inline:-16px;padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface)}
+.bfoot span{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.tck{transition:none}}

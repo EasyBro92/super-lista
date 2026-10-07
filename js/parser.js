@@ -16,7 +16,7 @@ export function stem(w) {
 const STOP = new Set(["de", "del", "la", "las", "el", "los", "un", "una", "unos", "unas", "al", "y", "e", "para", "por", "favor", "mas", "algo", "poco", "pocos", "unas"]);
 const SYN = { banana: "platano", cocacola: "coca cola", yogurt: "yogur", yoghourt: "yogur", jabon: "jabon", papel: "papel", huevo: "huevo", birra: "cerveza", pasta_dientes: "dentifrico" };
 
-const PHRASES = [[/pasta de dientes|crema dental/g, "dentifrico"], [/papel de cocina/g, "rollo cocina"], [/coca cola/g, "coca cola"]];
+const PHRASES = [[/pasta de dientes|crema dental/g, "dentifrico"], [/espagueti/g, "spaghetti"], [/coca cola/g, "coca cola"]];
 
 export function tokens(s) {
   let t = norm(s);
@@ -111,7 +111,8 @@ const GUESS = [
   [/limon/, "🍋", "Frutas y verduras"], [/tomate/, "🍅", "Frutas y verduras"], [/patata/, "🥔", "Frutas y verduras"],
   [/cebolla/, "🧅", "Frutas y verduras"], [/ajo/, "🧄", "Frutas y verduras"], [/lechuga|ensalada/, "🥬", "Frutas y verduras"],
   [/zanahoria/, "🥕", "Frutas y verduras"], [/aguacate/, "🥑", "Frutas y verduras"], [/pimiento/, "🫑", "Frutas y verduras"],
-  [/fresa/, "🍓", "Frutas y verduras"], [/uva/, "🍇", "Frutas y verduras"], [/pera/, "🍐", "Frutas y verduras"],
+  [/fresa/, "🍓", "Frutas y verduras"], [/sandia/, "🍉", "Frutas y verduras"], [/melon/, "🍈", "Frutas y verduras"],
+  [/pepino|calabacin/, "🥒", "Frutas y verduras"], [/brocoli|espinaca|champi/, "🥦", "Frutas y verduras"], [/uva/, "🍇", "Frutas y verduras"], [/pera/, "🍐", "Frutas y verduras"],
   [/pollo|pavo/, "🍗", "Carne"], [/carne|ternera|cerdo|filete|hamburguesa/, "🥩", "Carne"],
   [/pescado|salmon|merluza|bacalao|gamba|langostino/, "🐟", "Pescado"],
   [/jamon|chorizo|salchichon|fuet|embutido/, "🥓", "Charcutería y quesos"], [/queso/, "🧀", "Charcutería y quesos"],
@@ -123,7 +124,7 @@ const GUESS = [
   [/cereal/, "🥣", "Dulces y desayuno"], [/agua/, "💧", "Bebidas"], [/cerveza/, "🍺", "Bebidas"], [/vino/, "🍷", "Bebidas"],
   [/zumo|refresco|cola/, "🧃", "Bebidas"], [/helado/, "🍨", "Congelados"], [/pizza/, "🍕", "Congelados"],
   [/detergente|lejia|friegasuelos|lavavajillas|limpia|estropajo|basura/, "🧽", "Limpieza"],
-  [/papel|champu|gel|jabon|dentifrico|pasta de dientes|desodorante|compresa/, "🧴", "Higiene"],
+  [/papel higienico|champu|gel|jabon|dentifrico|pasta de dientes|desodorante|compresa/, "🧴", "Higiene"],
   [/panal|toallita|pienso|gato|perro/, "🍼", "Bebé y mascotas"],
 ];
 

@@ -1,4 +1,5 @@
 import { parseCommand, search, indexCatalog, guess, norm, capital, tokens } from "./parser.js";
+import { BASICS } from "./basics.js";
 
 const STORES = [
   ["any", "Cualquiera"], ["mercadona", "Mercadona"], ["carrefour", "Carrefour"], ["lidl", "Lidl"], ["dia", "Dia"],
@@ -52,6 +53,14 @@ async function catalogFor(store) {
   return all.flat();
 }
 
+// Para los básicos («Sandía», «Ternera») mejor sin foto que con un producto que solo los menciona de pasada.
+const BASIC_SET = new Set(Object.values(BASICS).flat().map(norm));
+function bestProd(cat, query) {
+  const r = search(cat, query, 6);
+  if (!BASIC_SET.has(norm(query))) return pick(r[0]);
+  const q0 = tokens(query)[0], c = guess(query).cat;
+  return pick(r.find((p) => p._t.indexOf(q0) === 0) ?? r.find((p) => p._t.indexOf(q0) === 1 && (c === "Otros" || p.c === c || tokens(query).length > 1)));
+}
 function pick(prod) {
   if (!prod) return null;
   const o = { n: prod.n, s: prod.s };
@@ -69,7 +78,7 @@ async function addItem({ query, qty = "", count = 1 }, forcedProd) {
   let prod = forcedProd ?? st.memory[memKey(query, l.store)] ?? null;
   if (!prod) {
     const cat = await catalogFor(l.store);
-    prod = pick(search(cat, query, 1)[0]);
+    prod = bestProd(cat, query);
   }
   const g = guess(query);
   const cat = prod?.c ?? g.cat;
@@ -194,7 +203,9 @@ function render() {
   const el = $("list");
   if (!l.items.length) {
     el.innerHTML = `<div class="empty"><b>La lista está vacía</b><span>Escribe o dicta lo que necesitas, por ejemplo:</span>
-      <button class="btn ghost" type="button" data-try="apunta leche, huevos y oreos">«apunta leche, huevos y oreos»</button></div>`;
+      <button class="btn ghost" type="button" data-try="apunta leche, huevos y oreos">«apunta leche, huevos y oreos»</button>
+      <span>o elige de la lista de productos:</span>
+      <button class="btn" type="button" data-browse>Ver productos</button></div>`;
     return;
   }
   const by = {};
@@ -354,6 +365,84 @@ function finishShopping() {
   });
 }
 
+// ---------- Catálogo para marcar productos (como Softlist) ----------
+let browse = null;
+async function openBrowse() {
+  const l = list();
+  const freq = Object.values(st.freq).sort((a, b) => b.count - a.count || b.last - a.last).slice(0, 24).map((f) => f.label);
+  const tabs = [...(freq.length ? ["Frecuentes"] : []), ...Object.keys(BASICS)];
+  browse = { tab: tabs[0], q: "", cat: [], tiles: new Map(), added: 0 };
+  openSheet("Añadir productos", `
+    <label class="vh" for="bq">Buscar producto</label>
+    <input id="bq" class="bsearch" type="search" placeholder="Buscar en ${esc(STORE_NAME[l.store])}…" enterkeyhint="search" autocomplete="off">
+    <div class="btabs" id="btabs">${tabs.map((t) => `<button type="button" class="chip" data-tab="${esc(t)}" aria-pressed="${t === browse.tab}">${esc(t)}</button>`).join("")}</div>
+    <div class="bgrid" id="bgrid"><p class="note">Cargando productos…</p></div>
+    <div class="bfoot"><span id="bcount"></span><button class="btn" type="button" id="bdone">Listo</button></div>`, "browsing");
+  browse.cat = await catalogFor(l.store);
+  browse.freq = freq;
+  if (!sheet.open) return;
+  renderBrowse();
+  $("btabs").onclick = (e) => {
+    const b = e.target.closest("[data-tab]"); if (!b) return;
+    browse.tab = b.dataset.tab; browse.q = ""; $("bq").value = "";
+    for (const c of $("btabs").children) c.setAttribute("aria-pressed", String(c === b));
+    renderBrowse(); $("bgrid").scrollTop = 0;
+  };
+  let tmo;
+  $("bq").oninput = (e) => { clearTimeout(tmo); tmo = setTimeout(() => { browse.q = e.target.value.trim(); renderBrowse(); }, 180); };
+  $("bgrid").onclick = (e) => { const b = e.target.closest("[data-tile]"); if (b) toggleTile(b.dataset.tile); };
+  $("bdone").onclick = closeSheet;
+}
+function inListByLabel(label) {
+  const k = norm(label);
+  return list().items.find((i) => !i.done && norm(i.label) === k);
+}
+function renderBrowse() {
+  const tiles = browse.tiles; tiles.clear();
+  let names;
+  if (browse.q) {
+    // Básicos que encajan con la búsqueda y después productos concretos del súper.
+    const qt = tokens(browse.q);
+    const basics = Object.values(BASICS).flat().filter((n) => { const t = tokens(n); return qt.every((w) => t.some((x) => x.startsWith(w))); });
+    for (const n of basics) tiles.set(`b:${n}`, { label: n, prod: bestProd(browse.cat, n) });
+    for (const p of search(browse.cat, browse.q, 40)) tiles.set(`p:${p.s}:${p.n}:${p.f ?? ""}`, { label: p.n, prod: pick(p), sub: [p.f, p.p != null ? eur(p.p) : ""].filter(Boolean).join(" · ") });
+    if (!tiles.size) tiles.set(`b:${capital(browse.q)}`, { label: capital(browse.q), prod: null });
+  } else {
+    names = browse.tab === "Frecuentes" ? browse.freq : BASICS[browse.tab] ?? [];
+    for (const n of names) {
+      const f = st.freq[norm(n)];
+      tiles.set(`b:${n}`, { label: n, prod: f?.prod ?? st.memory[memKey(n, list().store)] ?? bestProd(browse.cat, n) });
+    }
+  }
+  $("bgrid").innerHTML = [...tiles].map(([k, t]) => {
+    const on = !!inListByLabel(t.label);
+    return `<button type="button" class="tile" data-tile="${esc(k)}" aria-pressed="${on}">
+      <span class="tph">${photoHTML(t.prod?.img, guess(t.label).emoji, t.label)}<span class="tck" aria-hidden="true">${CHECK_SVG}</span></span>
+      <span class="tn">${esc(t.label)}</span>${t.sub ? `<span class="ts">${esc(t.sub)}</span>` : ""}</button>`;
+  }).join("");
+  updateBrowseCount();
+}
+function updateBrowseCount() {
+  const n = list().items.filter((i) => !i.done).length;
+  $("bcount").textContent = `${n} ${n === 1 ? "producto" : "productos"} en la lista${browse.added ? ` · ${browse.added} nuevos` : ""}`;
+}
+async function toggleTile(key) {
+  const t = browse.tiles.get(key); if (!t) return;
+  const btn = [...$("bgrid").children].find((b) => b.dataset.tile === key);
+  const ex = inListByLabel(t.label);
+  buzz();
+  if (ex) {
+    list().items = list().items.filter((i) => i !== ex);
+    browse.added = Math.max(0, browse.added - 1);
+    btn?.setAttribute("aria-pressed", "false");
+  } else {
+    btn?.setAttribute("aria-pressed", "true");
+    await addItem({ query: t.label }, t.prod);
+    browse.added++;
+  }
+  save(); render(); updateBrowseCount();
+}
+
 // ---------- Modo tienda ----------
 let wakeLock = null;
 async function keepAwake() {
@@ -428,7 +517,12 @@ async function onCode(code) {
 }
 
 // ---------- Eventos ----------
-$("bar").addEventListener("submit", (e) => { e.preventDefault(); const v = $("q").value; $("q").value = ""; handle(v); });
+$("bar").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const v = $("q").value;
+  if (!v.trim()) return openBrowse(); // «+» sin texto: abrir el catálogo para marcar productos
+  $("q").value = ""; handle(v);
+});
 $("micBtn").addEventListener("click", () => { if (rec && $("micBtn").classList.contains("rec")) { rec.stop(); return; } startVoice(); });
 $("scanBtn").addEventListener("click", openScan);
 $("listBtn").addEventListener("click", openLists);
@@ -452,6 +546,7 @@ $("list").addEventListener("click", (e) => {
   if (Date.now() < suppressClickUntil) { e.preventDefault(); e.stopPropagation(); return; }
   const t = e.target;
   const tryB = t.closest("[data-try]"); if (tryB) return handle(tryB.dataset.try);
+  if (t.closest("[data-browse]")) return openBrowse();
   const pk = t.closest("[data-pick]"); if (pk) return openPicker(pk.dataset.pick);
   const q = t.closest("[data-qty]"); if (q) return openQty(q.dataset.qty);
   const li = t.closest("li.item"); if (!li) return;

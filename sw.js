@@ -1,6 +1,6 @@
 // Permite abrir la app sin conexión (por ejemplo, dentro del súper sin cobertura).
-const VERSION = "v8";
-const SHELL = ["./", "index.html", "styles.css", "js/app.js", "js/parser.js", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png"];
+const VERSION = "v9";
+const SHELL = ["./", "index.html", "styles.css", "js/app.js", "js/parser.js", "js/basics.js", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(`shell-${VERSION}`).then((c) => Promise.allSettled(SHELL.map((u) => c.add(u)))).then(() => self.skipWaiting()));

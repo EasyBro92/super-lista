@@ -1,0 +1,21 @@
+// Productos básicos que se ofrecen para marcar sin escribir, ordenados por sección.
+export const BASICS = {
+  "Frutas y verduras": ["Plátanos", "Manzanas", "Naranjas", "Mandarinas", "Limones", "Fresas", "Uvas", "Peras", "Melón", "Sandía",
+    "Aguacates", "Tomates", "Lechuga", "Cebollas", "Ajos", "Patatas", "Zanahorias", "Pimientos", "Calabacín", "Pepino", "Brócoli",
+    "Champiñones", "Espinacas"],
+  "Carne": ["Pechuga de pollo", "Muslos de pollo", "Carne picada", "Ternera", "Lomo de cerdo", "Hamburguesas", "Salchichas", "Costillas"],
+  "Pescado": ["Salmón", "Merluza", "Gambas", "Bacalao", "Calamares", "Mejillones"],
+  "Charcutería y quesos": ["Jamón serrano", "Jamón cocido", "Pechuga de pavo", "Chorizo", "Salchichón", "Queso en lonchas", "Queso curado",
+    "Queso fresco", "Queso rallado"],
+  "Lácteos y huevos": ["Leche", "Huevos", "Yogures", "Mantequilla", "Nata", "Leche sin lactosa", "Bebida de avena", "Natillas"],
+  "Panadería": ["Pan", "Pan de molde", "Pan tostado", "Croissants", "Magdalenas", "Tortillas de trigo"],
+  "Despensa": ["Aceite de oliva", "Aceite de girasol", "Arroz", "Macarrones", "Espaguetis", "Garbanzos", "Lentejas", "Tomate frito",
+    "Atún en lata", "Sal", "Azúcar", "Harina", "Vinagre", "Mayonesa", "Ketchup", "Caldo de pollo", "Aceitunas", "Frutos secos", "Patatas fritas"],
+  "Dulces y desayuno": ["Café", "Cacao en polvo", "Cereales", "Galletas", "Chocolate", "Mermelada", "Infusiones", "Miel"],
+  "Bebidas": ["Agua", "Agua con gas", "Coca-Cola", "Refresco de naranja", "Zumo", "Cerveza", "Vino tinto"],
+  "Congelados": ["Pizza", "Helado", "Guisantes", "Croquetas", "Menestra", "Patatas congeladas", "Varitas de merluza"],
+  "Limpieza": ["Detergente", "Suavizante", "Lavavajillas", "Pastillas lavavajillas", "Lejía", "Friegasuelos", "Bolsas de basura",
+    "Papel de cocina", "Estropajos", "Limpiacristales"],
+  "Higiene": ["Papel higiénico", "Gel de baño", "Champú", "Pasta de dientes", "Desodorante", "Cepillo de dientes", "Pañuelos", "Compresas", "Maquinillas"],
+  "Bebé y mascotas": ["Pañales", "Toallitas", "Comida para gatos", "Comida para perros", "Arena para gatos"],
+};
