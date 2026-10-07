@@ -16,8 +16,12 @@ export function stem(w) {
 const STOP = new Set(["de", "del", "la", "las", "el", "los", "un", "una", "unos", "unas", "al", "y", "e", "para", "por", "favor", "mas", "algo", "poco", "pocos", "unas"]);
 const SYN = { banana: "platano", cocacola: "coca cola", yogurt: "yogur", yoghourt: "yogur", jabon: "jabon", papel: "papel", huevo: "huevo", birra: "cerveza", pasta_dientes: "dentifrico" };
 
+const PHRASES = [[/pasta de dientes|crema dental/g, "dentifrico"], [/papel de cocina/g, "rollo cocina"], [/coca cola/g, "coca cola"]];
+
 export function tokens(s) {
-  return norm(s).split(" ").filter((w) => w && !STOP.has(w)).map((w) => stem(SYN[w] ?? w));
+  let t = norm(s);
+  for (const [re, r] of PHRASES) t = t.replace(re, r);
+  return t.split(" ").filter((w) => w && !STOP.has(w)).map((w) => stem(SYN[w] ?? w));
 }
 
 const NUMW = { un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12, media: 0.5, medio: 0.5 };
@@ -67,7 +71,7 @@ export function indexCatalog(items, store) {
   return items;
 }
 
-export function score(it, qt) {
+export function score(it, qt, prefCat) {
   let s = 0;
   let miss = 0;
   for (const q of qt) {
@@ -78,6 +82,8 @@ export function score(it, qt) {
   if (miss && (qt.length < 2 || miss > qt.length / 3)) return -1;
   s -= miss * 2;
   if (it._first === qt[0]) s += 3;
+  if (!miss && it._t.length === qt.length) s += 2;
+  if (prefCat && it.c === prefCat) s += 2.5;
   s -= it._t.length * 0.25;
   s -= it.r * 0.0004;
   if (it.img) s += 0.5;
@@ -86,10 +92,12 @@ export function score(it, qt) {
 
 export function search(catalog, query, limit = 12) {
   const qt = tokens(query);
+  const g = guess(query).cat;
+  const prefCat = g === "Otros" ? null : g;
   if (!qt.length) return [];
   const res = [];
   for (const it of catalog) {
-    const s = score(it, qt);
+    const s = score(it, qt, prefCat);
     if (s > 0) res.push([s, it]);
   }
   res.sort((a, b) => b[0] - a[0]);

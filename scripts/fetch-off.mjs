@@ -13,9 +13,9 @@ export const OFF_STORES = {
   elcorteingles: ["el-corte-ingles", "hipercor"],
 };
 
-const FIELDS = "code,product_name_es,product_name,generic_name_es,brands,quantity,image_front_small_url,categories_tags,unique_scans_n";
-const PAGE_SIZE = 250;
-const MAX_PAGES = Number(process.env.OFF_MAX_PAGES || 16);
+const FIELDS = "lang,code,product_name_es,product_name,generic_name_es,brands,quantity,image_front_small_url,categories_tags,unique_scans_n";
+const PAGE_SIZE = 100; // máximo que devuelve la API
+const MAX_PAGES = Number(process.env.OFF_MAX_PAGES || 40);
 // Open Food Facts permite unas 10 búsquedas por minuto.
 const WAIT = 6500;
 
@@ -35,7 +35,8 @@ export async function fetchOffStore(slug) {
       }
       const prods = data.products ?? [];
       for (const p of prods) {
-        const name = (p.product_name_es || p.product_name || p.generic_name_es || "").trim();
+        // Solo productos con nombre en español, para no mezclar artículos de otros países.
+        const name = (p.product_name_es || (p.lang === "es" ? p.product_name : "") || p.generic_name_es || "").trim();
         if (!name || !p.image_front_small_url || seen.has(p.code)) continue;
         seen.add(p.code);
         const brand = (p.brands || "").split(",")[0].trim();

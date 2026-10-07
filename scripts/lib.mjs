@@ -11,13 +11,13 @@ export async function getJSON(url, { tries = 4, headers = {} } = {}) {
   for (let i = 0; i < tries; i++) {
     try {
       const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "application/json", ...headers } });
-      if (res.status === 429 || res.status >= 500) throw new Error(`HTTP ${res.status}`);
+      if (res.status === 429 || res.status >= 500) throw Object.assign(new Error(`HTTP ${res.status}`), { slow: res.status === 429 });
       if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status} en ${url}`), { fatal: true });
       return await res.json();
     } catch (e) {
       last = e;
       if (e.fatal) break;
-      await sleep(2000 * 2 ** i);
+      await sleep((e.slow ? 20000 : 2000) * 2 ** i);
     }
   }
   throw last;
@@ -48,9 +48,10 @@ const RULES = [
   [/aceite|especia|salsa|arroz|legumbre|pasta|conserva|caldo|crema|aperitivo|plato|oil|sauce|rice|canned|spice|snack|condiment|cereal|flour|harina|meal/, "Despensa"],
 ];
 
+// Prueba primero el texto más específico (la última categoría) y va subiendo.
 export function catFor(...texts) {
-  const t = norm(texts.flat().filter(Boolean).join(" "));
-  for (const [re, c] of RULES) if (re.test(t)) return c;
+  const parts = texts.flat().filter(Boolean).map((t) => norm(t).replace(/plant-based-foods-and-beverages|en:/g, " "));
+  for (const t of parts.reverse()) for (const [re, c] of RULES) if (re.test(t)) return c;
   return "Otros";
 }
 
