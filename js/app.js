@@ -156,10 +156,15 @@ function toggleItem(id) {
 function setStatus(t, err) { const s = $("status"); s.textContent = t; s.classList.toggle("err", !!err); }
 
 // ---------- Pintar ----------
-function thumbHTML(prod, emoji, cls = "") {
-  if (prod?.img) return `<img class="pimg ${cls}" src="${esc(prod.img)}" alt="" loading="lazy" draggable="false" referrerpolicy="no-referrer" data-emoji="${esc(emoji || "🛒")}">`;
-  return `<span class="emo">${esc(emoji || "🛒")}</span>`;
+// Las fotos se pintan como fondo (no como <img>) para que Chrome no muestre su menú de «Descargar imagen»
+// al mantener pulsado. Debajo queda el emoji, que se ve si la foto no carga.
+const cssUrl = (u) => esc(String(u).replace(/'/g, "%27").replace(/"/g, "%22").replace(/\s/g, "%20"));
+function photoHTML(url, emoji, label = "") {
+  const emo = `<span class="emo" aria-hidden="true">${esc(emoji || "🛒")}</span>`;
+  if (!url) return emo;
+  return `<span class="photo" role="img" aria-label="${esc(label)}">${emo}<span class="photo-img" style="background-image:url('${cssUrl(url)}')"></span></span>`;
 }
+function thumbHTML(prod, emoji) { return photoHTML(prod?.img, emoji, prod?.n); }
 const itemPrice = (i) => (i.prod?.p != null ? i.prod.p * (i.count || 1) : null);
 
 function renderStores() {
@@ -516,7 +521,7 @@ function openOptions(id) {
   const p = it.prod;
   const info = p ? [p.f, p.p != null ? eur(p.p) : "", p.u, list().store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "";
   openSheet(it.label, `<figure class="peek">
-      <div class="peek-ph">${p?.img ? `<img class="pimg" src="${esc(bigImg(p.img))}" alt="${esc(p.n)}" draggable="false" referrerpolicy="no-referrer" data-emoji="${esc(it.emoji)}">` : `<span class="emo">${esc(it.emoji || "🛒")}</span>`}</div>
+      <div class="peek-ph">${photoHTML(p?.img && bigImg(p.img), it.emoji, p?.n)}</div>
       <figcaption>${p ? `<b>${esc(p.n)}</b>${info ? `<span>${esc(info)}</span>` : ""}` : "<span>Sin producto concreto. Elige uno con «Cambiar producto».</span>"}</figcaption>
     </figure>
     <div class="menu">

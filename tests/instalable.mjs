@@ -17,10 +17,13 @@ await p.fill("#q", "apunta leche, huevos y oreos");
 await p.click("button[type=submit]");
 await p.waitForTimeout(4000);
 const status = await p.textContent("#status");
-const imgs = await p.locator("li.item img").count();
-const out = { http: res.status(), installabilityErrors, manifestErrors: man.errors, manifestUrl: man.url, sw, status, imgs, errs };
+// Las fotos se pintan como fondo: comprobamos que hay y que la primera se descarga bien.
+const imgs = await p.locator("li.item .photo-img").count();
+const firstUrl = await p.evaluate(() => getComputedStyle(document.querySelector("li.item .photo-img")).backgroundImage.slice(5, -2));
+const photoStatus = firstUrl ? (await p.request.get(firstUrl)).status() : 0;
+const out = { http: res.status(), installabilityErrors, manifestErrors: man.errors, manifestUrl: man.url, sw, status, imgs, photoStatus, errs };
 console.log(JSON.stringify(out, null, 2));
-const bad = installabilityErrors.length || man.errors.length || !imgs;
+const bad = installabilityErrors.length || man.errors.length || !imgs || photoStatus !== 200;
 console.log(`::${bad ? "error" : "notice"} title=Resultado::${JSON.stringify(out).replace(/\n/g, " ")}`);
 await b.close();
 process.exit(bad ? 1 : 0);

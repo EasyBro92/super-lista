@@ -1,5 +1,5 @@
 // Permite abrir la app sin conexión (por ejemplo, dentro del súper sin cobertura).
-const VERSION = "v7";
+const VERSION = "v8";
 const SHELL = ["./", "index.html", "styles.css", "js/app.js", "js/parser.js", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {
@@ -15,7 +15,8 @@ self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   // Código y catálogos propios: primero la red (para tener lo último), si no hay red, lo guardado.
   if (url.origin === location.origin) {
-    e.respondWith(fetch(e.request).then((res) => {
+    // «no-cache» evita que el navegador sirva una versión vieja guardada por GitHub Pages.
+    e.respondWith(fetch(e.request, { cache: "no-cache" }).then((res) => {
       if (res.ok) { const copy = res.clone(); caches.open(`shell-${VERSION}`).then((c) => c.put(e.request, copy)); }
       return res;
     }).catch(() => caches.match(e.request, { ignoreSearch: true })));
