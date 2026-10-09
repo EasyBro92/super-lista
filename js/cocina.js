@@ -174,8 +174,8 @@ function showRecipe(id) {
   const c = check(r);
   const toAdd = c.missing.filter((i) => !inList(i.k));
   const ings = r.ings.map((i) => {
-    const st = has(i.k) ? "have" : inList(i.k) ? "list" : i.opt ? "opt" : "miss";
-    const label = { have: "En casa", list: "En la lista", opt: "Opcional", miss: "Falta" }[st];
+    const st = has(i.k) ? "have" : inList(i.k) ? "list" : i.opt ? "optional" : "miss";
+    const label = { have: "En casa", list: "En la lista", optional: "Opcional", miss: "Falta" }[st];
     return `<li><button type="button" class="ing ${st}" data-ing="${A.esc(i.k)}" data-n="${A.esc(i.n)}" aria-pressed="${st === "have"}">
       <span class="ic" aria-hidden="true">${A.CHECK_SVG}</span><span class="ie" aria-hidden="true">${A.esc(guess(i.n).emoji)}</span>
       <span class="inm">${A.esc(i.n)}<small>${A.esc(i.q || "")}</small></span><span class="ist">${label}</span></button></li>`;

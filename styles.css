@@ -247,3 +247,4 @@ input,textarea{-webkit-touch-callout:default;-webkit-user-select:text;user-selec
 .hero-img{display:block;width:100%;aspect-ratio:16/10;border-radius:16px;background:var(--accent-soft) center/cover no-repeat}
 .hero figcaption{font-size:.72rem;color:var(--muted);overflow-wrap:anywhere}
 .hero figcaption a{color:inherit}
+.cdetail>*,.clist>*,.pgrid>*{flex:none}
