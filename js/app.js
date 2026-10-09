@@ -1,5 +1,6 @@
 import { parseCommand, search, indexCatalog, guess, norm, capital, tokens } from "./parser.js";
 import { BASICS } from "./basics.js";
+import { initCocina, openRecipes, learnPurchase } from "./cocina.js";
 
 const STORES = [
   ["any", "Cualquiera"], ["mercadona", "Mercadona"], ["carrefour", "Carrefour"], ["lidl", "Lidl"], ["dia", "Dia"],
@@ -362,6 +363,7 @@ function finishShopping() {
     items: done.map(({ label, qty, count, prod }) => ({ label, qty, count, prod })) });
   if (st.history.length > 100) st.history.shift();
   l.items = l.items.filter((i) => !i.done);
+  learnPurchase(done);
   });
 }
 
@@ -527,6 +529,9 @@ $("micBtn").addEventListener("click", () => { if (rec && $("micBtn").classList.c
 $("scanBtn").addEventListener("click", openScan);
 $("listBtn").addEventListener("click", openLists);
 $("histBtn").addEventListener("click", openHistory);
+$("cookBtn").addEventListener("click", openRecipes);
+initCocina({ st, list, addItem, save, render, setStatus, buzz, esc, openSheet, sheet, CHECK_SVG,
+  body: () => $("sheetBody"), setTitle: (t) => { $("sheetTitle").textContent = t; } });
 $("finishBtn").addEventListener("click", finishShopping);
 $("shopBtn").addEventListener("click", () => {
   st.shop = !st.shop; save(); render();
