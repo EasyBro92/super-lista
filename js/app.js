@@ -54,11 +54,23 @@ async function catalogFor(store) {
   return all.flat();
 }
 
-// Para los básicos («Sandía», «Ternera») mejor sin foto que con un producto que solo los menciona de pasada.
+// Para los básicos y los ingredientes de recetas («Sandía», «Ternera») mejor sin foto que con un producto
+// que solo los menciona de pasada.
 const BASIC_SET = new Set(Object.values(BASICS).flat().map(norm));
+const markGeneric = (names) => { for (const n of names) BASIC_SET.add(norm(n)); };
+// Cómo llaman los súpers a algunos genéricos («Ternera» es «vacuno añojo» en Mercadona).
+const ALIAS = {
+  "ternera": "tacos de vacuno añojo", "filetes de ternera": "filetes de vacuno añojo plancha", "queso parmesano": "queso grana padano",
+  "cuscus": "cous cous", "fideos de arroz": "noodles de arroz", "nueces": "nuez natural pelada", "sesamo": "semillas sesamo",
+  "mascarpone": "queso mascarpone", "atun fresco": "rodajas de atun", "hojaldre": "masa fresca hojaldre", "queso crema": "queso untar",
+  "hamburguesas": "burger de vacuno", "merluza": "filetes de merluza", "salmon": "filete de salmon",
+};
+markGeneric(Object.values(ALIAS));
 function bestProd(cat, query) {
+  const alias = ALIAS[norm(query)];
+  if (alias) { const p = bestProd(cat, alias); if (p) return p; }
   const r = search(cat, query, 6);
-  if (!BASIC_SET.has(norm(query))) return pick(r[0]);
+  if (!BASIC_SET.has(norm(query)) && !alias) return pick(r[0]);
   const q0 = tokens(query)[0], c = guess(query).cat;
   return pick(r.find((p) => p._t.indexOf(q0) === 0) ?? r.find((p) => p._t.indexOf(q0) === 1 && (c === "Otros" || p.c === c || tokens(query).length > 1)));
 }
@@ -530,7 +542,7 @@ $("scanBtn").addEventListener("click", openScan);
 $("listBtn").addEventListener("click", openLists);
 $("histBtn").addEventListener("click", openHistory);
 $("cookBtn").addEventListener("click", openRecipes);
-initCocina({ st, list, addItem, save, render, setStatus, buzz, esc, openSheet, sheet, CHECK_SVG,
+initCocina({ st, list, addItem, markGeneric, save, render, setStatus, buzz, esc, openSheet, sheet, CHECK_SVG,
   body: () => $("sheetBody"), setTitle: (t) => { $("sheetTitle").textContent = t; } });
 $("finishBtn").addEventListener("click", finishShopping);
 $("shopBtn").addEventListener("click", () => {

@@ -3,14 +3,14 @@ import { tokens, guess, norm } from "./parser.js";
 
 // Sección de cada ingrediente, para ordenar «Lo que tengo en casa» como en el súper.
 const SECTIONS = {
-  "Frutas y verduras": "Plátanos, Manzanas, Naranjas, Mandarinas, Limones, Fresas, Uvas, Peras, Melón, Sandía, Aguacates, Tomates, Lechuga, Cebollas, Ajos, Patatas, Zanahorias, Pimientos, Calabacín, Pepino, Brócoli, Champiñones, Espinacas, Berenjenas, Puerros, Calabaza, Coliflor, Judías verdes, Cebolla morada, Tomates cherry, Perejil, Cilantro, Albahaca, Jengibre, Rúcula, Maíz dulce, Limas, Mango, Piña, Arándanos",
+  "Frutas y verduras": "Plátanos, Manzanas, Naranjas, Mandarinas, Limones, Fresas, Uvas, Peras, Melón, Sandía, Aguacates, Tomates, Lechuga, Cebollas, Ajos, Patatas, Zanahorias, Pimientos, Calabacín, Pepino, Brócoli, Champiñones, Espinacas, Berenjenas, Puerros, Calabaza, Coliflor, Judías verdes, Cebolla morada, Tomates cherry, Perejil, Cilantro, Albahaca, Jengibre, Rúcula, Maíz dulce, Limas, Mango, Piña, Arándanos, Repollo",
   "Carne": "Pechuga de pollo, Muslos de pollo, Pollo entero, Carne picada, Ternera, Filetes de ternera, Lomo de cerdo, Costillas, Hamburguesas, Salchichas, Bacon, Panceta, Cordero, Pavo picado, Alitas de pollo",
   "Pescado": "Salmón, Merluza, Gambas, Bacalao, Calamares, Mejillones, Atún fresco, Lubina, Dorada, Sepia, Almejas, Langostinos, Surimi",
-  "Charcutería y quesos": "Jamón serrano, Jamón cocido, Pechuga de pavo, Chorizo, Salchichón, Queso en lonchas, Queso curado, Queso fresco, Queso rallado, Mozzarella, Queso parmesano, Queso de cabra, Queso crema, Queso feta, Morcilla",
+  "Charcutería y quesos": "Jamón serrano, Jamón cocido, Pechuga de pavo, Chorizo, Salchichón, Queso en lonchas, Queso curado, Queso fresco, Queso rallado, Mozzarella, Queso parmesano, Queso de cabra, Queso crema, Queso feta, Mascarpone, Morcilla",
   "Lácteos y huevos": "Leche, Huevos, Yogures, Yogur griego, Mantequilla, Nata, Nata para cocinar, Leche de coco, Bebida de avena, Leche condensada",
   "Panadería": "Pan, Pan de molde, Pan rallado, Pan de hamburguesa, Pan de pita, Tortillas de trigo, Masa de pizza, Hojaldre, Masa de empanadillas, Masa quebrada, Bizcochos de soletilla, Galletas",
   "Despensa": "Aceite de oliva, Aceite de girasol, Arroz, Arroz basmati, Macarrones, Espaguetis, Fideos, Lasaña, Tallarines, Gnocchi, Tortellini, Cuscús, Quinoa, Garbanzos, Lentejas, Alubias, Tomate frito, Tomate triturado, Atún en lata, Sardinas en lata, Vinagre, Mayonesa, Ketchup, Mostaza, Salsa de soja, Caldo de pollo, Caldo de verduras, Caldo de pescado, Aceitunas, Alcaparras, Pimiento del piquillo, Frutos secos, Nueces, Almendras, Pasas, Hummus, Guacamole, Pesto, Salsa barbacoa, Tahini, Edamame, Fideos de arroz, Salsa de ostras, Vino blanco, Vino tinto, Cerveza",
-  "Especias y repostería": "Sal, Pimienta negra, Pimentón, Comino, Orégano, Laurel, Canela, Curry, Azafrán, Colorante alimentario, Guindilla, Tomillo, Romero, Nuez moscada, Sésamo, Azúcar, Harina, Levadura, Maicena, Gelatina, Azúcar glas, Esencia de vainilla, Coco rallado, Miel, Chocolate, Cacao en polvo, Mermelada, Copos de avena, Cereales",
+  "Especias y repostería": "Sal, Pimienta negra, Pimentón, Comino, Orégano, Laurel, Canela, Curry, Azafrán, Colorante alimentario, Guindilla, Tomillo, Romero, Nuez moscada, Sésamo, Azúcar, Harina, Levadura, Maicena, Gelatina, Azúcar glas, Esencia de vainilla, Coco rallado, Miel, Chocolate, Cacao en polvo, Mermelada, Copos de avena, Cereales, Café",
   "Congelados": "Guisantes, Menestra, Patatas congeladas, Croquetas, Varitas de merluza, Pizza, Helado, Gyozas, Verduras para wok",
 };
 const ORDER = [...Object.keys(SECTIONS), "Otros"];
@@ -38,6 +38,7 @@ function loadRecipes() {
       r.toks = new Set(tokens(`${r.n} ${r.i.map((x) => x[0]).join(" ")}`));
       r.filters = [...r.tags, ...(r.t <= 20 ? ["Rápidas"] : []), ...(r.tags.includes("Vegana") ? ["Vegetariana"] : [])];
     });
+    A.markGeneric(rs.flatMap((r) => r.i.map((x) => x[0])));
     return (recipes = rs);
   });
   return loading;
