@@ -31,11 +31,13 @@ const ui = { view: "list", mode: "tengo", tag: "Todas", q: "", id: null, pq: "" 
 export function initCocina(api) { A = api; }
 
 function loadRecipes() {
-  loading ??= fetch("data/recetas.json").then((r) => (r.ok ? r.json() : [])).catch(() => []).then((rs) => {
+  const get = (u, d) => fetch(u).then((r) => (r.ok ? r.json() : d)).catch(() => d);
+  loading ??= Promise.all([get("data/recetas.json", []), get("data/recetas-fotos.json", {})]).then(([rs, fotos]) => {
     rs.forEach((r, idx) => {
       r.id = idx;
       r.ings = r.i.map(([n, q]) => ({ n, q, k: key(n), opt: !!r.o?.includes(n) }));
       r.toks = new Set(tokens(`${r.n} ${r.i.map((x) => x[0]).join(" ")}`));
+      r.foto = fotos[r.n] ?? null;
       r.filters = [...r.tags, ...(r.t <= 20 ? ["Rápidas"] : []), ...(r.tags.includes("Vegana") ? ["Vegetariana"] : [])];
     });
     A.markGeneric(rs.flatMap((r) => r.i.map((x) => x[0])));
@@ -114,11 +116,23 @@ function showList() {
 }
 const $$ = (id) => document.getElementById(id);
 
+// Foto de la receta como fondo (sin menú de «Guardar imagen» al mantener pulsado); se carga al aparecer en pantalla.
+const pic = (r) => `<span class="re" style="--h:${hue(r.n)}"${r.foto ? ` data-bg="${A.esc(r.foto.img)}"` : ""}>${A.esc(r.e)}</span>`;
+let seen = null;
+function lazyBg(root) {
+  const els = root.querySelectorAll("[data-bg]");
+  const show = (el) => { el.style.backgroundImage = `url('${el.dataset.bg}')`; el.classList.add("has-foto"); el.removeAttribute("data-bg"); };
+  if (!("IntersectionObserver" in window)) return els.forEach(show);
+  seen?.disconnect();
+  seen = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { show(e.target); seen.unobserve(e.target); } }), { root: null, rootMargin: "300px" });
+  els.forEach((el) => seen.observe(el));
+}
+
 function card(r, c) {
   const miss = c.missing.map((i) => i.n);
   const line = !miss.length ? `<span class="rh ok">✓ Tienes todo lo necesario</span>`
     : `<span class="rh">${miss.length === 1 ? "Te falta" : `Te faltan ${miss.length}`}: ${A.esc(miss.slice(0, 4).join(", "))}${miss.length > 4 ? "…" : ""}</span>`;
-  return `<button type="button" class="rc" data-r="${r.id}"><span class="re" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>
+  return `<button type="button" class="rc" data-r="${r.id}">${pic(r)}
     <span class="ri"><span class="rn">${A.esc(r.n)}</span><span class="rm">${A.esc(meta(r))}</span>${line}</span></button>`;
 }
 
@@ -131,6 +145,7 @@ function fillList() {
   if (ui.mode === "todas") {
     rows.sort((a, b) => a.c.missing.length - b.c.missing.length || a.r.n.localeCompare(b.r.n, "es"));
     el.innerHTML = rows.length ? rows.map(({ r, c }) => card(r, c)).join("") : `<p class="note">No hay recetas con eso. Prueba con otra palabra.</p>`;
+    lazyBg(el);
     return;
   }
   // «Con lo que tengo»: primero lo que puedes hacer ya, luego lo que necesita 1, 2 o 3 cosas más.
@@ -149,6 +164,7 @@ function fillList() {
     const g = useful.filter((x) => x.c.missing.length === m);
     return g.length ? `<h3 class="cgroup">${t}</h3>${g.map(({ r, c }) => card(r, c)).join("")}` : "";
   }).join("");
+  lazyBg(el);
 }
 
 function showRecipe(id) {
@@ -170,7 +186,9 @@ function showRecipe(id) {
   A.body().innerHTML = `
     <button type="button" class="back" id="cback">‹ Recetas</button>
     <div class="cdetail">
-      <div class="rhead"><span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>
+      ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>
+        <figcaption>Foto: <a href="${A.esc(r.foto.fuente)}" target="_blank" rel="noopener">${A.esc(r.foto.autor)}</a> · ${A.esc(r.foto.licencia)}</figcaption></figure>` : ""}
+      <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>`}
         <div><p class="rm">${A.esc(meta(r))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p></div></div>
       <h3 class="cgroup">Ingredientes <span>toca para marcar lo que tienes</span></h3>
       <ul class="ings">${ings}</ul>
