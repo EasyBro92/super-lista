@@ -1,5 +1,5 @@
 // Permite abrir la app sin conexión (por ejemplo, dentro del súper sin cobertura).
-const VERSION = "v13";
+const VERSION = "v14";
 const SHELL = ["./", "index.html", "styles.css", "js/app.js", "js/parser.js", "js/basics.js", "js/cocina.js", "data/recetas.json", "data/recetas-fotos.json", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {

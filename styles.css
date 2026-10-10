@@ -260,3 +260,18 @@ li.item.incoming{opacity:0}
 li.item.landed .row-in{animation:landed .7s ease}
 @keyframes landed{from{background:var(--accent-soft)}to{background:var(--surface)}}
 @media (prefers-reduced-motion:reduce){li.item.landed .row-in{animation:none}}
+
+/* «¿Qué cocino hoy?» debajo de la lista */
+.ideas{margin-top:28px;display:flex;flex-direction:column;gap:10px}
+.ideas-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.ideas-head h2{font-family:var(--display);font-weight:800;font-size:1.2rem;margin:0}
+.lnk{border:0;background:none;color:var(--accent);font:700 .88rem var(--body);cursor:pointer;padding:4px 0}
+.ideas-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding:2px 16px 4px;scroll-snap-type:x mandatory}
+.ideas-row::-webkit-scrollbar{display:none}
+.idea{flex:none;width:140px;display:flex;flex-direction:column;gap:4px;border:0;background:none;padding:0;text-align:left;cursor:pointer;color:var(--fg);scroll-snap-align:start}
+.idea-ph{display:block;width:140px;height:105px;border-radius:14px;background:var(--accent-soft) center/cover no-repeat;border:1px solid var(--line)}
+.idea:active .idea-ph{transform:scale(.97)}
+.idea-n{font-weight:700;font-size:.86rem;line-height:1.2}
+.idea-m{font-size:.75rem;color:var(--muted)}
+.idea-m.ok{color:var(--accent);font-weight:700}
+body.shop .ideas{display:none}

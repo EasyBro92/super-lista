@@ -26,7 +26,7 @@ const FILTERS = ["Todas", "Rápidas", "Española", "Vegetariana", "Pasta y arroz
 
 let A; // funciones de la app (lista, guardar, pintar…)
 let recipes = null, loading = null;
-const ui = { view: "list", mode: "tengo", tag: "Todas", q: "", id: null, pq: "" };
+const ui = { view: "list", mode: "tengo", tag: "Todas", q: "", id: null, pq: "", scroll: 0 };
 
 export function initCocina(api) { A = api; }
 
@@ -66,21 +66,49 @@ export function learnPurchase(items) {
   for (const i of items) p[key(i.label)] = i.label;
 }
 
-export async function openRecipes() {
-  ui.view = "list"; ui.q = "";
+// Se vuelve a abrir donde lo dejaste: mismos filtros, búsqueda y posición.
+export async function openRecipes(id) {
   A.openSheet("Recetas", `<p class="note">Cargando recetas…</p>`, "browsing cooking");
   await loadRecipes();
   if (!A.sheet.open) return;
-  showList();
+  if (id != null && recipes[id]) { ui.view = "list"; return showRecipe(id); }
+  showList(true);
+}
+
+// Botón de cerrar, gesto de atrás o deslizar hacia abajo: desde una receta o «En casa», vuelve a las recetas.
+export function cookBack() {
+  if (ui.view === "recipe" || ui.view === "pantry") { showList(true); return true; }
+  return false;
+}
+
+// «¿Qué cocino hoy?» debajo de la lista: unas cuantas recetas con foto para que se vean sin buscarlas.
+let ideasHTML = "";
+export async function renderIdeas(el) {
+  await loadRecipes();
+  if (!recipes.length) { el.hidden = true; return; }
+  const staples = new Set(STAPLES.map(key));
+  const cooking = Object.keys(pantry()).some((k) => !staples.has(k));
+  const day = Math.floor(Date.now() / 864e5);
+  const rot = (r) => ((r.id * 7919 + day * 104729) % 9973);
+  const rows = recipes.filter((r) => r.foto).map((r) => ({ r, c: check(r) }));
+  rows.sort((a, b) => (cooking ? Math.min(a.c.missing.length, 4) - Math.min(b.c.missing.length, 4) : 0) || rot(a.r) - rot(b.r));
+  const pick = rows.slice(0, 8);
+  const html = `<div class="ideas-head"><h2>¿Qué cocino hoy?</h2><button type="button" class="lnk" data-cook-all>Ver las ${recipes.length} recetas</button></div>
+    <div class="ideas-row">${pick.map(({ r, c }) => `<button type="button" class="idea" data-recipe="${r.id}">
+      <span class="idea-ph" style="background-image:url('${A.esc(r.foto.img)}')"></span>
+      <span class="idea-n">${A.esc(r.n)}</span>
+      <span class="idea-m${c.missing.length ? "" : " ok"}">${c.missing.length ? (cooking ? `Faltan ${c.missing.length}` : `${r.t} min`) : "✓ Tienes todo"}</span></button>`).join("")}</div>`;
+  if (html !== ideasHTML) { el.innerHTML = html; ideasHTML = html; }
+  el.hidden = false;
 }
 
 const hue = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
 const meta = (r) => `${r.t} min · ${r.r} ${r.r === 1 ? "ración" : "raciones"} · ${r.d}`;
 const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
 
-function showList() {
+function showList(restore = false) {
   ui.view = "list";
-  A.setTitle("Recetas");
+  A.setTitle("Recetas", false);
   const n = Object.keys(pantry()).length;
   A.body().innerHTML = `
     <div class="seg" id="cmode" role="group" aria-label="Qué recetas ver">
@@ -93,6 +121,7 @@ function showList() {
     <div class="btabs" id="ctags">${FILTERS.map((t) => `<button type="button" class="chip" data-tag="${A.esc(t)}" aria-pressed="${t === ui.tag}">${A.esc(t)}</button>`).join("")}</div>
     <div class="clist" id="clist"></div>`;
   fillList();
+  if (restore) { const l = $$("clist"), y = ui.scroll; l.scrollTop = y; requestAnimationFrame(() => { l.scrollTop = y; }); }
   $$("cmode").onclick = (e) => {
     const b = e.target.closest("[data-mode]"); if (!b) return;
     ui.mode = b.dataset.mode;
@@ -167,10 +196,13 @@ function fillList() {
   lazyBg(el);
 }
 
+const keepScroll = () => { const l = $$("clist"); if (l) ui.scroll = l.scrollTop; };
 function showRecipe(id) {
   const r = recipes[id]; if (!r) return;
+  keepScroll();
+  const same = ui.view === "recipe" && ui.id === id, prev = same ? A.body().querySelector(".cdetail")?.scrollTop ?? 0 : 0;
   ui.view = "recipe"; ui.id = id;
-  A.setTitle(r.n);
+  A.setTitle(r.n, true);
   const c = check(r);
   const toAdd = c.missing.filter((i) => !inList(i.k));
   const ings = r.ings.map((i) => {
@@ -196,7 +228,7 @@ function showRecipe(id) {
       <h3 class="cgroup">Preparación</h3>
       <ol class="steps">${r.p.map((s) => `<li>${A.esc(s)}</li>`).join("")}</ol>
     </div>`;
-  $$("cback").onclick = showList;
+  $$("cback").onclick = () => showList(true);
   A.body().querySelector(".ings").onclick = (e) => {
     const b = e.target.closest("[data-ing]"); if (!b) return;
     const p = pantry();
@@ -211,12 +243,13 @@ function showRecipe(id) {
     A.setStatus(`Apuntado para ${r.n}: ${toAdd.map((i) => i.n).join(", ")}.`);
     showRecipe(id);
   };
-  A.body().scrollTop = 0;
+  A.body().querySelector(".cdetail").scrollTop = prev;
 }
 
 function showPantry() {
+  keepScroll();
   ui.view = "pantry";
-  A.setTitle("Lo que tengo en casa");
+  A.setTitle("Lo que tengo en casa", true);
   const all = new Map();
   for (const r of recipes) for (const i of r.ings) if (!all.has(i.k)) all.set(i.k, i.n);
   for (const [k, n] of Object.entries(pantry())) if (!all.has(k)) all.set(k, n);
@@ -254,6 +287,6 @@ function showPantry() {
   const pl = $$("plast");
   if (pl) pl.onclick = () => { learnPurchase(last.items); A.save(); fill(); A.buzz(); };
   $$("pclear").onclick = () => { A.st.pantry = {}; A.save(); fill(); };
-  $$("cback").onclick = showList;
+  $$("cback").onclick = () => showList(true);
   $$("pdone").onclick = () => { ui.mode = "tengo"; showList(); };
 }

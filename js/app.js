@@ -1,6 +1,6 @@
 import { parseCommand, search, indexCatalog, guess, norm, capital, tokens } from "./parser.js";
 import { BASICS } from "./basics.js";
-import { initCocina, openRecipes, learnPurchase } from "./cocina.js";
+import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas } from "./cocina.js";
 
 const STORES = [
   ["any", "Cualquiera"], ["mercadona", "Mercadona"], ["carrefour", "Carrefour"], ["lidl", "Lidl"], ["dia", "Dia"],
@@ -253,6 +253,7 @@ function renderSummary() {
 }
 function render() {
   const l = list();
+  renderIdeas($("ideas")).catch(() => {});
   $("listName").textContent = l.name;
   document.body.classList.toggle("shop", !!st.shop);
   $("shopBtn").setAttribute("aria-pressed", String(!!st.shop));
@@ -308,15 +309,25 @@ function bigImg(u) {
 }
 function openSheet(title, html, cls = "") {
   sheet.className = `sheet ${cls}`.trim();
+  setSheetBack(false);
   $("sheetTitle").textContent = title;
   $("sheetBody").innerHTML = html;
   if (!sheet.open) sheet.showModal();
 }
 function closeSheet() { if (sheet.open) sheet.close(); }
-$("sheetClose").addEventListener("click", closeSheet);
+// En recetas, cerrar una receta vuelve a la lista de recetas en vez de salir del todo.
+const CLOSE_SVG = $("sheetClose").innerHTML;
+const BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+function setSheetBack(on) {
+  $("sheetClose").innerHTML = on ? BACK_SVG : CLOSE_SVG;
+  $("sheetClose").setAttribute("aria-label", on ? "Volver a las recetas" : "Cerrar");
+}
+function sheetBack() { if (sheet.classList.contains("cooking") && cookBack()) return; closeSheet(); }
+$("sheetClose").addEventListener("click", sheetBack);
+sheet.addEventListener("cancel", (e) => { if (sheet.classList.contains("cooking") && cookBack()) e.preventDefault(); });
 sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSheet(); });
 // Si la hoja se ha vuelto a abrir con otro contenido (p. ej. del menú a «Editar»), no se borra.
-sheet.addEventListener("close", () => { if (sheet.open) return; stopScan(); $("sheetBody").innerHTML = ""; });
+sheet.addEventListener("close", () => { if (sheet.open) return; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); });
 
 async function openPicker(id, query) {
   const l = list();
@@ -637,9 +648,13 @@ $("micBtn").addEventListener("click", () => { if (voice?.on) { voice.stop(); ret
 $("scanBtn").addEventListener("click", openScan);
 $("listBtn").addEventListener("click", openLists);
 $("histBtn").addEventListener("click", openHistory);
-$("cookBtn").addEventListener("click", openRecipes);
+$("cookBtn").addEventListener("click", () => openRecipes());
+$("ideas").addEventListener("click", (e) => {
+  const r = e.target.closest("[data-recipe]"); if (r) return openRecipes(+r.dataset.recipe);
+  if (e.target.closest("[data-cook-all]")) openRecipes();
+});
 initCocina({ st, list, addItem, markGeneric, save, render, setStatus, buzz, esc, openSheet, sheet, CHECK_SVG,
-  body: () => $("sheetBody"), setTitle: (t) => { $("sheetTitle").textContent = t; } });
+  body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
 $("finishBtn").addEventListener("click", finishShopping);
 $("shopBtn").addEventListener("click", () => {
   st.shop = !st.shop; save(); render();
@@ -764,7 +779,7 @@ function openOptions(id) {
   const end = () => {
     if (y0 == null) return;
     y0 = null; box().style.transform = "";
-    if (dy > 80) closeSheet();
+    if (dy > 80) sheetBack();
   };
   sheet.addEventListener("pointerup", end);
   sheet.addEventListener("pointercancel", end);
