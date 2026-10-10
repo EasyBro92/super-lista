@@ -64,13 +64,15 @@ const ALIAS = {
   "cuscus": "cous cous", "fideos de arroz": "noodles de arroz", "nueces": "nuez natural pelada", "sesamo": "semillas sesamo",
   "mascarpone": "queso mascarpone", "atun fresco": "rodajas de atun", "hojaldre": "masa fresca hojaldre", "queso crema": "queso untar",
   "hamburguesas": "burger de vacuno", "merluza": "filetes de merluza", "salmon": "filete de salmon",
+  "leche de avena": "bebida de avena", "leche de soja": "bebida de soja", "leche de almendras": "bebida de almendras", "leche de arroz": "bebida de arroz",
 };
 markGeneric(Object.values(ALIAS));
 function bestProd(cat, query) {
   const alias = ALIAS[norm(query)];
   if (alias) { const p = bestProd(cat, alias); if (p) return p; }
   const r = search(cat, query, 6);
-  if (!BASIC_SET.has(norm(query)) && !alias) return pick(r[0]);
+  // Si la primera palabra aparece al final del nombre («leche» en unas galletas con leche), mejor uno que empiece por ella.
+  if (!BASIC_SET.has(norm(query)) && !alias) { const q0 = tokens(query)[0]; return pick(r.find((p) => p._t.indexOf(q0) <= 1 && p._t.includes(q0)) ?? r[0]); }
   const q0 = tokens(query)[0], c = guess(query).cat;
   return pick(r.find((p) => p._t.indexOf(q0) === 0) ?? r.find((p) => p._t.indexOf(q0) === 1 && (c === "Otros" || p.c === c || tokens(query).length > 1)));
 }
@@ -117,13 +119,13 @@ function matchItems(query) {
   });
 }
 
-async function handle(text) {
+async function handle(text, { quiet = false } = {}) {
   text = text.trim();
   if (!text) return;
   const acts = parseCommand(text);
   if (!acts.length) return setStatus("No he entendido qué apuntar.", true);
   setStatus("Buscando productos…");
-  const added = [], removed = [], checked = [];
+  const added = [], removed = [], checked = [], addedIds = [];
   for (const a of acts) {
     if (a.op === "remove") {
       const m = matchItems(a.query);
@@ -133,15 +135,60 @@ async function handle(text) {
       for (const i of matchItems(a.query)) { i.done = true; checked.push(i.label); }
     } else {
       const it = await addItem(a);
-      added.push(it.label);
+      added.push(it.label); addedIds.push(it.id);
     }
   }
-  save(); render();
+  save(); render(); flyIn(addedIds);
   const bits = [];
   if (added.length) bits.push(`Apuntado: ${added.join(", ")}`);
   if (removed.length) bits.push(`Quitado: ${removed.join(", ")}`);
   if (checked.length) bits.push(`Comprado: ${checked.join(", ")}`);
-  setStatus(bits.join(" · ") || "No he encontrado eso en la lista.", !bits.length);
+  if (!quiet) setStatus(bits.join(" · ") || "No he encontrado eso en la lista.", !bits.length);
+  return added;
+}
+
+// Tarjeta que aparece arriba con el producto y baja hasta su sitio en la lista.
+let flyQueue = Promise.resolve();
+const incoming = new Set(); // productos que aún están «volando» hacia la lista
+function flyIn(ids) {
+  if (!Element.prototype.animate) return;
+  for (const id of ids) {
+    incoming.add(id);
+    document.querySelector(`li.item[data-id="${id}"]`)?.classList.add("incoming");
+    flyQueue = flyQueue.then(() => flyOne(id)).catch(() => {}).finally(() => {
+      incoming.delete(id); document.querySelector(`li.item[data-id="${id}"]`)?.classList.remove("incoming");
+    });
+  }
+}
+async function flyOne(id) {
+  const it = list().items.find((i) => i.id === id);
+  const li = () => document.querySelector(`li.item[data-id="${id}"]`);
+  if (!it || !li()) return;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const card = document.createElement("div");
+  card.className = "fly";
+  card.setAttribute("aria-hidden", "true");
+  card.innerHTML = `<span class="thumb">${thumbHTML(it.prod, it.emoji)}</span>
+    <span class="info"><span class="name">${esc(it.label)}</span><span class="sub">${esc(it.prod?.n ?? "Añadido a la lista")}</span></span>
+    <span class="fly-ok">${CHECK_SVG}</span>`;
+  document.body.append(card);
+  buzz(15);
+  li()?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+  await card.animate([{ transform: "translateY(-24px) scale(.9)", opacity: 0 }, { transform: "none", opacity: 1 }],
+    { duration: reduce ? 1 : 260, easing: "cubic-bezier(.2,.9,.3,1.25)", fill: "forwards" }).finished;
+  await new Promise((r) => setTimeout(r, reduce ? 500 : 650));
+  const target = li();
+  if (target) {
+    const a = card.getBoundingClientRect(), b = target.getBoundingClientRect();
+    const dx = b.left - a.left, dy = b.top - a.top, sx = b.width / a.width, sy = b.height / a.height;
+    await card.animate([{ transform: "none", opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`, opacity: .9 }],
+      { duration: reduce ? 1 : 420, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" }).finished;
+    incoming.delete(id);
+    target.classList.remove("incoming");
+    target.classList.add("landed");
+    setTimeout(() => target.classList.remove("landed"), 700);
+  }
+  card.remove();
 }
 
 // ---------- Deshacer ----------
@@ -228,7 +275,7 @@ function render() {
       const p = it.prod;
       const sub = p ? [p.n, p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "Toca la foto para elegir producto";
       const price = itemPrice(it);
-      return `<li class="item${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}" data-id="${it.id}">
+      return `<li class="item${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}${incoming.has(it.id) ? " incoming" : ""}" data-id="${it.id}">
         <div class="swipe-bg" aria-hidden="true"><span class="bg-done">${CHECK_SVG}${it.done ? "Pendiente" : "Comprado"}</span><span class="bg-del">Borrar${TRASH_SVG}</span></div>
         <div class="row-in">
         <button class="thumb" type="button" data-pick="${it.id}" aria-label="Cambiar producto de ${esc(it.label)}">${thumbHTML(p, it.emoji)}</button>
@@ -268,7 +315,8 @@ function openSheet(title, html, cls = "") {
 function closeSheet() { if (sheet.open) sheet.close(); }
 $("sheetClose").addEventListener("click", closeSheet);
 sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSheet(); });
-sheet.addEventListener("close", () => { stopScan(); $("sheetBody").innerHTML = ""; });
+// Si la hoja se ha vuelto a abrir con otro contenido (p. ej. del menú a «Editar»), no se borra.
+sheet.addEventListener("close", () => { if (sheet.open) return; stopScan(); $("sheetBody").innerHTML = ""; });
 
 async function openPicker(id, query) {
   const l = list();
@@ -300,24 +348,40 @@ async function openPicker(id, query) {
   $("pickQ").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); openPicker(id, e.target.value); } };
 }
 
-function openQty(id) {
+// Editar un producto: el texto (por si el dictado se equivoca) y la cantidad.
+function openEdit(id, focusName = true) {
   const it = list().items.find((i) => i.id === id);
   if (!it) return;
-  openSheet(`Cantidad de ${it.label}`, `<div class="row"><button class="round" type="button" id="qMinus" aria-label="Menos">−</button>
+  openSheet("Editar producto", `<label class="field">Nombre<input id="eName" value="${esc(it.label)}" enterkeyhint="done" autocomplete="off" autocapitalize="sentences"></label>
+    <div class="row"><span class="note" style="flex:1">Cantidad</span><button class="round" type="button" id="qMinus" aria-label="Menos">−</button>
       <strong id="qCount" style="font-size:1.6rem;min-width:2ch;text-align:center">${it.count || 1}</strong>
       <button class="round" type="button" id="qPlus" aria-label="Más">+</button></div>
-    <label class="field">O escribe la cantidad (por ejemplo «2 kg» o «pack de 6»)<input id="qText" value="${esc(it.qty)}"></label>
+    <label class="field">O escribe la cantidad (por ejemplo «2 kg» o «pack de 6»)<input id="qText" value="${esc(it.qty)}" autocomplete="off"></label>
     <div class="row"><button class="btn" type="button" id="qSave">Guardar</button>
     <button class="btn danger" type="button" id="qDel">Quitar de la lista</button></div>`);
+  // El foco en el mismo toque hace que el móvil abra el teclado.
+  if (focusName) { const n = $("eName"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
   let c = it.count || 1;
   const upd = (d) => { c = Math.max(1, c + d); $("qCount").textContent = c; $("qText").value = String(c); };
   $("qMinus").onclick = () => upd(-1);
   $("qPlus").onclick = () => upd(1);
-  $("qSave").onclick = () => {
+  const doSave = async () => {
     const t = $("qText").value.trim();
     it.qty = t; it.count = /^\d+$/.test(t) ? +t : c;
-    save(); render(); closeSheet();
+    const name = capital($("eName").value.trim());
+    closeSheet();
+    if (name && name !== it.label) {
+      // Nuevo nombre: nuevo dibujo y el producto que mejor encaje en el súper.
+      it.label = name; it.emoji = guess(name).emoji;
+      const cat = await catalogFor(list().store);
+      it.prod = st.memory[memKey(name, list().store)] ?? bestProd(cat, name);
+      it.cat = it.prod?.c ?? guess(name).cat;
+      fresh.add(it.id);
+    }
+    save(); render();
   };
+  $("qSave").onclick = doSave;
+  $("eName").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); doSave(); } };
   $("qDel").onclick = () => { closeSheet(); removeItem(it.id); };
 }
 
@@ -468,22 +532,54 @@ document.addEventListener("visibilitychange", keepAwake);
 // ---------- Voz ----------
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;
+// Dictado seguido: cada frase se apunta al momento y se sigue escuchando hasta tocar otra vez el micro
+// o hasta unos segundos de silencio. Así se pueden dictar muchos productos de una vez.
+let voice = null;
 function startVoice() {
   const mic = $("micBtn");
   if (!SR) return dictHint();
-  try {
-    rec = new SR();
-    rec.lang = "es-ES"; rec.interimResults = true; rec.maxAlternatives = 1;
-    let finalT = "";
-    rec.onresult = (e) => {
-      let t = ""; for (const r of e.results) t += r[0].transcript;
-      $("q").value = t;
-      if (e.results[e.results.length - 1].isFinal) finalT = t;
-    };
-    rec.onerror = (e) => { mic.classList.remove("rec"); if (e.error !== "no-speech" && e.error !== "aborted") dictHint(); };
-    rec.onend = () => { mic.classList.remove("rec"); const t = finalT || $("q").value; $("q").value = ""; if (t.trim()) handle(t); };
-    rec.start(); mic.classList.add("rec"); setStatus("Te escucho…");
-  } catch { dictHint(); }
+  voice = { on: true, last: Date.now(), prev: "", count: 0, queue: Promise.resolve() };
+  const v = voice;
+  const stop = () => { v.on = false; try { rec?.stop(); } catch {} };
+  v.stop = stop;
+  const listen = () => {
+    try {
+      rec = new SR();
+      rec.lang = "es-ES"; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
+      rec.onresult = (e) => {
+        v.last = Date.now();
+        let interim = "";
+        for (let k = e.resultIndex; k < e.results.length; k++) {
+          const r = e.results[k], t = r[0].transcript;
+          if (!r.isFinal) { interim += t; continue; }
+          // Algunos Android repiten lo ya dicho al principio de cada frase: se quita.
+          let nuevo = t.trim();
+          if (v.prev && norm(nuevo).startsWith(norm(v.prev))) nuevo = nuevo.slice(v.prev.length).trim();
+          v.prev = t.trim();
+          if (!nuevo) continue;
+          v.queue = v.queue.then(() => handle(nuevo, { quiet: true })).then((added) => {
+            v.count += added?.length ?? 0;
+            if (v.on) setStatus(`Te escucho… ${v.count} apuntado${v.count === 1 ? "" : "s"}. Toca el micro para terminar.`);
+          });
+        }
+        $("q").value = interim;
+      };
+      rec.onerror = (e) => {
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") { v.on = false; dictHint(); }
+      };
+      rec.onend = () => {
+        $("q").value = "";
+        // Chrome corta tras un silencio: si seguimos en modo dictado, vuelve a escuchar.
+        if (v.on && Date.now() - v.last < 12000) { v.prev = ""; return listen(); }
+        v.on = false; mic.classList.remove("rec");
+        v.queue.then(() => setStatus(v.count ? `Listo: ${v.count} producto${v.count === 1 ? "" : "s"} apuntado${v.count === 1 ? "" : "s"}.` : "No te he oído. Toca el micro y prueba otra vez."));
+      };
+      rec.start();
+    } catch { v.on = false; mic.classList.remove("rec"); dictHint(); }
+  };
+  mic.classList.add("rec");
+  setStatus("Te escucho… di todos los productos que quieras. Toca el micro para terminar.");
+  listen();
 }
 function dictHint() {
   setStatus("Tu móvil no deja usar el micro aquí. Toca el cuadro de texto y usa el micrófono del teclado.", true);
@@ -537,7 +633,7 @@ $("bar").addEventListener("submit", (e) => {
   if (!v.trim()) return openBrowse(); // «+» sin texto: abrir el catálogo para marcar productos
   $("q").value = ""; handle(v);
 });
-$("micBtn").addEventListener("click", () => { if (rec && $("micBtn").classList.contains("rec")) { rec.stop(); return; } startVoice(); });
+$("micBtn").addEventListener("click", () => { if (voice?.on) { voice.stop(); return; } startVoice(); });
 $("scanBtn").addEventListener("click", openScan);
 $("listBtn").addEventListener("click", openLists);
 $("histBtn").addEventListener("click", openHistory);
@@ -565,7 +661,7 @@ $("list").addEventListener("click", (e) => {
   const tryB = t.closest("[data-try]"); if (tryB) return handle(tryB.dataset.try);
   if (t.closest("[data-browse]")) return openBrowse();
   const pk = t.closest("[data-pick]"); if (pk) return openPicker(pk.dataset.pick);
-  const q = t.closest("[data-qty]"); if (q) return openQty(q.dataset.qty);
+  const q = t.closest("[data-qty]"); if (q) return openEdit(q.dataset.qty, false);
   const li = t.closest("li.item"); if (!li) return;
   toggleItem(li.dataset.id);
 });
@@ -638,6 +734,7 @@ function openOptions(id) {
     </figure>
     <div class="menu">
     <button type="button" data-o="done">${it.done ? "Marcar como pendiente" : "Marcar como comprado"}</button>
+    <button type="button" data-o="edit">Editar texto</button>
     <button type="button" data-o="pick">Cambiar producto</button>
     <button type="button" data-o="qty">Cambiar cantidad</button>
     <button type="button" data-o="dup">Duplicar</button>
@@ -647,7 +744,8 @@ function openOptions(id) {
     closeSheet();
     if (o === "done") toggleItem(id);
     else if (o === "pick") openPicker(id);
-    else if (o === "qty") openQty(id);
+    else if (o === "edit") openEdit(id);
+    else if (o === "qty") openEdit(id, false);
     else if (o === "del") removeItem(id);
     else if (o === "dup") { const c = { ...structuredClone(it), id: uid(), done: false, added: Date.now() }; list().items.push(c); fresh.add(c.id); save(); render(); }
   };

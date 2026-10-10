@@ -248,3 +248,15 @@ input,textarea{-webkit-touch-callout:default;-webkit-user-select:text;user-selec
 .hero figcaption{font-size:.72rem;color:var(--muted);overflow-wrap:anywhere}
 .hero figcaption a{color:inherit}
 .cdetail>*,.clist>*,.pgrid>*{flex:none}
+
+/* Tarjeta que confirma lo añadido: aparece arriba y baja hasta su sitio en la lista */
+.fly{position:fixed;z-index:30;top:calc(env(safe-area-inset-top,0px) + 14px);left:max(16px,calc(50% - 284px));width:min(568px,calc(100vw - 32px));
+  display:flex;align-items:center;gap:12px;padding:9px 12px 9px 10px;background:var(--surface);color:var(--fg);border:2px solid var(--accent);border-radius:16px;
+  box-shadow:0 14px 40px rgb(0 0 0 / .22);transform-origin:top left;pointer-events:none;opacity:0}
+.fly .thumb{cursor:default}
+.fly-ok{flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.fly-ok svg{width:16px;height:16px}
+li.item.incoming{opacity:0}
+li.item.landed .row-in{animation:landed .7s ease}
+@keyframes landed{from{background:var(--accent-soft)}to{background:var(--surface)}}
+@media (prefers-reduced-motion:reduce){li.item.landed .row-in{animation:none}}
