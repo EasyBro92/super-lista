@@ -934,5 +934,17 @@
   "autor": "USDAgov",
   "licencia": "Public domain",
   "fuente": "https://commons.wikimedia.org/wiki/File:Pollinator_Festival_at_USDA_Farmer%27s_Market_and_Night_Farmers_Market)_(20160624-AMS-LSC-0644).jpg"
+ },
+ "Pan con chocolate": {
+  "img": "img/recetas/pan-con-chocolate.jpg",
+  "autor": "pika1935",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:%E3%83%AD%E3%82%A4%E3%82%BA%E3%83%81%E3%83%A7%E3%82%B3_%E3%83%91%E3%83%B3_(22053777770).jpg"
+ },
+ "Rosquillas de anís": {
+  "img": "img/recetas/rosquillas-de-anis.jpg",
+  "autor": "Tamorlan",
+  "licencia": "CC BY 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Rosquillas_panaderas.jpg"
  }
 }
