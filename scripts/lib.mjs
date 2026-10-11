@@ -52,6 +52,7 @@ const RULES = [
 // Prueba primero el texto más específico (la última categoría) y va subiendo.
 export function catFor(...texts) {
   const parts = texts.flat().filter(Boolean).map((t) => norm(t).replace(/plant-based-foods-and-beverages|en:/g, " "));
+  if (parts.some((t) => RULES[0][0].test(t))) return RULES[0][1]; // un huevo Kinder no va con los huevos
   for (const t of parts.reverse()) for (const [re, c] of RULES) if (re.test(t)) return c;
   return "Otros";
 }
