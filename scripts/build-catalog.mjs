@@ -15,7 +15,14 @@ const STORES = {
 };
 for (const s of Object.keys(OFF_STORES)) Object.assign(STORES[s], { source: "Open Food Facts", prices: false, fetch: () => fetchOffStore(s) });
 // Súpers cuya tienda online deja consultar precios; si un día fallan, se usa Open Food Facts (sin precios).
-const withOff = (s, fetch) => async () => { try { return await fetch(); } catch (e) { console.error(`✗ ${STORES[s].name} (precios): ${e.message}`); STORES[s].source = "Open Food Facts"; STORES[s].prices = false; return fetchOffStore(s); } };
+// Si el buscador da pocos productos, se completa con los de Open Food Facts (sin precio), detrás de los que sí lo tienen.
+const withOff = (s, fetch) => async () => { try {
+  const items = await fetch();
+  if (items.length >= 1500) return items;
+  const have = new Set(items.map((p) => p.n.toLowerCase()));
+  const off = (await fetchOffStore(s).catch(() => [])).filter((p) => !have.has(p.n.toLowerCase()));
+  return [...items, ...off.map((p) => ({ ...p, r: p.r + items.length }))];
+} catch (e) { console.error(`✗ ${STORES[s].name} (precios): ${e.message}`); STORES[s].source = "Open Food Facts"; STORES[s].prices = false; return fetchOffStore(s); } };
 Object.assign(STORES.consum, { source: "Tienda online de Consum", prices: true, fetch: withOff("consum", fetchConsum) });
 Object.assign(STORES.dia, { source: "Buscador de la tienda online de Dia", prices: true, fetch: withOff("dia", fetchDia) });
 Object.assign(STORES.alcampo, { source: "Buscador de la tienda online de Alcampo", prices: true, fetch: withOff("alcampo", fetchAlcampo) });

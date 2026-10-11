@@ -10,18 +10,21 @@ const UNITS = { litre: "L", kg: "kg", kilogram: "kg", each: "ud", unit: "ud", "1
 const eur = (n) => String(Math.round(+n * 100) / 100).replace(".", ",");
 const fmtOf = (s) => s.match(/(\d+\s*x\s*)?\d+(?:[.,]\d+)?\s*(?:kg|g|gr|l|ml|cl|ud|uds|unidades)\b/i)?.[0] ?? "";
 
+const seenStatus = {};
 async function page(q) {
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     try {
       const r = await fetch(BASE + encodeURIComponent(q), { headers: HEADERS });
-      if (r.status === 429 || r.status >= 500) throw new Error(`HTTP ${r.status}`);
+      seenStatus[r.status] = (seenStatus[r.status] ?? 0) + 1;
+      // Si nos frena (403/429), esperamos un rato y volvemos a probar.
+      if (r.status === 403 || r.status === 429 || r.status >= 500) throw new Error(`HTTP ${r.status}`);
       if (!r.ok) return null;
       const t = await r.text();
       const a = t.indexOf("__INITIAL_STATE__=");
       if (a < 0) return null;
       const b = t.indexOf("</script>", a);
       return JSON.parse(t.slice(a + 18, b).trim().replace(/;$/, ""));
-    } catch (e) { await sleep(3000 * 2 ** i); }
+    } catch (e) { await sleep(15000 * (i + 1)); }
   }
   return null;
 }
@@ -32,7 +35,9 @@ export async function fetchAlcampo() {
   let fails = 0;
   for (const t of await terminos()) {
     const d = await page(t);
-    if (!d) { if (++fails > 25 && !out.length) throw new Error("no responde"); continue; }
+    // Si deja de responder muchas veces seguidas, paramos con lo que haya.
+    if (!d) { if (++fails > 8) break; continue; }
+    fails = 0;
     for (const p of Object.values(d.data?.products?.productEntities ?? {})) {
       if (!p?.retailerProductId || seen.has(p.retailerProductId)) continue;
       seen.add(p.retailerProductId);
@@ -51,8 +56,9 @@ export async function fetchAlcampo() {
         rank: out.length,
       }));
     }
-    await sleep(500);
+    await sleep(2500);
   }
+  console.log(`::notice title=Alcampo::${out.length} productos; respuestas ${JSON.stringify(seenStatus)}`);
   return out;
 }
 
