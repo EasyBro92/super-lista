@@ -946,5 +946,209 @@
   "autor": "Tamorlan",
   "licencia": "CC BY 3.0",
   "fuente": "https://commons.wikimedia.org/wiki/File:Rosquillas_panaderas.jpg"
+ },
+ "Ramen de pollo": {
+  "img": "img/recetas/ramen-de-pollo.jpg",
+  "autor": "Lusheeta at Japanese Wikipedia",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Soy_ramen.jpg"
+ },
+ "Makis de salmón y aguacate": {
+  "img": "img/recetas/makis-de-salmon-y-aguacate.jpg",
+  "autor": "Phengphian Laogumnerd Cuisine",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Fresh_and_delicious_maki_roll_from_Phengphian_Laogumnerd_Cuisine.jpg"
+ },
+ "Pollo katsu con curry japonés": {
+  "img": "img/recetas/pollo-katsu-con-curry-japones.jpg",
+  "autor": "Ocdp",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Katsu-curry_003.jpg"
+ },
+ "Onigiris de atún": {
+  "img": "img/recetas/onigiris-de-atun.jpg",
+  "autor": "Ocdp",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Onigiri_002.jpg"
+ },
+ "Bibimbap": {
+  "img": "img/recetas/bibimbap.jpg",
+  "autor": "abex (a flickr user)",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Korean.food-Bibimbap-02.jpg"
+ },
+ "Arroz frito con kimchi": {
+  "img": "img/recetas/arroz-frito-con-kimchi.jpg",
+  "autor": "Sharon Ang",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Kimchi_fried_rice.jpg"
+ },
+ "Pho de ternera": {
+  "img": "img/recetas/pho-de-ternera.jpg",
+  "autor": "Andy Li",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Pho_Bo_by_Banh_%26_Mee_in_Kirkgate_Market.jpg"
+ },
+ "Rollitos vietnamitas de papel de arroz con gambas": {
+  "img": "img/recetas/rollitos-vietnamitas-de-papel-de-arroz-con-gambas.jpg",
+  "autor": "Desconocido",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Summer_roll.jpg"
+ },
+ "Curry verde tailandés de pollo": {
+  "img": "img/recetas/curry-verde-tailandes-de-pollo.jpg",
+  "autor": "Acabashi",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Thai_green_chicken_curry_at_Highgate_Cricket_Club,_Crouch_End,_London_1.jpg"
+ },
+ "Pollo con anacardos": {
+  "img": "img/recetas/pollo-con-anacardos.jpg",
+  "autor": "Jaysin Trevino from Evanston, IL, US",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Cashew_Chicken_(6078860960).jpg"
+ },
+ "Pollo tikka masala": {
+  "img": "img/recetas/pollo-tikka-masala.jpg",
+  "autor": "Kelly Sue",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Chicken_Tikka_Masala_KellySue.JPG"
+ },
+ "Dal de lentejas rojas": {
+  "img": "img/recetas/dal-de-lentejas-rojas.jpg",
+  "autor": "Solehachikhalkar",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Masoor_Dal_in_Dhaba_Style.jpg"
+ },
+ "Nasi goreng": {
+  "img": "img/recetas/nasi-goreng.jpg",
+  "autor": "Siliconprophet",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Nasi_goreng_at_warung_garasi_ubud_bali.jpg"
+ },
+ "Pollo kung pao": {
+  "img": "img/recetas/pollo-kung-pao.jpg",
+  "autor": "John Thompson from Iqaluit",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:May%27s_Garden_Restaurant,_Ottawa_-_Kung_Pao_Chicken_(6454330343).jpg"
+ },
+ "Mapo tofu": {
+  "img": "img/recetas/mapo-tofu.jpg",
+  "autor": "Rezwalker",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Homemade_Mapo_doufu.jpg"
+ },
+ "Pollo adobo filipino": {
+  "img": "img/recetas/pollo-adobo-filipino.jpg",
+  "autor": "dbgg1979 on flickr",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Chicken_adobo.jpg"
+ },
+ "Tacos al pastor": {
+  "img": "img/recetas/tacos-al-pastor.jpg",
+  "autor": "T.Tseng",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Tacos_al_pastor,_taco_de_panza.jpg"
+ },
+ "Chilaquiles rojos con huevo": {
+  "img": "img/recetas/chilaquiles-rojos-con-huevo.jpg",
+  "autor": "Chris Woodrich",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Chilaquiles_at_the_Grand_Cantina,_Windsor,_Ontario,_2025-09-01_03.jpg"
+ },
+ "Ceviche peruano": {
+  "img": "img/recetas/ceviche-peruano.jpg",
+  "autor": "No machine-readable author provided. Manuel González Olaechea assumed (based on ",
+  "licencia": "CC BY 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Ceviche_del_Per%C3%BA.jpg"
+ },
+ "Lomo saltado": {
+  "img": "img/recetas/lomo-saltado.jpg",
+  "autor": "WikiHes",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Lomo-saltado-perudelights.jpg"
+ },
+ "Arepas de reina pepiada": {
+  "img": "img/recetas/arepas-de-reina-pepiada.jpg",
+  "autor": "Mitdralla",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Arepa-reina-pepiada-arepasdelgringo.jpg"
+ },
+ "Empanadas argentinas de carne": {
+  "img": "img/recetas/empanadas-argentinas-de-carne.jpg",
+  "autor": "Horacio Cambeiro",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Empanadas_argentinas_fritas_de_pollo_(Argentina).jpg"
+ },
+ "Feijoada": {
+  "img": "img/recetas/feijoada.jpg",
+  "autor": "Bradleyzm",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Feijoada_%C3%A0_brasileira_-02.jpg"
+ },
+ "Pão de queijo": {
+  "img": "img/recetas/pao-de-queijo.jpg",
+  "autor": "Murilo manzini",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Cheesebread.jpg"
+ },
+ "Pollo jerk": {
+  "img": "img/recetas/pollo-jerk.jpg",
+  "autor": "stu_spivack",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Jerk_chicken_plate.jpg"
+ },
+ "Tajine de pollo con limón y aceitunas": {
+  "img": "img/recetas/tajine-de-pollo-con-limon-y-aceitunas.jpg",
+  "autor": "Foodista",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Moroccan_food-Chicken_tagine_with_preserved_lemons_and_olives-01.jpg"
+ },
+ "Harira": {
+  "img": "img/recetas/harira.jpg",
+  "autor": "إيان",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:%D8%AD%D8%B1%D9%8A%D8%B1%D8%A9.jpg"
+ },
+ "Mafé de pollo con cacahuete": {
+  "img": "img/recetas/mafe-de-pollo-con-cacahuete.jpg",
+  "autor": "A Healthier Michigan from Detroit, United States",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:African_Chicken_Peanut_Stew_(37673757141).jpg"
+ },
+ "Falafel con salsa de yogur": {
+  "img": "img/recetas/falafel-con-salsa-de-yogur.jpg",
+  "autor": "Redboston",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Falafel_serving.jpg"
+ },
+ "Tabulé": {
+  "img": "img/recetas/tabule.jpg",
+  "autor": "cyclonebill",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Flickr_-_cyclonebill_-_Tabbouleh.jpg"
+ },
+ "Musaka griega": {
+  "img": "img/recetas/musaka-griega.jpg",
+  "autor": "Robert Kindermann aka RobertK",
+  "licencia": "CC BY-SA 2.5",
+  "fuente": "https://commons.wikimedia.org/wiki/File:MussakasMeMelitsanesKePatates01.JPG"
+ },
+ "Menemen": {
+  "img": "img/recetas/menemen.jpg",
+  "autor": "やましこ",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Menemen_(49657982813).jpg"
+ },
+ "Kofta de cordero": {
+  "img": "img/recetas/kofta-de-cordero.jpg",
+  "autor": "Foodista",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:K%C3%B6fte_kebabs.jpg"
+ },
+ "Baba ganoush": {
+  "img": "img/recetas/baba-ganoush.jpg",
+  "autor": "Breville USA",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Baba_Ganoush_05of05_(8735238183).jpg"
  }
 }
