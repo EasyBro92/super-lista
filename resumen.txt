@@ -1,0 +1,9 @@
+consumall: 200 5172b {"totalCount":9179,"totalRecipeCount":0,"hasMore":true,"products":[{"id":4667,"productType":1,"code":"1669","ean":"84232
+alcampo: 200 1543768b <!doctype html> <html lang="es-ES" dir="ltr" data-theme="light"> <head> <meta http-equiv="X-UA-Compatible" c
+alcampo3: 404 9b Not Found
+aldi: 200 139132b <!DOCTYPE html><html lang="es"><head><meta charSet="utf-8" data-next-head=""/><meta name="viewport" content="width=devic
+aldi2: 404 66214b <!DOCTYPE html><html lang="es"><head><meta charSet="utf-8" data-next-head=""/><meta name="viewport" content="width=devic
+eci: 200 6525715b <!DOCTYPE html> <html lang="es_ES"><head> <link rel="preconnect" href="https://cdn.grupoelcorteingles.es/statics/fr
+carrefour: 403 5489b <!DOCTYPE html> <!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en-US"> <![endif]--> <!--[if IE 7]> <html class
+eroski: 403 134b <!doctype html><meta charset="utf-8"><meta name=viewport content="width=device-width, initial-scale=1"><title>403</title
+diacat: 200 24847b {"cart":{"postal_code":"28041","total_amount":0,"total_units":0},"facets":[{"field":"bio","field_name":"BIO","filters":[
