@@ -922,5 +922,17 @@
   "autor": "Shisma",
   "licencia": "CC BY 4.0",
   "fuente": "https://commons.wikimedia.org/wiki/File:Banana_bread_slices.jpg"
+ },
+ "Pudin de chía con mango": {
+  "img": "img/recetas/pudin-de-chia-con-mango.jpg",
+  "autor": "Miscellaneous contributor",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Chia_seed_pudding_in_a_tea_cup.jpg"
+ },
+ "Tostas de queso brie con miel y nueces": {
+  "img": "img/recetas/tostas-de-queso-brie-con-miel-y-nueces.jpg",
+  "autor": "USDAgov",
+  "licencia": "Public domain",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Pollinator_Festival_at_USDA_Farmer%27s_Market_and_Night_Farmers_Market)_(20160624-AMS-LSC-0644).jpg"
  }
 }
