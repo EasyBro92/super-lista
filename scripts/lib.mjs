@@ -55,6 +55,9 @@ export function catFor(...texts) {
   return "Otros";
 }
 
+// «PASCUAL» → «Pascual», «EL POZO» → «El Pozo».
+export const titleCase = (s) => String(s ?? "").toLowerCase().replace(/(^|[\s\-'(])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+
 export async function writeJSON(path, data) {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, JSON.stringify(data));

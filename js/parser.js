@@ -87,6 +87,7 @@ export function score(it, qt, prefCat) {
   s -= it._t.length * 0.25;
   s -= it.r * 0.0004;
   if (it.img) s += 0.5;
+  if (it.p != null) s += 0.6; // con precio, mejor
   return s;
 }
 

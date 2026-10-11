@@ -1,6 +1,6 @@
 // Productos y precios de Alcampo desde las páginas de búsqueda de su tienda online
 // (cada página trae los productos en un JSON dentro del HTML: window.__INITIAL_STATE__).
-import { sleep, catFor, product, writeJSON } from "./lib.mjs";
+import { sleep, catFor, product, writeJSON, titleCase, norm } from "./lib.mjs";
 import { guess } from "../js/parser.js";
 import { terminos } from "./terminos.mjs";
 
@@ -41,9 +41,12 @@ export async function fetchAlcampo() {
     for (const p of Object.values(d.data?.products?.productEntities ?? {})) {
       if (!p?.retailerProductId || seen.has(p.retailerProductId)) continue;
       seen.add(p.retailerProductId);
-      const name = (p.name ?? "").replace(/\s*Producto Alcampo\.?$/i, "").replace(/\.$/, "").trim();
+      let name = (p.name ?? "").replace(/\s*Producto Alcampo\.?$/i, "").replace(/\.$/, "").trim();
+      // «AUCHAN Leche semidesnatada» → «Leche semidesnatada Auchan»
+      const lead = name.match(/^((?:[A-ZÁÉÍÓÚÑÜ0-9&'.-]{2,}\s+)+)(?=\p{Lu}?\p{Ll})/u)?.[1];
+      if (lead) name = `${name.slice(lead.length)} ${titleCase(lead.trim())}`;
       const unitKey = (p.price?.unit?.label ?? "").replace(/^fop\.price\.per\./, "");
-      let cat = catFor(p.categoryPath ?? [], name);
+      let cat = catFor(name, p.categoryPath ?? []);
       if (cat === "Otros") cat = guess(name).cat;
       out.push(product({
         name,

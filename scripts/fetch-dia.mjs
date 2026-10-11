@@ -22,7 +22,7 @@ export async function fetchDia() {
         seen.add(p.object_id);
         const name = p.display_name ?? "";
         const pr = p.prices ?? {};
-        let cat = catFor(p.l1_category_description, p.l2_category_description, name);
+        let cat = catFor(name, p.l1_category_description, p.l2_category_description);
         if (cat === "Otros") cat = guess(name).cat;
         out.push(product({
           name,
