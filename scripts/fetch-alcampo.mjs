@@ -1,5 +1,6 @@
 // Productos y precios de Alcampo desde las páginas de búsqueda de su tienda online
 // (cada página trae los productos en un JSON dentro del HTML: window.__INITIAL_STATE__).
+import { readFile } from "node:fs/promises";
 import { sleep, catFor, product, writeJSON, titleCase, norm } from "./lib.mjs";
 import { guess } from "../js/parser.js";
 import { terminos } from "./terminos.mjs";
@@ -11,6 +12,14 @@ const eur = (n) => String(Math.round(+n * 100) / 100).replace(".", ",");
 const fmtOf = (s) => s.match(/(\d+\s*x\s*)?\d+(?:[.,]\d+)?\s*(?:kg|g|gr|l|ml|cl|ud|uds|unidades)\b/i)?.[0] ?? "";
 
 const seenStatus = {};
+// «AUCHAN Leche semidesnatada Producto Alcampo.» → «Leche semidesnatada Auchan»
+function fixName(n) {
+  let name = n.replace(/\s*Producto Alcampo\.?$/i, "").replace(/\.$/, "").trim();
+  const lead = name.match(/^((?:[A-ZÁÉÍÓÚÑÜ0-9&'.-]{2,}\s+)+)(?=\p{Lu}?\p{Ll})/u)?.[1];
+  if (lead) name = `${name.slice(lead.length)} ${titleCase(lead.trim())}`;
+  return name;
+}
+
 async function page(q) {
   for (let i = 0; i < 2; i++) {
     try {
@@ -33,7 +42,11 @@ export async function fetchAlcampo() {
   const out = [];
   const seen = new Set();
   let fails = 0;
-  for (const t of await terminos()) {
+  // Alcampo corta tras unas pocas búsquedas seguidas: cada noche se empieza por otra parte de la lista
+  // y se guardan también los productos con precio de noches anteriores.
+  const all = await terminos();
+  const start = (Math.floor(Date.now() / 864e5) * 6) % all.length;
+  for (const t of [...all.slice(start), ...all.slice(0, start)]) {
     const d = await page(t);
     // Si deja de responder muchas veces seguidas, paramos con lo que haya.
     if (!d) { if (++fails > 8) break; continue; }
@@ -41,10 +54,7 @@ export async function fetchAlcampo() {
     for (const p of Object.values(d.data?.products?.productEntities ?? {})) {
       if (!p?.retailerProductId || seen.has(p.retailerProductId)) continue;
       seen.add(p.retailerProductId);
-      let name = (p.name ?? "").replace(/\s*Producto Alcampo\.?$/i, "").replace(/\.$/, "").trim();
-      // «AUCHAN Leche semidesnatada» → «Leche semidesnatada Auchan»
-      const lead = name.match(/^((?:[A-ZÁÉÍÓÚÑÜ0-9&'.-]{2,}\s+)+)(?=\p{Lu}?\p{Ll})/u)?.[1];
-      if (lead) name = `${name.slice(lead.length)} ${titleCase(lead.trim())}`;
+      const name = fixName(p.name ?? "");
       const unitKey = (p.price?.unit?.label ?? "").replace(/^fop\.price\.per\./, "");
       let cat = catFor(name, p.categoryPath ?? []);
       if (cat === "Otros") cat = guess(name).cat;
@@ -61,7 +71,16 @@ export async function fetchAlcampo() {
     }
     await sleep(2500);
   }
-  console.log(`::notice title=Alcampo::${out.length} productos; respuestas ${JSON.stringify(seenStatus)}`);
+  const nuevos = out.length;
+  try {
+    const prev = JSON.parse(await readFile("data/stores/alcampo.json", "utf8"));
+    const have = new Set(out.map((p) => p.n.toLowerCase()));
+    for (const p of prev) {
+      const n = fixName(p.n);
+      if (p.p != null && !have.has(n.toLowerCase())) { have.add(n.toLowerCase()); out.push({ ...p, n, r: out.length }); }
+    }
+  } catch {}
+  console.log(`::notice title=Alcampo::${nuevos} productos nuevos, ${out.length} con precio en total; respuestas ${JSON.stringify(seenStatus)}`);
   return out;
 }
 
