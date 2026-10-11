@@ -3,6 +3,9 @@
 import { readFile } from "node:fs/promises";
 import { fetchMercadona } from "./fetch-mercadona.mjs";
 import { fetchOffStore, OFF_STORES } from "./fetch-off.mjs";
+import { fetchConsum } from "./fetch-consum.mjs";
+import { fetchDia } from "./fetch-dia.mjs";
+import { fetchAlcampo } from "./fetch-alcampo.mjs";
 import { writeJSON } from "./lib.mjs";
 
 const STORES = {
@@ -11,6 +14,11 @@ const STORES = {
   eroski: { name: "Eroski" }, aldi: { name: "Aldi" }, consum: { name: "Consum" }, elcorteingles: { name: "El Corte Inglés" },
 };
 for (const s of Object.keys(OFF_STORES)) Object.assign(STORES[s], { source: "Open Food Facts", prices: false, fetch: () => fetchOffStore(s) });
+// Súpers cuya tienda online deja consultar precios; si un día fallan, se usa Open Food Facts (sin precios).
+const withOff = (s, fetch) => async () => { try { return await fetch(); } catch (e) { console.error(`✗ ${STORES[s].name} (precios): ${e.message}`); STORES[s].source = "Open Food Facts"; STORES[s].prices = false; return fetchOffStore(s); } };
+Object.assign(STORES.consum, { source: "Tienda online de Consum", prices: true, fetch: withOff("consum", fetchConsum) });
+Object.assign(STORES.dia, { source: "Buscador de la tienda online de Dia", prices: true, fetch: withOff("dia", fetchDia) });
+Object.assign(STORES.alcampo, { source: "Buscador de la tienda online de Alcampo", prices: true, fetch: withOff("alcampo", fetchAlcampo) });
 
 const only = process.argv.slice(2);
 let meta = { stores: {} };
@@ -18,10 +26,11 @@ try { meta = JSON.parse(await readFile("data/meta.json", "utf8")); } catch {}
 
 for (const [slug, s] of Object.entries(STORES)) {
   const prev = meta.stores[slug] ?? {};
-  meta.stores[slug] = { name: s.name, source: s.source, prices: s.prices, count: prev.count ?? 0, updated: prev.updated ?? null };
+  meta.stores[slug] = { name: s.name, source: prev.source ?? s.source, prices: prev.prices ?? s.prices, count: prev.count ?? 0, updated: prev.updated ?? null };
   if (only.length && !only.includes(slug)) continue;
   try {
     const items = await s.fetch();
+    Object.assign(meta.stores[slug], { source: s.source, prices: s.prices });
     if (items.length < 20) throw new Error(`solo ${items.length} productos`);
     await writeJSON(`data/stores/${slug}.json`, items);
     meta.stores[slug].count = items.length;
