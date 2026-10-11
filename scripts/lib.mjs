@@ -33,6 +33,7 @@ export const CATS = [
 ];
 
 const RULES = [
+  [/huevos? (de )?chocolate|con sorpresa|kinder|gominola|chuche/, "Dulces y desayuno"],
   [/fruta|verdura|hortaliz|fresh-vegetables|fruits|vegetables|legumes-and-their-products(?!.*canned)|ensalada/, "Frutas y verduras"],
   [/marisco|pescado|fish|seafood|atun fresco/, "Pescado"],
   [/charcuteria|queso|cheese|embutido|jamon|sausage|ham|cured/, "Charcutería y quesos"],

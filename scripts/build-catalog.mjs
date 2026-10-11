@@ -39,6 +39,8 @@ for (const [slug, s] of Object.entries(STORES)) {
     const items = await s.fetch();
     Object.assign(meta.stores[slug], { source: s.source, prices: s.prices });
     if (items.length < 20) throw new Error(`solo ${items.length} productos`);
+    // Open Food Facts a veces responde a medias: si sale menos de la mitad que la última vez, se conserva lo anterior.
+    if (prev.count && items.length < prev.count / 2) throw new Error(`solo ${items.length} productos (antes ${prev.count})`);
     await writeJSON(`data/stores/${slug}.json`, items);
     meta.stores[slug].count = items.length;
     meta.stores[slug].updated = new Date().toISOString();

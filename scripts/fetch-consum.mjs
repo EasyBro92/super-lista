@@ -31,7 +31,7 @@ export async function fetchConsum() {
         img: pd.imageURL ?? "",
         cat,
         ean: p.ean ?? "",
-        rank: out.length,
+        rank: 0, // el orden de Consum no es de popularidad
       }));
     }
     if (!d.hasMore || !d.products?.length) break;
