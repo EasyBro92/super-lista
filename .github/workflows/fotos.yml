@@ -48,6 +48,19 @@ jobs:
           git commit -qm "Fotos candidatas para las recetas"
           git push -f origin fotos-candidatas
           echo "::notice title=Resultado::$(ls *.jpg | wc -l) fotos candidatas"
+      - name: Comprimir las fotos nuevas
+        if: steps.modo.outputs.modo == 'final'
+        run: |
+          pip install -q pillow
+          python3 - <<'PY'
+          from PIL import Image
+          import os
+          for f in filter(None, open("out-nuevas.txt").read().split("\n")):
+              im = Image.open(f).convert("RGB")
+              if im.width > 640: im = im.resize((640, round(im.height * 640 / im.width)), Image.LANCZOS)
+              im.save(f, "JPEG", quality=74, optimize=True, progressive=True)
+              print(f, os.path.getsize(f) // 1024, "KB")
+          PY
       - name: Guardar fotos elegidas
         if: steps.modo.outputs.modo == 'final'
         run: |

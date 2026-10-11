@@ -275,3 +275,17 @@ li.item.landed .row-in{animation:landed .7s ease}
 .idea-m{font-size:.75rem;color:var(--muted)}
 .idea-m.ok{color:var(--accent);font-weight:700}
 body.shop .ideas{display:none}
+
+/* Recetas por momento del día */
+.moments{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;flex:none;margin-inline:-6px}
+.moments button{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid transparent;border-radius:14px;background:none;padding:7px 0 6px;cursor:pointer;color:var(--muted);min-width:0}
+.mo-e{font-size:1.45rem;line-height:1;transition:transform .2s}
+.mo-n{font:700 .69rem var(--body);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.moments button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+.moments button[aria-pressed="true"] .mo-e{transform:scale(1.12)}
+.chip.sub{font-weight:700}
+@media (max-width:370px){.mo-n{font-size:.62rem}.mo-e{font-size:1.3rem}}
+.chip-sep{flex:none;width:1px;align-self:stretch;margin:4px 4px;background:var(--line)}
+.ideas-mo{align-self:flex-start;border:1px solid var(--line);background:var(--accent-soft);color:var(--fg);border-radius:999px;padding:5px 12px;font:600 .82rem var(--body);cursor:pointer;margin-top:-4px}
+.rmo{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+.mo-tag{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:3px 10px;font:600 .78rem var(--body);cursor:pointer}

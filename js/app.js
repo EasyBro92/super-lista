@@ -64,6 +64,8 @@ const ALIAS = {
   "cuscus": "cous cous", "fideos de arroz": "noodles de arroz", "nueces": "nuez natural pelada", "sesamo": "semillas sesamo",
   "mascarpone": "queso mascarpone", "atun fresco": "rodajas de atun", "hojaldre": "masa fresca hojaldre", "queso crema": "queso untar",
   "hamburguesas": "burger de vacuno", "merluza": "filetes de merluza", "salmon": "filete de salmon",
+  "frutos rojos": "mix frutos rojos", "granola": "muesli crunchy sin azucares", "anis": "licor de anis", "esencia de vainilla": "aroma de vainilla",
+  "pepitas de chocolate": "gotas de chocolate", "queso fresco": "queso fresco burgos",
   "leche de avena": "bebida de avena", "leche de soja": "bebida de soja", "leche de almendras": "bebida de almendras", "leche de arroz": "bebida de arroz",
 };
 markGeneric(Object.values(ALIAS));
@@ -651,7 +653,8 @@ $("histBtn").addEventListener("click", openHistory);
 $("cookBtn").addEventListener("click", () => openRecipes());
 $("ideas").addEventListener("click", (e) => {
   const r = e.target.closest("[data-recipe]"); if (r) return openRecipes(+r.dataset.recipe);
-  if (e.target.closest("[data-cook-all]")) openRecipes();
+  const m = e.target.closest("[data-cook-moment]"); if (m) return openRecipes(null, m.dataset.cookMoment);
+  if (e.target.closest("[data-cook-all]")) openRecipes(null, "Todo");
 });
 initCocina({ st, list, addItem, markGeneric, save, render, setStatus, buzz, esc, openSheet, sheet, CHECK_SVG,
   body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });

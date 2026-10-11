@@ -1,6 +1,7 @@
 // Fotos reales de las recetas desde Wikimedia Commons (licencias libres, con autor).
 //   node tools/fotos-recetas.mjs candidatas  → descarga varias opciones por receta en out/cand para elegir a mano
 //   node tools/fotos-recetas.mjs final       → descarga las elegidas en tools/fotos-eleccion.json a img/recetas
+// Solo trabaja con lo nuevo: candidatas para recetas sin foto elegida y descarga de las que aún no tienen foto.
 import fs from "node:fs/promises";
 
 const UA = "SuperLista/1.0 (https://github.com/EasyBro92/super-lista; lista de la compra)";
@@ -42,7 +43,9 @@ async function pageImage(host, title) {
 }
 
 async function candidatas() {
-  const busq = JSON.parse(await fs.readFile("tools/fotos-busquedas.json", "utf8"));
+  const todas = JSON.parse(await fs.readFile("tools/fotos-busquedas.json", "utf8"));
+  const elegidas = JSON.parse(await fs.readFile("tools/fotos-eleccion.json", "utf8").catch(() => "{}"));
+  const busq = Object.fromEntries(Object.entries(todas).filter(([n]) => !elegidas[n]));
   await fs.mkdir("out/cand", { recursive: true });
   const res = [];
   let i = 0;
@@ -77,8 +80,8 @@ async function candidatas() {
 async function final() {
   const elec = JSON.parse(await fs.readFile("tools/fotos-eleccion.json", "utf8"));
   await fs.mkdir("img/recetas", { recursive: true });
-  const out = {};
-  const names = Object.keys(elec);
+  const out = JSON.parse(await fs.readFile("data/recetas-fotos.json", "utf8").catch(() => "{}"));
+  const names = Object.keys(elec).filter((n) => !out[n]);
   for (let k = 0; k < names.length; k += 20) {
     const part = names.slice(k, k + 20);
     const infos = await filesInfo(part.map((n) => elec[n]), 560);
@@ -95,7 +98,8 @@ async function final() {
     }
   }
   await fs.writeFile("data/recetas-fotos.json", JSON.stringify(out, null, 1));
-  console.log(`${Object.keys(out).length} fotos guardadas`);
+  await fs.writeFile("out-nuevas.txt", names.filter((n) => out[n]).map((n) => out[n].img).join("\n"));
+  console.log(`${names.length} fotos nuevas, ${Object.keys(out).length} en total`);
 }
 
 const modo = process.argv[2];

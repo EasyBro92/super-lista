@@ -3,14 +3,14 @@ import { tokens, guess, norm } from "./parser.js";
 
 // Sección de cada ingrediente, para ordenar «Lo que tengo en casa» como en el súper.
 const SECTIONS = {
-  "Frutas y verduras": "Plátanos, Manzanas, Naranjas, Mandarinas, Limones, Fresas, Uvas, Peras, Melón, Sandía, Aguacates, Tomates, Lechuga, Cebollas, Ajos, Patatas, Zanahorias, Pimientos, Calabacín, Pepino, Brócoli, Champiñones, Espinacas, Berenjenas, Puerros, Calabaza, Coliflor, Judías verdes, Cebolla morada, Tomates cherry, Perejil, Cilantro, Albahaca, Jengibre, Rúcula, Maíz dulce, Limas, Mango, Piña, Arándanos, Repollo",
+  "Frutas y verduras": "Plátanos, Manzanas, Naranjas, Mandarinas, Limones, Fresas, Uvas, Peras, Melón, Sandía, Aguacates, Tomates, Lechuga, Cebollas, Ajos, Patatas, Zanahorias, Pimientos, Calabacín, Pepino, Brócoli, Champiñones, Espinacas, Berenjenas, Puerros, Calabaza, Coliflor, Judías verdes, Cebolla morada, Tomates cherry, Perejil, Cilantro, Albahaca, Jengibre, Rúcula, Maíz dulce, Limas, Mango, Piña, Arándanos, Repollo, Kiwis, Frutos rojos",
   "Carne": "Pechuga de pollo, Muslos de pollo, Pollo entero, Carne picada, Ternera, Filetes de ternera, Lomo de cerdo, Costillas, Hamburguesas, Salchichas, Bacon, Panceta, Cordero, Pavo picado, Alitas de pollo",
-  "Pescado": "Salmón, Merluza, Gambas, Bacalao, Calamares, Mejillones, Atún fresco, Lubina, Dorada, Sepia, Almejas, Langostinos, Surimi",
-  "Charcutería y quesos": "Jamón serrano, Jamón cocido, Pechuga de pavo, Chorizo, Salchichón, Queso en lonchas, Queso curado, Queso fresco, Queso rallado, Mozzarella, Queso parmesano, Queso de cabra, Queso crema, Queso feta, Mascarpone, Morcilla",
+  "Pescado": "Salmón, Merluza, Gambas, Bacalao, Calamares, Mejillones, Atún fresco, Lubina, Dorada, Sepia, Almejas, Langostinos, Surimi, Salmón ahumado",
+  "Charcutería y quesos": "Jamón serrano, Jamón cocido, Pechuga de pavo, Chorizo, Salchichón, Queso en lonchas, Queso curado, Queso fresco, Queso rallado, Mozzarella, Queso parmesano, Queso de cabra, Queso crema, Queso feta, Mascarpone, Morcilla, Queso brie",
   "Lácteos y huevos": "Leche, Huevos, Yogures, Yogur griego, Mantequilla, Nata, Nata para cocinar, Leche de coco, Bebida de avena, Leche condensada",
-  "Panadería": "Pan, Pan de molde, Pan rallado, Pan de hamburguesa, Pan de pita, Tortillas de trigo, Masa de pizza, Hojaldre, Masa de empanadillas, Masa quebrada, Bizcochos de soletilla, Galletas",
-  "Despensa": "Aceite de oliva, Aceite de girasol, Arroz, Arroz basmati, Macarrones, Espaguetis, Fideos, Lasaña, Tallarines, Gnocchi, Tortellini, Cuscús, Quinoa, Garbanzos, Lentejas, Alubias, Tomate frito, Tomate triturado, Atún en lata, Sardinas en lata, Vinagre, Mayonesa, Ketchup, Mostaza, Salsa de soja, Caldo de pollo, Caldo de verduras, Caldo de pescado, Aceitunas, Alcaparras, Pimiento del piquillo, Frutos secos, Nueces, Almendras, Pasas, Hummus, Guacamole, Pesto, Salsa barbacoa, Tahini, Edamame, Fideos de arroz, Salsa de ostras, Vino blanco, Vino tinto, Cerveza",
-  "Especias y repostería": "Sal, Pimienta negra, Pimentón, Comino, Orégano, Laurel, Canela, Curry, Azafrán, Colorante alimentario, Guindilla, Tomillo, Romero, Nuez moscada, Sésamo, Azúcar, Harina, Levadura, Maicena, Gelatina, Azúcar glas, Esencia de vainilla, Coco rallado, Miel, Chocolate, Cacao en polvo, Mermelada, Copos de avena, Cereales, Café",
+  "Panadería": "Pan, Pan de molde, Pan rallado, Pan de hamburguesa, Pan de pita, Tortillas de trigo, Masa de pizza, Hojaldre, Masa de empanadillas, Masa quebrada, Bizcochos de soletilla, Galletas, Croissants, Tortitas de arroz, Nachos",
+  "Despensa": "Aceite de oliva, Aceite de girasol, Arroz, Arroz basmati, Macarrones, Espaguetis, Fideos, Lasaña, Tallarines, Gnocchi, Tortellini, Cuscús, Quinoa, Garbanzos, Lentejas, Alubias, Tomate frito, Tomate triturado, Atún en lata, Sardinas en lata, Vinagre, Mayonesa, Ketchup, Mostaza, Salsa de soja, Caldo de pollo, Caldo de verduras, Caldo de pescado, Aceitunas, Alcaparras, Pimiento del piquillo, Frutos secos, Nueces, Almendras, Pasas, Hummus, Guacamole, Pesto, Salsa barbacoa, Tahini, Edamame, Fideos de arroz, Salsa de ostras, Vino blanco, Vino tinto, Cerveza, Anís, Alubias con tomate, Crema de cacao, Crema de cacahuete",
+  "Especias y repostería": "Sal, Pimienta negra, Pimentón, Comino, Orégano, Laurel, Canela, Curry, Azafrán, Colorante alimentario, Guindilla, Tomillo, Romero, Nuez moscada, Sésamo, Azúcar, Harina, Levadura, Maicena, Gelatina, Azúcar glas, Esencia de vainilla, Coco rallado, Miel, Chocolate, Cacao en polvo, Mermelada, Copos de avena, Cereales, Café, Granola, Semillas de chía, Pepitas de chocolate, Levadura de panadería",
   "Congelados": "Guisantes, Menestra, Patatas congeladas, Croquetas, Varitas de merluza, Pizza, Helado, Gyozas, Verduras para wok",
 };
 const ORDER = [...Object.keys(SECTIONS), "Otros"];
@@ -23,10 +23,38 @@ const sectionOf = (n) => SECTION_OF.get(key(n)) ?? (ORDER.includes(guess(n).cat)
 const STAPLES = ["Sal", "Aceite de oliva", "Pimienta negra", "Azúcar", "Harina"];
 const FILTERS = ["Todas", "Rápidas", "Española", "Vegetariana", "Pasta y arroz", "Legumbres", "Carne", "Pescado", "Ensaladas",
   "Sopas y cremas", "Cenas ligeras", "Desayunos", "Postres", "Internacional", "Para niños", "Freidora de aire", "Con productos del súper"];
+// Momentos del día y, dentro de cada uno, sus tipos (campo «m» de cada receta). Una receta puede estar en varios.
+const MOMENTS = [
+  ["Desayuno", "☕", "Para desayunar", ["Dulce", "Salado", "Saludable", "Batidos y zumos"]],
+  ["Brunch", "🥐", "Para el brunch", ["Huevos", "Tostadas y bocadillos", "Horneados", "Dulce"]],
+  ["Comida", "🍲", "Para comer", ["Arroces", "Pasta", "Legumbres y guisos", "Carne", "Pescado", "Verduras y ensaladas", "Internacional", "Postres"]],
+  ["Merienda", "🧁", "Para merendar", ["Bizcochos y repostería", "Dulce rápido", "Salado", "Fruta y batidos"]],
+  ["Cena", "🌙", "Para cenar", ["Ligera", "Huevos", "Sopas y cremas", "Para picar", "Pizza y hamburguesas", "Postres"]],
+];
+const ALL = "Todo";
+const MOMENT = new Map(MOMENTS.map((m) => [m[0], m]));
+// Filtros de siempre que siguen a mano dentro de cada momento.
+const EXTRA = ["Rápidas", "Vegetariana", "Para niños", "Española", "Internacional", "Freidora de aire", "Con productos del súper"];
+// El momento según la hora: lo primero que ves es lo que toca ahora.
+function nowMoment(d = new Date()) {
+  const h = d.getHours() + d.getMinutes() / 60, finde = d.getDay() === 0 || d.getDay() === 6;
+  if (h >= 5 && h < (finde ? 10 : 11.5)) return "Desayuno";
+  if (h >= 5 && h < 13) return finde ? "Brunch" : "Comida";
+  if (h >= 5 && h < 16.5) return "Comida";
+  if (h >= 5 && h < 20) return "Merienda";
+  return "Cena";
+}
+const chipsFor = (mo) => mo === ALL ? FILTERS : ["Todas", ...MOMENT.get(mo)[3], ...EXTRA.filter((t) => !MOMENT.get(mo)[3].includes(t))];
+function matches(r) {
+  if (ui.moment !== ALL && !r.m?.[ui.moment]) return false;
+  if (ui.tag === "Todas") return true;
+  if (ui.moment !== ALL && MOMENT.get(ui.moment)[3].includes(ui.tag)) return r.m[ui.moment].includes(ui.tag);
+  return r.filters.includes(ui.tag);
+}
 
 let A; // funciones de la app (lista, guardar, pintar…)
 let recipes = null, loading = null;
-const ui = { view: "list", mode: "tengo", tag: "Todas", q: "", id: null, pq: "", scroll: 0 };
+const ui = { view: "list", mode: "tengo", moment: null, tag: "Todas", q: "", id: null, pq: "", scroll: 0 };
 
 export function initCocina(api) { A = api; }
 
@@ -67,10 +95,11 @@ export function learnPurchase(items) {
 }
 
 // Se vuelve a abrir donde lo dejaste: mismos filtros, búsqueda y posición.
-export async function openRecipes(id) {
+export async function openRecipes(id, moment) {
   A.openSheet("Recetas", `<p class="note">Cargando recetas…</p>`, "browsing cooking");
   await loadRecipes();
   if (!A.sheet.open) return;
+  if (moment && (MOMENT.has(moment) || moment === ALL) && moment !== ui.moment) { ui.moment = moment; ui.tag = "Todas"; ui.scroll = 0; }
   if (id != null && recipes[id]) { ui.view = "list"; return showRecipe(id); }
   showList(true);
 }
@@ -90,27 +119,37 @@ export async function renderIdeas(el) {
   const cooking = Object.keys(pantry()).some((k) => !staples.has(k));
   const day = Math.floor(Date.now() / 864e5);
   const rot = (r) => ((r.id * 7919 + day * 104729) % 9973);
+  // Ideas del momento del día que toca (desayuno por la mañana, cena por la noche…).
+  const [mo, emo, para] = MOMENT.get(nowMoment());
+  const inMo = (r) => !!r.m?.[mo];
   const rows = recipes.filter((r) => r.foto).map((r) => ({ r, c: check(r) }));
-  rows.sort((a, b) => (cooking ? Math.min(a.c.missing.length, 4) - Math.min(b.c.missing.length, 4) : 0) || rot(a.r) - rot(b.r));
+  rows.sort((a, b) => inMo(b.r) - inMo(a.r) || (cooking ? Math.min(a.c.missing.length, 4) - Math.min(b.c.missing.length, 4) : 0) || rot(a.r) - rot(b.r));
   const pick = rows.slice(0, 8);
   const html = `<div class="ideas-head"><h2>¿Qué cocino hoy?</h2><button type="button" class="lnk" data-cook-all>Ver las ${recipes.length} recetas</button></div>
+    <button type="button" class="ideas-mo" data-cook-moment="${mo}"><span aria-hidden="true">${emo}</span> ${para} · ver ${recipes.filter(inMo).length} recetas</button>
     <div class="ideas-row">${pick.map(({ r, c }) => `<button type="button" class="idea" data-recipe="${r.id}">
       <span class="idea-ph" style="background-image:url('${A.esc(r.foto.img)}')"></span>
       <span class="idea-n">${A.esc(r.n)}</span>
-      <span class="idea-m${c.missing.length ? "" : " ok"}">${c.missing.length ? (cooking ? `Faltan ${c.missing.length}` : `${r.t} min`) : "✓ Tienes todo"}</span></button>`).join("")}</div>`;
+      <span class="idea-m${c.missing.length ? "" : " ok"}">${c.missing.length ? (cooking ? `Faltan ${c.missing.length}` : mins(r.t)) : "✓ Tienes todo"}</span></button>`).join("")}</div>`;
   if (html !== ideasHTML) { el.innerHTML = html; ideasHTML = html; }
   el.hidden = false;
 }
 
 const hue = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
-const meta = (r) => `${r.t} min · ${r.r} ${r.r === 1 ? "ración" : "raciones"} · ${r.d}`;
+const mins = (t) => t < 60 ? `${t} min` : `${Math.floor(t / 60)} h${t % 60 ? ` ${t % 60} min` : ""}`;
+const meta = (r) => `${mins(r.t)} · ${r.r} ${r.r === 1 ? "ración" : "raciones"} · ${r.d}`;
 const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
 
 function showList(restore = false) {
   ui.view = "list";
+  ui.moment ??= nowMoment();
+  if (!chipsFor(ui.moment).includes(ui.tag)) ui.tag = "Todas";
   A.setTitle("Recetas", false);
   const n = Object.keys(pantry()).length;
+  const tabs = [...MOMENTS, [ALL, "📖"]].map(([mo, emo]) => `<button type="button" data-moment="${mo}" aria-pressed="${mo === ui.moment}">
+      <span class="mo-e" aria-hidden="true">${emo}</span><span class="mo-n">${mo}</span></button>`).join("");
   A.body().innerHTML = `
+    <div class="moments" id="cmoment" role="group" aria-label="Momento del día">${tabs}</div>
     <div class="seg" id="cmode" role="group" aria-label="Qué recetas ver">
       <button type="button" data-mode="tengo" aria-pressed="${ui.mode === "tengo"}">Con lo que tengo</button>
       <button type="button" data-mode="todas" aria-pressed="${ui.mode === "todas"}">Todas</button>
@@ -118,9 +157,11 @@ function showList(restore = false) {
     <button type="button" class="pantry-btn" id="cpantry"><span>🏠 En casa tienes <b>${plural(n, "ingrediente", "ingredientes")}</b></span><span class="lnk">Cambiar</span></button>
     <label class="vh" for="cq">Buscar receta o ingrediente</label>
     <input id="cq" class="bsearch" type="search" placeholder="Busca una receta o un ingrediente…" value="${A.esc(ui.q)}" enterkeyhint="search" autocomplete="off">
-    <div class="btabs" id="ctags">${FILTERS.map((t) => `<button type="button" class="chip" data-tag="${A.esc(t)}" aria-pressed="${t === ui.tag}">${A.esc(t)}</button>`).join("")}</div>
+    <div class="btabs" id="ctags">${tagChips()}</div>
     <div class="clist" id="clist"></div>`;
   fillList();
+  const on = $$("ctags").querySelector('[aria-pressed="true"]');
+  if (on && on.dataset.tag !== "Todas") $$("ctags").scrollLeft = on.offsetLeft - $$("ctags").offsetLeft - 16;
   if (restore) { const l = $$("clist"), y = ui.scroll; l.scrollTop = y; requestAnimationFrame(() => { l.scrollTop = y; }); }
   $$("cmode").onclick = (e) => {
     const b = e.target.closest("[data-mode]"); if (!b) return;
@@ -128,10 +169,17 @@ function showList(restore = false) {
     for (const c of $$("cmode").children) c.setAttribute("aria-pressed", String(c === b));
     fillList();
   };
+  $$("cmoment").onclick = (e) => {
+    const b = e.target.closest("[data-moment]"); if (!b || b.dataset.moment === ui.moment) return;
+    ui.moment = b.dataset.moment; ui.tag = "Todas";
+    for (const c of $$("cmoment").children) c.setAttribute("aria-pressed", String(c === b));
+    $$("ctags").innerHTML = tagChips(); $$("ctags").scrollLeft = 0;
+    A.buzz(); fillList(); $$("clist").scrollTop = 0;
+  };
   $$("ctags").onclick = (e) => {
     const b = e.target.closest("[data-tag]"); if (!b) return;
     ui.tag = b.dataset.tag;
-    for (const c of $$("ctags").children) c.setAttribute("aria-pressed", String(c === b));
+    for (const c of $$("ctags").querySelectorAll("[data-tag]")) c.setAttribute("aria-pressed", String(c === b));
     fillList();
   };
   let tmo;
@@ -144,6 +192,11 @@ function showList(restore = false) {
   };
 }
 const $$ = (id) => document.getElementById(id);
+// Tipos del momento elegido (Dulce, Salado…) y, tras una raya, los filtros de siempre.
+function tagChips() {
+  const subs = ui.moment === ALL ? [] : MOMENT.get(ui.moment)[3];
+  return chipsFor(ui.moment).map((t, k, all) => `${subs.length && k === subs.length + 1 ? `<span class="chip-sep" aria-hidden="true"></span>` : ""}<button type="button" class="chip${subs.includes(t) ? " sub" : ""}" data-tag="${A.esc(t)}" aria-pressed="${t === ui.tag}">${A.esc(t)}</button>`).join("");
+}
 
 // Foto de la receta como fondo (sin menú de «Guardar imagen» al mantener pulsado); se carga al aparecer en pantalla.
 const pic = (r) => `<span class="re" style="--h:${hue(r.n)}"${r.foto ? ` data-bg="${A.esc(r.foto.img)}"` : ""}>${A.esc(r.e)}</span>`;
@@ -167,7 +220,8 @@ function card(r, c) {
 
 function fillList() {
   const qt = tokens(ui.q);
-  let rs = recipes.filter((r) => (ui.tag === "Todas" || r.filters.includes(ui.tag))
+  // Al buscar se busca en todas, sin importar el momento elegido.
+  let rs = recipes.filter((r) => (qt.length || matches(r))
     && qt.every((w) => [...r.toks].some((t) => t.startsWith(w))));
   const rows = rs.map((r) => ({ r, c: check(r) }));
   const el = $$("clist");
@@ -179,7 +233,15 @@ function fillList() {
   }
   // «Con lo que tengo»: primero lo que puedes hacer ya, luego lo que necesita 1, 2 o 3 cosas más.
   const staples = new Set(STAPLES.map(key));
-  const useful = rows.filter(({ r, c }) => c.missing.length <= 3 && r.ings.some((i) => !i.opt && !staples.has(i.k) && has(i.k)));
+  const usable = ({ r, c }) => c.missing.length <= 3 && r.ings.some((i) => !i.opt && !staples.has(i.k) && has(i.k));
+  const useful = rows.filter(usable);
+  if (!useful.length && recipes.some((r) => usable({ r, c: check(r) }))) {
+    const mo = ui.moment === ALL ? "" : ` ${MOMENT.get(ui.moment)[2].toLowerCase()}`;
+    el.innerHTML = `<div class="empty"><b>Con lo que tienes no sale nada${A.esc(mo)}${ui.tag === "Todas" ? "" : ` (${A.esc(ui.tag)})`}</b>
+      <span>Prueba otro momento del día o mira todas las recetas de aquí y lo que te faltaría.</span>
+      <button class="btn" type="button" data-all>Ver todas las recetas</button></div>`;
+    return;
+  }
   if (!useful.length) {
     el.innerHTML = `<div class="empty"><b>Dime qué tienes en casa</b>
       <span>Marca los ingredientes que tienes y te diré qué puedes cocinar. Lo que compres con «Terminar compra» se apunta solo.</span>
@@ -221,7 +283,8 @@ function showRecipe(id) {
       ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>
         <figcaption>Foto: <a href="${A.esc(r.foto.fuente)}" target="_blank" rel="noopener">${A.esc(r.foto.autor)}</a> · ${A.esc(r.foto.licencia)}</figcaption></figure>` : ""}
       <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>`}
-        <div><p class="rm">${A.esc(meta(r))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p></div></div>
+        <div><p class="rm">${A.esc(meta(r))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p>
+          ${r.m ? `<p class="rmo">${Object.keys(r.m).filter((m) => MOMENT.has(m)).map((m) => `<button type="button" class="mo-tag" data-go-moment="${m}">${MOMENT.get(m)[1]} ${m}</button>`).join("")}</p>` : ""}</div></div>
       <h3 class="cgroup">Ingredientes <span>toca para marcar lo que tienes</span></h3>
       <ul class="ings">${ings}</ul>
       <div class="row">${btn}</div>
@@ -229,6 +292,11 @@ function showRecipe(id) {
       <ol class="steps">${r.p.map((s) => `<li>${A.esc(s)}</li>`).join("")}</ol>
     </div>`;
   $$("cback").onclick = () => showList(true);
+  A.body().querySelector(".rmo")?.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go-moment]"); if (!b) return;
+    if (ui.moment !== b.dataset.goMoment) { ui.moment = b.dataset.goMoment; ui.tag = "Todas"; ui.scroll = 0; }
+    showList(true);
+  });
   A.body().querySelector(".ings").onclick = (e) => {
     const b = e.target.closest("[data-ing]"); if (!b) return;
     const p = pantry();
