@@ -3,14 +3,14 @@ import { tokens, guess, norm } from "./parser.js";
 
 // Sección de cada ingrediente, para ordenar «Lo que tengo en casa» como en el súper.
 const SECTIONS = {
-  "Frutas y verduras": "Plátanos, Manzanas, Naranjas, Mandarinas, Limones, Fresas, Uvas, Peras, Melón, Sandía, Aguacates, Tomates, Lechuga, Cebollas, Ajos, Patatas, Zanahorias, Pimientos, Calabacín, Pepino, Brócoli, Champiñones, Espinacas, Berenjenas, Puerros, Calabaza, Coliflor, Judías verdes, Cebolla morada, Tomates cherry, Perejil, Cilantro, Albahaca, Jengibre, Rúcula, Maíz dulce, Limas, Mango, Piña, Arándanos, Repollo, Kiwis, Frutos rojos",
-  "Carne": "Pechuga de pollo, Muslos de pollo, Pollo entero, Carne picada, Ternera, Filetes de ternera, Lomo de cerdo, Costillas, Hamburguesas, Salchichas, Bacon, Panceta, Cordero, Pavo picado, Alitas de pollo",
+  "Frutas y verduras": "Plátanos, Manzanas, Naranjas, Mandarinas, Limones, Fresas, Uvas, Peras, Melón, Sandía, Aguacates, Tomates, Lechuga, Cebollas, Ajos, Patatas, Zanahorias, Pimientos, Calabacín, Pepino, Brócoli, Champiñones, Espinacas, Berenjenas, Puerros, Calabaza, Coliflor, Judías verdes, Cebolla morada, Tomates cherry, Perejil, Cilantro, Albahaca, Jengibre, Rúcula, Maíz dulce, Limas, Mango, Piña, Arándanos, Repollo, Kiwis, Frutos rojos, Batatas, Brotes de soja, Cebolletas, Hierbabuena, Menta",
+  "Carne": "Pechuga de pollo, Muslos de pollo, Pollo entero, Carne picada, Ternera, Filetes de ternera, Lomo de cerdo, Costillas, Hamburguesas, Salchichas, Bacon, Panceta, Cordero, Pavo picado, Alitas de pollo, Carne picada de cordero",
   "Pescado": "Salmón, Merluza, Gambas, Bacalao, Calamares, Mejillones, Atún fresco, Lubina, Dorada, Sepia, Almejas, Langostinos, Surimi, Salmón ahumado",
   "Charcutería y quesos": "Jamón serrano, Jamón cocido, Pechuga de pavo, Chorizo, Salchichón, Queso en lonchas, Queso curado, Queso fresco, Queso rallado, Mozzarella, Queso parmesano, Queso de cabra, Queso crema, Queso feta, Mascarpone, Morcilla, Queso brie",
   "Lácteos y huevos": "Leche, Huevos, Yogures, Yogur griego, Mantequilla, Nata, Nata para cocinar, Leche de coco, Bebida de avena, Leche condensada",
-  "Panadería": "Pan, Pan de molde, Pan rallado, Pan de hamburguesa, Pan de pita, Tortillas de trigo, Masa de pizza, Hojaldre, Masa de empanadillas, Masa quebrada, Bizcochos de soletilla, Galletas, Croissants, Tortitas de arroz, Nachos",
-  "Despensa": "Aceite de oliva, Aceite de girasol, Arroz, Arroz basmati, Macarrones, Espaguetis, Fideos, Lasaña, Tallarines, Gnocchi, Tortellini, Cuscús, Quinoa, Garbanzos, Lentejas, Alubias, Tomate frito, Tomate triturado, Atún en lata, Sardinas en lata, Vinagre, Mayonesa, Ketchup, Mostaza, Salsa de soja, Caldo de pollo, Caldo de verduras, Caldo de pescado, Aceitunas, Alcaparras, Pimiento del piquillo, Frutos secos, Nueces, Almendras, Pasas, Hummus, Guacamole, Pesto, Salsa barbacoa, Tahini, Edamame, Fideos de arroz, Salsa de ostras, Vino blanco, Vino tinto, Cerveza, Anís, Alubias con tomate, Crema de cacao, Crema de cacahuete",
-  "Especias y repostería": "Sal, Pimienta negra, Pimentón, Comino, Orégano, Laurel, Canela, Curry, Azafrán, Colorante alimentario, Guindilla, Tomillo, Romero, Nuez moscada, Sésamo, Azúcar, Harina, Levadura, Maicena, Gelatina, Azúcar glas, Esencia de vainilla, Coco rallado, Miel, Chocolate, Cacao en polvo, Mermelada, Copos de avena, Cereales, Café, Granola, Semillas de chía, Pepitas de chocolate, Levadura de panadería",
+  "Panadería": "Pan, Pan de molde, Pan rallado, Pan de hamburguesa, Pan de pita, Tortillas de trigo, Masa de pizza, Hojaldre, Masa de empanadillas, Masa quebrada, Bizcochos de soletilla, Galletas, Croissants, Tortitas de arroz, Nachos, Tortillas de maíz",
+  "Despensa": "Aceite de oliva, Aceite de girasol, Arroz, Arroz basmati, Macarrones, Espaguetis, Fideos, Lasaña, Tallarines, Gnocchi, Tortellini, Cuscús, Quinoa, Garbanzos, Lentejas, Alubias, Tomate frito, Tomate triturado, Atún en lata, Sardinas en lata, Vinagre, Mayonesa, Ketchup, Mostaza, Salsa de soja, Caldo de pollo, Caldo de verduras, Caldo de pescado, Aceitunas, Alcaparras, Pimiento del piquillo, Frutos secos, Nueces, Almendras, Pasas, Hummus, Guacamole, Pesto, Salsa barbacoa, Tahini, Edamame, Fideos de arroz, Salsa de ostras, Vino blanco, Vino tinto, Cerveza, Anís, Alubias con tomate, Crema de cacao, Crema de cacahuete, Alga nori, Arroz para sushi, Fideos ramen, Lentejas rojas, Papel de arroz, Pasta de curry verde, Salsa de pescado, Salsa sriracha, Vinagre de arroz, Aceite de sésamo, Anacardos, Cacahuetes, Caldo de carne, Gochujang, Pasta de soja picante, Wasabi, Kimchi, Tofu, Alubias negras, Bulgur, Chipotle, Harina de maíz precocida, Limones en conserva, Almidón de yuca",
+  "Especias y repostería": "Sal, Pimienta negra, Pimentón, Comino, Orégano, Laurel, Canela, Curry, Azafrán, Colorante alimentario, Guindilla, Tomillo, Romero, Nuez moscada, Sésamo, Azúcar, Harina, Levadura, Maicena, Gelatina, Azúcar glas, Esencia de vainilla, Coco rallado, Miel, Chocolate, Cacao en polvo, Mermelada, Copos de avena, Cereales, Café, Granola, Semillas de chía, Pepitas de chocolate, Levadura de panadería, Cúrcuma, Garam masala, Pimienta de Sichuan, Pimienta de Jamaica, Anís estrellado, Ají amarillo",
   "Congelados": "Guisantes, Menestra, Patatas congeladas, Croquetas, Varitas de merluza, Pizza, Helado, Gyozas, Verduras para wok",
 };
 const ORDER = [...Object.keys(SECTIONS), "Otros"];
@@ -21,7 +21,7 @@ const sectionOf = (n) => SECTION_OF.get(key(n)) ?? (ORDER.includes(guess(n).cat)
 
 // Lo que casi todo el mundo tiene; se puede quitar en «En casa».
 const STAPLES = ["Sal", "Aceite de oliva", "Pimienta negra", "Azúcar", "Harina"];
-const FILTERS = ["Todas", "Rápidas", "Española", "Vegetariana", "Pasta y arroz", "Legumbres", "Carne", "Pescado", "Ensaladas",
+const FILTERS = ["Todas", "Del mundo", "Rápidas", "Española", "Vegetariana", "Pasta y arroz", "Legumbres", "Carne", "Pescado", "Ensaladas",
   "Sopas y cremas", "Cenas ligeras", "Desayunos", "Postres", "Internacional", "Para niños", "Freidora de aire", "Con productos del súper"];
 // Momentos del día y, dentro de cada uno, sus tipos (campo «m» de cada receta). Una receta puede estar en varios.
 const MOMENTS = [
@@ -32,9 +32,15 @@ const MOMENTS = [
   ["Cena", "🌙", "Para cenar", ["Ligera", "Huevos", "Sopas y cremas", "Para picar", "Pizza y hamburguesas", "Postres"]],
 ];
 const ALL = "Todo";
+// País de origen (campo «z») de las recetas de fuera.
+const FLAGS = { "Argentina": "🇦🇷", "Brasil": "🇧🇷", "China": "🇨🇳", "Corea del Sur": "🇰🇷", "Estados Unidos": "🇺🇸", "Filipinas": "🇵🇭",
+  "Francia": "🇫🇷", "Grecia": "🇬🇷", "Hawái": "🌺", "India": "🇮🇳", "Indonesia": "🇮🇩", "Italia": "🇮🇹", "Jamaica": "🇯🇲", "Japón": "🇯🇵",
+  "Líbano": "🇱🇧", "Marruecos": "🇲🇦", "México": "🇲🇽", "Perú": "🇵🇪", "Reino Unido": "🇬🇧", "Senegal": "🇸🇳", "Suecia": "🇸🇪",
+  "Tailandia": "🇹🇭", "Turquía": "🇹🇷", "Túnez": "🇹🇳", "Venezuela": "🇻🇪", "Vietnam": "🇻🇳" };
+const origin = (r) => r.z ? `${FLAGS[r.z] ?? "🌍"} ${r.z}` : "";
 const MOMENT = new Map(MOMENTS.map((m) => [m[0], m]));
 // Filtros de siempre que siguen a mano dentro de cada momento.
-const EXTRA = ["Rápidas", "Vegetariana", "Para niños", "Española", "Internacional", "Freidora de aire", "Con productos del súper"];
+const EXTRA = ["Del mundo", "Rápidas", "Vegetariana", "Para niños", "Española", "Internacional", "Freidora de aire", "Con productos del súper"];
 // El momento según la hora: lo primero que ves es lo que toca ahora.
 function nowMoment(d = new Date()) {
   const h = d.getHours() + d.getMinutes() / 60, finde = d.getDay() === 0 || d.getDay() === 6;
@@ -64,9 +70,9 @@ function loadRecipes() {
     rs.forEach((r, idx) => {
       r.id = idx;
       r.ings = r.i.map(([n, q]) => ({ n, q, k: key(n), opt: !!r.o?.includes(n) }));
-      r.toks = new Set(tokens(`${r.n} ${r.i.map((x) => x[0]).join(" ")}`));
+      r.toks = new Set(tokens(`${r.n} ${r.z ?? ""} ${r.i.map((x) => x[0]).join(" ")}`));
       r.foto = fotos[r.n] ?? null;
-      r.filters = [...r.tags, ...(r.t <= 20 ? ["Rápidas"] : []), ...(r.tags.includes("Vegana") ? ["Vegetariana"] : [])];
+      r.filters = [...r.tags, ...(r.t <= 20 ? ["Rápidas"] : []), ...(r.tags.includes("Vegana") ? ["Vegetariana"] : []), ...(r.z ? ["Del mundo"] : [])];
     });
     A.markGeneric(rs.flatMap((r) => r.i.map((x) => x[0])));
     return (recipes = rs);
@@ -137,7 +143,7 @@ export async function renderIdeas(el) {
 
 const hue = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
 const mins = (t) => t < 60 ? `${t} min` : `${Math.floor(t / 60)} h${t % 60 ? ` ${t % 60} min` : ""}`;
-const meta = (r) => `${mins(r.t)} · ${r.r} ${r.r === 1 ? "ración" : "raciones"} · ${r.d}`;
+const meta = (r) => `${r.z ? `${origin(r)} · ` : ""}${mins(r.t)} · ${r.r} ${r.r === 1 ? "ración" : "raciones"} · ${r.d}`;
 const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
 
 function showList(restore = false) {
@@ -225,6 +231,18 @@ function fillList() {
     && qt.every((w) => [...r.toks].some((t) => t.startsWith(w))));
   const rows = rs.map((r) => ({ r, c: check(r) }));
   const el = $$("clist");
+  if (ui.mode === "todas" && ui.tag === "Del mundo" && !qt.length) {
+    // Recetas de fuera agrupadas por país.
+    const by = new Map();
+    for (const x of rows.sort((a, b) => a.r.z.localeCompare(b.r.z, "es") || a.c.missing.length - b.c.missing.length)) {
+      if (!by.has(x.r.z)) by.set(x.r.z, []);
+      by.get(x.r.z).push(x);
+    }
+    el.innerHTML = [...by].map(([z, g]) => `<h3 class="cgroup">${FLAGS[z] ?? "🌍"} ${A.esc(z)}</h3>${g.map(({ r, c }) => card(r, c)).join("")}`).join("")
+      || `<p class="note">No hay recetas de fuera para este momento.</p>`;
+    lazyBg(el);
+    return;
+  }
   if (ui.mode === "todas") {
     rows.sort((a, b) => a.c.missing.length - b.c.missing.length || a.r.n.localeCompare(b.r.n, "es"));
     el.innerHTML = rows.length ? rows.map(({ r, c }) => card(r, c)).join("") : `<p class="note">No hay recetas con eso. Prueba con otra palabra.</p>`;

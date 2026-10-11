@@ -289,3 +289,11 @@ body.shop .ideas{display:none}
 .ideas-mo{align-self:flex-start;border:1px solid var(--line);background:var(--accent-soft);color:var(--fg);border-radius:999px;padding:5px 12px;font:600 .82rem var(--body);cursor:pointer;margin-top:-4px}
 .rmo{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
 .mo-tag{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:3px 10px;font:600 .78rem var(--body);cursor:pointer}
+
+/* Logo del súper cuando el producto es de su marca propia (solo se vende allí) */
+.slogo{position:absolute;right:2px;bottom:2px;width:18px;height:18px;border-radius:5px;background:#fff center/86% no-repeat;box-shadow:0 0 0 1px rgb(0 0 0 / .08),0 1px 3px rgb(0 0 0 / .18);z-index:1}
+body.shop .thumb .slogo{width:22px;height:22px}
+.tph .slogo{right:5px;bottom:5px;width:22px;height:22px;border-radius:6px}
+.opt .ph .slogo{width:22px;height:22px}
+.peek-ph .slogo{right:10px;bottom:10px;width:40px;height:40px;border-radius:10px}
+.fav .slogo,.fly .slogo{display:none}

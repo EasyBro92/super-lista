@@ -7,6 +7,21 @@ const STORES = [
   ["alcampo", "Alcampo"], ["eroski", "Eroski"], ["aldi", "Aldi"], ["consum", "Consum"], ["elcorteingles", "El Corte Inglés"],
 ];
 const STORE_NAME = Object.fromEntries(STORES);
+// Marcas propias: un producto de estas marcas solo se vende en su súper y lleva su logo en la esquina de la foto.
+const OWN_BRANDS = [
+  ["mercadona", /\b(hacendado|deliplus|bosque verde|compy)\b/], ["carrefour", /\bcarrefour\b/],
+  ["dia", /^dia\b|\bdia (lactea|nature|delicious|al punto)\b|\bbonte\b/], ["alcampo", /\b(auchan|alcampo)\b/],
+  ["eroski", /\b(eroski|seleqtia)\b/], ["consum", /^consum\b|\bconsum$/], ["elcorteingles", /\b(el corte ingles|aliada|hipercor)\b/],
+  ["lidl", /\b(milbona|pikok|combino|freeway|vitasia|chef select|baresa|alesto|solevita|crownfield|snack day|lidl)\b/],
+  ["aldi", /\b(milsani|golden seafood|cucina nobile|choceur|lyttos|moser roth|aldi)\b/],
+];
+function onlyAt(p) {
+  if (!p?.n) return null;
+  const b = norm(p.b ?? ""), n = norm(p.n);
+  for (const [s, re] of OWN_BRANDS) if ((b && re.test(b)) || re.test(n)) return s;
+  return null;
+}
+const logoHTML = (s) => s ? `<span class="slogo" style="background-image:url('img/logos/${s}.png')" role="img" aria-label="Solo en ${esc(STORE_NAME[s])}" title="Solo en ${esc(STORE_NAME[s])}"></span>` : "";
 const CATS = [
   "Frutas y verduras", "Carne", "Pescado", "Charcutería y quesos", "Lácteos y huevos", "Panadería",
   "Despensa", "Dulces y desayuno", "Bebidas", "Congelados", "Limpieza", "Higiene", "Bebé y mascotas", "Otros",
@@ -64,13 +79,17 @@ const ALIAS = {
   "cuscus": "cous cous", "fideos de arroz": "noodles de arroz", "nueces": "nuez natural pelada", "sesamo": "semillas sesamo",
   "mascarpone": "queso mascarpone", "atun fresco": "rodajas de atun", "hojaldre": "masa fresca hojaldre", "queso crema": "queso untar",
   "hamburguesas": "burger de vacuno", "merluza": "filetes de merluza", "salmon": "filete de salmon",
+  "fideos ramen": "noodles ramen", "cacahuetes": "cacahuete tostado", "arroz para sushi": "arroz redondo", "batatas": "batata",
+  // Sin equivalente en el súper: mejor sin foto que con otro producto.
+  "carne picada de cordero": "", "lentejas rojas": "", "anis estrellado": "",
   "frutos rojos": "mix frutos rojos", "granola": "muesli crunchy sin azucares", "anis": "licor de anis", "esencia de vainilla": "aroma de vainilla",
   "pepitas de chocolate": "gotas de chocolate", "queso fresco": "queso fresco burgos",
   "leche de avena": "bebida de avena", "leche de soja": "bebida de soja", "leche de almendras": "bebida de almendras", "leche de arroz": "bebida de arroz",
 };
-markGeneric(Object.values(ALIAS));
+markGeneric(Object.values(ALIAS).filter(Boolean));
 function bestProd(cat, query) {
   const alias = ALIAS[norm(query)];
+  if (alias === "") return null;
   if (alias) { const p = bestProd(cat, alias); if (p) return p; }
   const r = search(cat, query, 6);
   // Si la primera palabra aparece al final del nombre («leche» en unas galletas con leche), mejor uno que empiece por ella.
@@ -230,12 +249,12 @@ function setStatus(t, err) { const s = $("status"); s.textContent = t; s.classLi
 // Las fotos se pintan como fondo (no como <img>) para que Chrome no muestre su menú de «Descargar imagen»
 // al mantener pulsado. Debajo queda el emoji, que se ve si la foto no carga.
 const cssUrl = (u) => esc(String(u).replace(/'/g, "%27").replace(/"/g, "%22").replace(/\s/g, "%20"));
-function photoHTML(url, emoji, label = "") {
+function photoHTML(url, emoji, label = "", only = null) {
   const emo = `<span class="emo" aria-hidden="true">${esc(emoji || "🛒")}</span>`;
-  if (!url) return emo;
-  return `<span class="photo" role="img" aria-label="${esc(label)}">${emo}<span class="photo-img" style="background-image:url('${cssUrl(url)}')"></span></span>`;
+  if (!url) return only ? `<span class="photo">${emo}${logoHTML(only)}</span>` : emo;
+  return `<span class="photo" role="img" aria-label="${esc(label)}">${emo}<span class="photo-img" style="background-image:url('${cssUrl(url)}')"></span>${logoHTML(only)}</span>`;
 }
-function thumbHTML(prod, emoji) { return photoHTML(prod?.img, emoji, prod?.n); }
+function thumbHTML(prod, emoji) { return photoHTML(prod?.img, emoji, prod?.n, onlyAt(prod)); }
 const itemPrice = (i) => (i.prod?.p != null ? i.prod.p * (i.count || 1) : null);
 
 function renderStores() {
@@ -508,7 +527,7 @@ function renderBrowse() {
   $("bgrid").innerHTML = [...tiles].map(([k, t]) => {
     const on = !!inListByLabel(t.label);
     return `<button type="button" class="tile" data-tile="${esc(k)}" aria-pressed="${on}">
-      <span class="tph">${photoHTML(t.prod?.img, guess(t.label).emoji, t.label)}<span class="tck" aria-hidden="true">${CHECK_SVG}</span></span>
+      <span class="tph">${photoHTML(t.prod?.img, guess(t.label).emoji, t.label, onlyAt(t.prod))}<span class="tck" aria-hidden="true">${CHECK_SVG}</span></span>
       <span class="tn">${esc(t.label)}</span>${t.sub ? `<span class="ts">${esc(t.sub)}</span>` : ""}</button>`;
   }).join("");
   updateBrowseCount();
@@ -745,9 +764,10 @@ document.addEventListener("dragstart", (e) => { if (e.target.tagName === "IMG") 
 function openOptions(id) {
   const it = list().items.find((i) => i.id === id); if (!it) return;
   const p = it.prod;
-  const info = p ? [p.f, p.p != null ? eur(p.p) : "", p.u, list().store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "";
+  const only = onlyAt(p);
+  const info = p ? [p.f, p.p != null ? eur(p.p) : "", p.u, only ? `Solo en ${STORE_NAME[only]}` : list().store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "";
   openSheet(it.label, `<figure class="peek">
-      <div class="peek-ph">${photoHTML(p?.img && bigImg(p.img), it.emoji, p?.n)}</div>
+      <div class="peek-ph">${photoHTML(p?.img && bigImg(p.img), it.emoji, p?.n, only)}</div>
       <figcaption>${p ? `<b>${esc(p.n)}</b>${info ? `<span>${esc(info)}</span>` : ""}` : "<span>Sin producto concreto. Elige uno con «Cambiar producto».</span>"}</figcaption>
     </figure>
     <div class="menu">
