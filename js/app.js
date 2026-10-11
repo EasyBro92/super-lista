@@ -1,6 +1,7 @@
 import { parseCommand, search, indexCatalog, guess, norm, capital, tokens } from "./parser.js";
 import { BASICS } from "./basics.js";
 import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas } from "./cocina.js";
+import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
 
 const STORES = [
   ["any", "Cualquiera"], ["mercadona", "Mercadona"], ["carrefour", "Carrefour"], ["lidl", "Lidl"], ["dia", "Dia"],
@@ -44,7 +45,9 @@ function load() {
   const id = uid();
   return { lists: [{ id, name: "Casa", store: "mercadona", items: [] }], current: id, history: [], freq: {}, memory: {}, shop: false };
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch {} }
+// En las listas compartidas, guardar también marca qué ha cambiado y lo envía.
+function save() { stamp(); persist(); }
+function persist() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch {} }
 const list = () => st.lists.find((l) => l.id === st.current) ?? st.lists[0];
 
 // ---------- Catálogos ----------
@@ -270,12 +273,14 @@ function renderSummary() {
   let t = `<b>${left.length}</b> por comprar`;
   if (priced.length) t += ` · total aprox. <b>${eur(total)}</b>`;
   if (left.length - priced.length > 0 && priced.length) t += ` (${left.length - priced.length} sin precio)`;
+  if (left.length && pricedStores().length > 1) t += ` <button type="button" class="lnk cmp-btn" data-compare>Comparar súpers</button>`;
   $("summary").innerHTML = t;
 }
 function render() {
   const l = list();
   renderIdeas($("ideas")).catch(() => {});
-  $("listName").textContent = l.name;
+  $("listName").textContent = l.sid ? `${l.name} 👥` : l.name;
+  syncCurrent();
   document.body.classList.toggle("shop", !!st.shop);
   $("shopBtn").setAttribute("aria-pressed", String(!!st.shop));
   renderStores();
@@ -425,6 +430,7 @@ function openLists() {
   openSheet("Tus listas", `<div class="lists">${rows}</div>
     <label class="field">Nueva lista<input id="newList" placeholder="Cumpleaños, Lidl, Casa de la playa…"></label>
     <div class="row"><button class="btn" type="button" id="addList">Crear lista</button></div>
+    ${shareHTML(list())}
     <label class="field">Nombre de la lista actual<input id="renList" value="${esc(list().name)}"></label>
     <div class="row"><button class="btn ghost" type="button" id="saveName">Cambiar nombre</button>
     ${st.lists.length > 1 ? `<button class="btn danger" type="button" id="delList">Borrar esta lista</button>` : ""}</div>`);
@@ -437,11 +443,95 @@ function openLists() {
     const l = { id: uid(), name, store: list().store, items: [] };
     st.lists.push(l); st.current = l.id; save(); render(); closeSheet();
   };
+  bindShare();
   $("saveName").onclick = () => { const n = $("renList").value.trim(); if (n) { list().name = n; save(); render(); closeSheet(); } };
   const del = $("delList");
   if (del) del.onclick = () => {
     if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "Toca otra vez para borrarla"; return; }
     st.lists = st.lists.filter((l) => l.id !== st.current); st.current = st.lists[0].id; save(); render(); closeSheet();
+  };
+}
+
+// ---------- Compartir lista ----------
+function shareHTML(l) {
+  if (!syncReady()) return "";
+  return l.sid ? `<div class="share"><p><b>👥 Lista compartida.</b> Quien tenga el enlace ve y cambia «${esc(l.name)}» al momento.</p>
+      <div class="row"><button class="btn ghost small" type="button" id="shareSend">Enviar el enlace</button>
+      <button class="btn danger small" type="button" id="shareStop">Dejar de compartir</button></div></div>`
+    : `<div class="share"><p>👥 Comparte «${esc(l.name)}» con tu familia: lo que apunte cualquiera se ve al momento en todos los móviles.</p>
+      <div class="row"><button class="btn ghost small" type="button" id="shareStart">Compartir esta lista</button></div></div>`;
+}
+async function sendLink(l) {
+  const url = shareURL(l);
+  try {
+    if (navigator.share) { await navigator.share({ title: "Super Lista", text: `Únete a mi lista de la compra «${l.name}»`, url }); return; }
+  } catch (e) { if (e?.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(url); setStatus("Enlace copiado: pégalo en WhatsApp o donde quieras."); }
+  catch { prompt("Copia este enlace y envíalo:", url); }
+}
+function bindShare() {
+  const l = list();
+  const go = $("shareStart");
+  if (go) go.onclick = async () => {
+    go.disabled = true; go.textContent = "Compartiendo…";
+    if (await share(l)) { render(); openLists(); sendLink(l); }
+    else { go.disabled = false; go.textContent = "Compartir esta lista"; setStatus("No he podido compartirla. Revisa la conexión y prueba otra vez.", true); }
+  };
+  const send = $("shareSend"); if (send) send.onclick = () => sendLink(l);
+  const stop = $("shareStop");
+  if (stop) stop.onclick = () => {
+    if (stop.dataset.sure !== "1") { stop.dataset.sure = "1"; stop.textContent = "Toca otra vez: dejarás de ver sus cambios"; return; }
+    unshare(l); render(); openLists(); setStatus(`«${l.name}» ya no está compartida en este móvil.`);
+  };
+}
+
+// ---------- Comparar el precio de la lista en cada súper ----------
+const pricedStores = () => STORES.slice(1).map(([s]) => s).filter((s) => meta?.stores?.[s]?.prices && meta.stores[s].count);
+async function openCompare() {
+  const l = list(), items = l.items.filter((i) => !i.done);
+  if (!items.length) return;
+  const stores = pricedStores();
+  openSheet("¿Dónde sale más barata?", `<p class="note">Buscando cada producto en ${stores.map((s) => STORE_NAME[s]).join(", ")}…</p>`);
+  const cats = await Promise.all(stores.map(loadStore));
+  if (!sheet.open) return;
+  const res = stores.map((s, k) => {
+    const rows = items.map((it) => {
+      const prod = it.prod?.s === s && it.prod.p != null ? it.prod : st.memory[memKey(it.label, s)] ?? bestProd(cats[k], it.label);
+      return { it, prod, price: prod?.p != null ? prod.p * (it.count || 1) : null };
+    });
+    return { s, rows, found: rows.filter((r) => r.price != null).length, total: rows.reduce((a, r) => a + (r.price ?? 0), 0) };
+  });
+  // Lo que un súper no tiene se cuenta con el precio medio de los que sí, para comparar la lista entera.
+  const avg = items.map((_, j) => { const ps = res.map((r) => r.rows[j].price).filter((x) => x != null); return ps.length ? ps.reduce((a, x) => a + x, 0) / ps.length : null; });
+  for (const r of res) r.est = r.rows.reduce((a, x, j) => a + (x.price ?? avg[j] ?? 0), 0);
+  const nAny = avg.filter((x) => x != null).length;
+  const ok = res.filter((r) => r.found).sort((a, b) => a.est - b.est);
+  const best = ok[0];
+  const fmtRow = (x) => `<li><span>${esc(x.it.label)}</span><small>${x.prod ? esc(x.prod.n) : "No lo encuentro"}</small><b>${x.price != null ? eur(x.price) : "—"}</b></li>`;
+  $("sheetBody").innerHTML = ok.length ? `
+    <p class="note">Precio aproximado de tus ${nAny} productos con precio, eligiendo en cada súper el que más se parece. Si un súper no tiene algo, se cuenta lo que cuesta de media en los demás.</p>
+    <div class="cmp">${ok.map((r) => {
+      const cur = r.s === l.store, top = r === best && ok.length > 1, diff = r.est - best.est;
+      const miss = nAny - r.found;
+      return `<article class="cmp-s${top ? " best" : ""}">
+        <div class="cmp-h"><span class="cmp-logo" style="background-image:url('img/logos/${r.s}.png')" aria-hidden="true"></span>
+          <span class="cmp-n"><b>${esc(STORE_NAME[r.s])}</b>${top ? `<span class="badge">Más barato</span>` : ""}${cur ? `<span class="badge ghost">Tu súper</span>` : ""}</span>
+          <span class="cmp-p">${eur(r.est)}${diff > 0.005 ? `<small>+${eur(diff)}</small>` : ""}</span></div>
+        <p class="cmp-sub">${miss > 0 ? `Tiene ${r.found} de ${nAny} · ${miss === 1 ? "1 producto calculado" : `${miss} productos calculados`} con el precio medio` : `Tiene los ${nAny} productos`}</p>
+        <details><summary>Ver productos</summary><ul class="cmp-l">${r.rows.map(fmtRow).join("")}</ul></details>
+        ${cur ? "" : `<button class="btn ghost small" type="button" data-use="${r.s}">Hacer la compra en ${esc(STORE_NAME[r.s])}</button>`}
+      </article>`;
+    }).join("")}</div>` : `<p class="note">No encuentro precios para lo que tienes en la lista.</p>`;
+  $("sheetBody").onclick = (e) => {
+    const b = e.target.closest("[data-use]"); if (!b) return;
+    const r = res.find((x) => x.s === b.dataset.use);
+    // La lista pasa a ese súper con el producto que se ha usado para comparar.
+    for (const x of r.rows) {
+      if (x.prod) { x.it.prod = pick(x.prod); x.it.cat = x.prod.c ?? x.it.cat; }
+      else if (x.it.prod && x.it.prod.s !== r.s) x.it.prod = null; // para no mezclar precios de otro súper
+    }
+    l.store = r.s; save(); render(); closeSheet(); buzz(20);
+    setStatus(`Lista cambiada a ${STORE_NAME[r.s]}: unos ${eur(r.total)} por lo que encuentra.`);
   };
 }
 
@@ -673,6 +763,7 @@ $("cookBtn").addEventListener("click", () => openRecipes());
 $("ideas").addEventListener("click", (e) => {
   const r = e.target.closest("[data-recipe]"); if (r) return openRecipes(+r.dataset.recipe);
   const m = e.target.closest("[data-cook-moment]"); if (m) return openRecipes(null, m.dataset.cookMoment);
+  if (e.target.closest("[data-cook-plan]")) return openRecipes(null, null, "plan");
   if (e.target.closest("[data-cook-all]")) openRecipes(null, "Todo");
 });
 initCocina({ st, list, addItem, markGeneric, save, render, setStatus, buzz, esc, openSheet, sheet, CHECK_SVG,
@@ -703,6 +794,7 @@ $("list").addEventListener("click", (e) => {
   toggleItem(li.dataset.id);
 });
 $("toastUndo").addEventListener("click", undo);
+$("summary").addEventListener("click", (e) => { if (e.target.closest("[data-compare]")) openCompare(); });
 
 // ---------- Gestos ----------
 // Deslizar a la izquierda: borrar. A la derecha: marcar como comprado. Mantener pulsado: opciones.
@@ -822,6 +914,7 @@ document.addEventListener("error", (e) => {
 }, true);
 
 // ---------- Arranque ----------
+initSync({ st, list, persist, render: () => render(), setStatus, uid });
 render();
 catalogFor(list().store);
 if (st.shop) keepAwake();

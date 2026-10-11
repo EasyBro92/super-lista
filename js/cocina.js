@@ -60,9 +60,28 @@ function matches(r) {
 
 let A; // funciones de la app (lista, guardar, pintar…)
 let recipes = null, loading = null;
-const ui = { view: "list", mode: "tengo", moment: null, tag: "Todas", q: "", id: null, pq: "", scroll: 0 };
+const ui = { view: "list", mode: "tengo", moment: null, tag: "Todas", q: "", id: null, pq: "", scroll: 0, serv: {}, step: 0, from: null, pickDay: null };
 
-export function initCocina(api) { A = api; }
+export function initCocina(api) {
+  A = api;
+  // En el modo cocinar la pantalla no se apaga; al salir se deja de pedir.
+  A.sheet.addEventListener("close", () => setView("closed"));
+  document.addEventListener("visibilitychange", () => { if (ui.view === "cook" && A.sheet.open) lockScreen(); });
+  document.addEventListener("keydown", (e) => {
+    if (ui.view !== "cook" || !A.sheet.open || e.target.closest?.("input, textarea")) return;
+    if (e.key === "ArrowRight") { e.preventDefault(); stepTo(ui.step + 1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); stepTo(ui.step - 1); }
+  });
+}
+function setView(v) {
+  ui.view = v;
+  if (v === "cook") lockScreen(); else { screenLock?.release?.().catch(() => {}); screenLock = null; }
+}
+let screenLock = null;
+async function lockScreen() {
+  if (screenLock || !("wakeLock" in navigator) || document.visibilityState !== "visible") return;
+  try { screenLock = await navigator.wakeLock.request("screen"); screenLock.addEventListener("release", () => { screenLock = null; }); } catch {}
+}
 
 function loadRecipes() {
   const get = (u, d) => fetch(u).then((r) => (r.ok ? r.json() : d)).catch(() => d);
@@ -101,18 +120,22 @@ export function learnPurchase(items) {
 }
 
 // Se vuelve a abrir donde lo dejaste: mismos filtros, búsqueda y posición.
-export async function openRecipes(id, moment) {
+export async function openRecipes(id, moment, view) {
   A.openSheet("Recetas", `<p class="note">Cargando recetas…</p>`, "browsing cooking");
   await loadRecipes();
   if (!A.sheet.open) return;
+  ui.from = null; ui.pickDay = null;
   if (moment && (MOMENT.has(moment) || moment === ALL) && moment !== ui.moment) { ui.moment = moment; ui.tag = "Todas"; ui.scroll = 0; }
+  if (view === "plan") return showPlan();
   if (id != null && recipes[id]) { ui.view = "list"; return showRecipe(id); }
   showList(true);
 }
 
-// Botón de cerrar, gesto de atrás o deslizar hacia abajo: desde una receta o «En casa», vuelve a las recetas.
+// Botón de cerrar, gesto de atrás o deslizar hacia abajo: un paso atrás (paso a paso → receta → recetas o menú).
 export function cookBack() {
-  if (ui.view === "recipe" || ui.view === "pantry") { showList(true); return true; }
+  if (ui.view === "cook") { showRecipe(ui.id); return true; }
+  if ((ui.view === "recipe" && ui.from === "plan") || (ui.view === "list" && ui.pickDay)) { showPlan(); return true; }
+  if (ui.view === "recipe" || ui.view === "pantry" || ui.view === "plan") { showList(true); return true; }
   return false;
 }
 
@@ -128,30 +151,33 @@ export async function renderIdeas(el) {
   // Ideas del momento del día que toca (desayuno por la mañana, cena por la noche…).
   const [mo, emo, para] = MOMENT.get(nowMoment());
   const inMo = (r) => !!r.m?.[mo];
-  const rows = recipes.filter((r) => r.foto).map((r) => ({ r, c: check(r) }));
-  rows.sort((a, b) => inMo(b.r) - inMo(a.r) || (cooking ? Math.min(a.c.missing.length, 4) - Math.min(b.c.missing.length, 4) : 0) || rot(a.r) - rot(b.r));
+  // Lo que tienes en el menú de hoy va primero.
+  const hoy = new Set(plan().filter((e) => e.d === ymd()).map((e) => e.n)), np = plan().length;
+  const rows = recipes.filter((r) => r.foto || hoy.has(r.n)).map((r) => ({ r, c: check(r) }));
+  rows.sort((a, b) => hoy.has(b.r.n) - hoy.has(a.r.n) || inMo(b.r) - inMo(a.r) || (cooking ? Math.min(a.c.missing.length, 4) - Math.min(b.c.missing.length, 4) : 0) || rot(a.r) - rot(b.r));
   const pick = rows.slice(0, 8);
   const html = `<div class="ideas-head"><h2>¿Qué cocino hoy?</h2><button type="button" class="lnk" data-cook-all>Ver las ${recipes.length} recetas</button></div>
-    <button type="button" class="ideas-mo" data-cook-moment="${mo}"><span aria-hidden="true">${emo}</span> ${para} · ver ${recipes.filter(inMo).length} recetas</button>
+    <div class="ideas-pills"><button type="button" class="ideas-mo" data-cook-moment="${mo}"><span aria-hidden="true">${emo}</span> ${para} · ver ${recipes.filter(inMo).length} recetas</button>
+      <button type="button" class="ideas-mo" data-cook-plan><span aria-hidden="true">📅</span> ${np ? `Tu menú · ${plural(np, "receta", "recetas")}` : "Planificar el menú"}</button></div>
     <div class="ideas-row">${pick.map(({ r, c }) => `<button type="button" class="idea" data-recipe="${r.id}">
-      <span class="idea-ph" style="background-image:url('${A.esc(r.foto.img)}')"></span>
+      <span class="idea-ph" style="${r.foto ? `background-image:url('${A.esc(r.foto.img)}')` : ""}">${r.foto ? "" : A.esc(r.e)}</span>
       <span class="idea-n">${A.esc(r.n)}</span>
-      <span class="idea-m${c.missing.length ? "" : " ok"}">${c.missing.length ? (cooking ? `Faltan ${c.missing.length}` : mins(r.t)) : "✓ Tienes todo"}</span></button>`).join("")}</div>`;
+      <span class="idea-m${c.missing.length && !hoy.has(r.n) ? "" : " ok"}">${hoy.has(r.n) ? "📅 En tu menú de hoy" : c.missing.length ? (cooking ? `Faltan ${c.missing.length}` : mins(r.t)) : "✓ Tienes todo"}</span></button>`).join("")}</div>`;
   if (html !== ideasHTML) { el.innerHTML = html; ideasHTML = html; }
   el.hidden = false;
 }
 
 const hue = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
 const mins = (t) => t < 60 ? `${t} min` : `${Math.floor(t / 60)} h${t % 60 ? ` ${t % 60} min` : ""}`;
-const meta = (r) => `${r.z ? `${origin(r)} · ` : ""}${mins(r.t)} · ${r.r} ${r.r === 1 ? "ración" : "raciones"} · ${r.d}`;
+const meta = (r, s = r.r) => `${r.z ? `${origin(r)} · ` : ""}${mins(r.t)} · ${s} ${s === 1 ? "ración" : "raciones"} · ${r.d}`;
 const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
 
 function showList(restore = false) {
-  ui.view = "list";
+  setView("list");
   ui.moment ??= nowMoment();
   if (!chipsFor(ui.moment).includes(ui.tag)) ui.tag = "Todas";
-  A.setTitle("Recetas", false);
-  const n = Object.keys(pantry()).length;
+  A.setTitle(ui.pickDay ? "Elige una receta" : "Recetas", !!ui.pickDay);
+  const n = Object.keys(pantry()).length, np = plan().length;
   const tabs = [...MOMENTS, [ALL, "📖"]].map(([mo, emo]) => `<button type="button" data-moment="${mo}" aria-pressed="${mo === ui.moment}">
       <span class="mo-e" aria-hidden="true">${emo}</span><span class="mo-n">${mo}</span></button>`).join("");
   A.body().innerHTML = `
@@ -160,7 +186,9 @@ function showList(restore = false) {
       <button type="button" data-mode="tengo" aria-pressed="${ui.mode === "tengo"}">Con lo que tengo</button>
       <button type="button" data-mode="todas" aria-pressed="${ui.mode === "todas"}">Todas</button>
     </div>
-    <button type="button" class="pantry-btn" id="cpantry"><span>🏠 En casa tienes <b>${plural(n, "ingrediente", "ingredientes")}</b></span><span class="lnk">Cambiar</span></button>
+    ${ui.pickDay ? `<div class="pickbar"><span>📅 Toca una receta para el menú <b>${A.esc(delDay(ui.pickDay))}</b></span><button type="button" class="lnk" id="cpickx">Cancelar</button></div>`
+    : `<div class="cbtns"><button type="button" class="pantry-btn" id="cpantry"><span>🏠 En casa</span><b>${plural(n, "ingrediente", "ingredientes")}</b></button>
+      <button type="button" class="pantry-btn" id="cplan"><span>📅 Menú semanal</span><b>${np ? plural(np, "receta", "recetas") : "Planificar"}</b></button></div>`}
     <label class="vh" for="cq">Buscar receta o ingrediente</label>
     <input id="cq" class="bsearch" type="search" placeholder="Busca una receta o un ingrediente…" value="${A.esc(ui.q)}" enterkeyhint="search" autocomplete="off">
     <div class="btabs" id="ctags">${tagChips()}</div>
@@ -190,9 +218,12 @@ function showList(restore = false) {
   };
   let tmo;
   $$("cq").oninput = (e) => { clearTimeout(tmo); tmo = setTimeout(() => { ui.q = e.target.value.trim(); fillList(); }, 160); };
-  $$("cpantry").onclick = showPantry;
+  if (ui.pickDay) $$("cpickx").onclick = showPlan;
+  else { $$("cpantry").onclick = showPantry; $$("cplan").onclick = showPlan; }
   $$("clist").onclick = (e) => {
-    const b = e.target.closest("[data-r]"); if (b) return showRecipe(+b.dataset.r);
+    const b = e.target.closest("[data-r]");
+    if (b && ui.pickDay) { addToPlan(+b.dataset.r, ui.pickDay); return showPlan(); }
+    if (b) { ui.from = null; return showRecipe(+b.dataset.r); }
     if (e.target.closest("[data-gopantry]")) showPantry();
     if (e.target.closest("[data-all]")) { ui.mode = "todas"; showList(); }
   };
@@ -276,44 +307,96 @@ function fillList() {
   lazyBg(el);
 }
 
+// ---------- Raciones ----------
+// Las cantidades se recalculan al cambiar las raciones: «1/2 cucharadita» × 2 = «1 cucharadita».
+const FRAC = { 0.25: "¼", 0.5: "½", 0.75: "¾" };
+const PLURAL = new Set(("cucharada cucharadita rebanada diente bote trozo barra lata oblea rama hoja lámina rodaja loncha yema bolsa sobre "
+  + "tarrina vasito filete lomo contramuslo muslo bola cabeza cogollo envase paquete puñado ramita rulo tarro manojo onza panecillo estrella "
+  + "guindilla chile chorrito taza vaso pieza tira rojo roja verde maduro madura grande mediano mediana pequeño pequeña fresco fresca "
+  + "blanco blanca cocido cocida troceado deshuesado entero entera").split(" "));
+const MEASURE = new Set(["g", "kg", "ml", "l", "cl", "cm", "cucharada", "cucharadas", "cucharadita", "cucharaditas", "taza", "tazas", "vaso", "vasos", "vasito", "vasitos"]);
+// Lo que se cuenta por piezas (huevos, dientes, lonchas) va en enteros o medios; lo que se mide, en cuartos.
+function roundQty(v, dec, pieces) {
+  if (v >= 20) v = Math.max(5, Math.round(v / 5) * 5);
+  else if (dec) v = Math.max(0.1, Math.round(v * 10) / 10);
+  else if (pieces) v = v >= 2 ? Math.round(v) : Math.max(0.5, Math.round(v * 2) / 2);
+  else if (v >= 3) v = Math.round(v * 2) / 2;
+  else v = Math.max(0.25, Math.round(v * 4) / 4);
+  const ent = Math.floor(v), fr = +(v - ent).toFixed(2);
+  return [!dec && FRAC[fr] ? (ent ? `${ent} ${FRAC[fr]}` : FRAC[fr]) : String(v).replace(".", ","), v];
+}
+export function scaleQty(q, f) {
+  if (!q || Math.abs(f - 1) < 1e-9) return q;
+  // Lo que va entre paréntesis («1 envase (125 g)») es el tamaño de cada uno: no cambia.
+  return q.split(/(\([^)]*\))/).map((part, k) => k % 2 ? part
+    : part.replace(/(\d+(?:[.,]\d+)?)(?:\/(\d+))?(\s+)?([a-záéíóúüñ]+)?/gi, (m, a, b, sp = "", w) => {
+      const n = b ? parseFloat(a) / +b : parseFloat(a.replace(",", "."));
+      const [txt, v] = roundQty(n * f, /[.,]/.test(a), !MEASURE.has(w?.toLowerCase()));
+      if (!w) return txt + sp;
+      const lw = w.toLowerCase();
+      if ((lw === "g" || lw === "ml") && v >= 1000) return `${String(Math.round(v / 100) / 10).replace(".", ",")}${sp}${lw === "g" ? "kg" : "l"}`;
+      if (v > 1 && PLURAL.has(lw)) w += "s";
+      else if (v <= 1 && lw.endsWith("s") && PLURAL.has(lw.slice(0, -1))) w = w.slice(0, -1);
+      return `${txt}${sp}${w}`;
+    })).join("");
+}
+const servOf = (r) => ui.serv[r.id] ?? r.r;
+function setServ(r, s) {
+  s = Math.max(1, Math.min(24, s));
+  ui.serv[r.id] = s;
+  // Si vienes del menú, las raciones se guardan en ese día.
+  const e = ui.from === "plan" ? plan()[ui.planIdx] : null;
+  if (e && e.n === r.n) { e.s = s; A.save(); }
+}
+
 const keepScroll = () => { const l = $$("clist"); if (l) ui.scroll = l.scrollTop; };
 function showRecipe(id) {
   const r = recipes[id]; if (!r) return;
   keepScroll();
   const same = ui.view === "recipe" && ui.id === id, prev = same ? A.body().querySelector(".cdetail")?.scrollTop ?? 0 : 0;
-  ui.view = "recipe"; ui.id = id;
+  setView("recipe"); ui.id = id;
   A.setTitle(r.n, true);
-  const c = check(r);
+  const c = check(r), sv = servOf(r), f = sv / r.r;
   const toAdd = c.missing.filter((i) => !inList(i.k));
   const ings = r.ings.map((i) => {
     const st = has(i.k) ? "have" : inList(i.k) ? "list" : i.opt ? "optional" : "miss";
     const label = { have: "En casa", list: "En la lista", optional: "Opcional", miss: "Falta" }[st];
     return `<li><button type="button" class="ing ${st}" data-ing="${A.esc(i.k)}" data-n="${A.esc(i.n)}" aria-pressed="${st === "have"}">
       <span class="ic" aria-hidden="true">${A.CHECK_SVG}</span><span class="ie" aria-hidden="true">${A.esc(guess(i.n).emoji)}</span>
-      <span class="inm">${A.esc(i.n)}<small>${A.esc(i.q || "")}</small></span><span class="ist">${label}</span></button></li>`;
+      <span class="inm">${A.esc(i.n)}<small>${A.esc(scaleQty(i.q, f) || "")}</small></span><span class="ist">${label}</span></button></li>`;
   }).join("");
   const btn = !c.missing.length ? `<p class="ready">🎉 Tienes todo para hacerla.</p>`
     : toAdd.length ? `<button class="btn" type="button" id="cadd">Apuntar lo que falta (${toAdd.length})</button>`
     : `<p class="ready">Ya tienes en la lista todo lo que falta.</p>`;
+  const days = nextDays(), inPlan = new Set(plan().filter((e) => e.n === r.n).map((e) => e.d));
   A.body().innerHTML = `
-    <button type="button" class="back" id="cback">‹ Recetas</button>
+    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : "Recetas"}</button>
     <div class="cdetail">
       ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>
         <figcaption>Foto: <a href="${A.esc(r.foto.fuente)}" target="_blank" rel="noopener">${A.esc(r.foto.autor)}</a> · ${A.esc(r.foto.licencia)}</figcaption></figure>` : ""}
       <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>`}
-        <div><p class="rm">${A.esc(meta(r))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p>
+        <div><p class="rm">${A.esc(meta(r, sv))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p>
           ${r.m ? `<p class="rmo">${Object.keys(r.m).filter((m) => MOMENT.has(m)).map((m) => `<button type="button" class="mo-tag" data-go-moment="${m}">${MOMENT.get(m)[1]} ${m}</button>`).join("")}</p>` : ""}</div></div>
+      <div class="rtools">
+        <div class="serv" role="group" aria-label="Raciones"><span>Raciones</span>
+          <button type="button" class="round" id="sminus" aria-label="Menos raciones"${sv <= 1 ? " disabled" : ""}>−</button>
+          <b aria-live="polite">${sv}</b><button type="button" class="round" id="splus" aria-label="Más raciones">+</button></div>
+        <button type="button" class="btn ghost small" id="cplanadd" aria-expanded="false">📅 ${inPlan.size ? "En tu menú" : "Al menú"}</button>
+      </div>
+      <div class="pdays" id="pdays" hidden><span>¿Qué día la haces?</span><div>${days.map((d) =>
+        `<button type="button" class="chip" data-day="${d}" aria-pressed="${inPlan.has(d)}">${A.esc(dayShort(d))}</button>`).join("")}</div></div>
       <h3 class="cgroup">Ingredientes <span>toca para marcar lo que tienes</span></h3>
       <ul class="ings">${ings}</ul>
       <div class="row">${btn}</div>
       <h3 class="cgroup">Preparación</h3>
+      <button class="btn cookgo" type="button" id="ccook">👩‍🍳 Cocinar paso a paso</button>
       <ol class="steps">${r.p.map((s) => `<li>${A.esc(s)}</li>`).join("")}</ol>
     </div>`;
-  $$("cback").onclick = () => showList(true);
+  $$("cback").onclick = () => cookBack();
   A.body().querySelector(".rmo")?.addEventListener("click", (e) => {
     const b = e.target.closest("[data-go-moment]"); if (!b) return;
     if (ui.moment !== b.dataset.goMoment) { ui.moment = b.dataset.goMoment; ui.tag = "Todas"; ui.scroll = 0; }
-    showList(true);
+    ui.from = null; showList(true);
   });
   A.body().querySelector(".ings").onclick = (e) => {
     const b = e.target.closest("[data-ing]"); if (!b) return;
@@ -321,6 +404,21 @@ function showRecipe(id) {
     if (b.dataset.ing in p) delete p[b.dataset.ing]; else p[b.dataset.ing] = b.dataset.n;
     A.buzz(); A.save(); showRecipe(id);
   };
+  $$("sminus").onclick = () => { setServ(r, sv - 1); A.buzz(); showRecipe(id); };
+  $$("splus").onclick = () => { setServ(r, sv + 1); A.buzz(); showRecipe(id); };
+  $$("cplanadd").onclick = (e) => {
+    const open = $$("pdays").hidden;
+    $$("pdays").hidden = !open; e.currentTarget.setAttribute("aria-expanded", String(open));
+  };
+  $$("pdays").onclick = (e) => {
+    const b = e.target.closest("[data-day]"); if (!b) return;
+    const d = b.dataset.day, k = plan().findIndex((x) => x.d === d && x.n === r.n);
+    if (k >= 0) { plan().splice(k, 1); A.setStatus(`Quitada del menú ${delDay(d)}: ${r.n}.`); }
+    else { addToPlan(id, d); A.setStatus(`Añadida al menú ${delDay(d)}: ${r.n}.`); }
+    b.setAttribute("aria-pressed", String(k < 0)); A.buzz(); A.save();
+    $$("cplanadd").textContent = `📅 ${plan().some((x) => x.n === r.n) ? "En tu menú" : "Al menú"}`;
+  };
+  $$("ccook").onclick = () => showCook(id, 0);
   const add = $$("cadd");
   if (add) add.onclick = async () => {
     add.disabled = true;
@@ -332,9 +430,174 @@ function showRecipe(id) {
   A.body().querySelector(".cdetail").scrollTop = prev;
 }
 
+// ---------- Cocinar paso a paso ----------
+// Pasos grandes de uno en uno, la pantalla no se apaga y los tiempos del paso («20 minutos») son temporizadores.
+const TIME_RE = /(\d+(?:[.,]\d+)?)(?:\s*(?:-|–|a|o)\s*(\d+))?\s*(minutos?|min\b|horas?|segundos?)/gi;
+function stepTimers(s) {
+  const out = [];
+  for (const m of s.matchAll(TIME_RE)) {
+    const n = parseFloat(m[1].replace(",", ".")), u = m[3][0].toLowerCase();
+    const sec = Math.round(n * (u === "h" ? 3600 : u === "s" ? 1 : 60));
+    if (sec >= 10 && sec <= 12 * 3600 && !out.includes(sec)) out.push(sec);
+  }
+  return out;
+}
+const fmtDur = (sec) => sec >= 3600 ? `${Math.floor(sec / 3600)} h${sec % 3600 >= 60 ? ` ${Math.round((sec % 3600) / 60)} min` : ""}`
+  : sec >= 60 ? `${Math.round(sec / 60)} min` : `${sec} s`;
+const clock = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = t % 60;
+  return `${h ? `${h}:${String(m).padStart(2, "0")}` : m}:${String(s).padStart(2, "0")}`; };
+const timers = []; // { id, name, sec, end, rang }
+let tick = null, audio = null;
+function startTimer(r, sec) {
+  try { audio ??= new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch {}
+  timers.push({ id: Math.random().toString(36).slice(2), name: r.n, sec, end: Date.now() + sec * 1000, rang: false });
+  tick ??= setInterval(onTick, 1000);
+  paintTimers();
+}
+function onTick() {
+  for (const t of timers) if (!t.rang && t.end <= Date.now()) { t.rang = true; ring(t); }
+  if (!timers.some((t) => !t.rang)) { clearInterval(tick); tick = null; }
+  paintTimers();
+}
+function ring(t) {
+  try { navigator.vibrate?.([400, 200, 400, 200, 600]); } catch {}
+  try {
+    if (audio) for (let k = 0; k < 4; k++) {
+      const o = audio.createOscillator(), g = audio.createGain(), t0 = audio.currentTime + k * 0.45;
+      o.frequency.value = k % 2 ? 660 : 880; o.connect(g); g.connect(audio.destination);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.38);
+      o.start(t0); o.stop(t0 + 0.4);
+    }
+  } catch {}
+  A.setStatus(`⏰ ¡Tiempo! ${fmtDur(t.sec)} de ${t.name}`);
+}
+function paintTimers() {
+  const el = $$("ctimers"); if (!el) return;
+  el.hidden = !timers.length;
+  el.innerHTML = timers.map((t) => `<div class="ctimer${t.rang ? " rang" : ""}"><span>⏱ ${t.rang ? "¡Tiempo!" : clock(t.end - Date.now())}</span>
+    <small>${A.esc(fmtDur(t.sec))} · ${A.esc(t.name)}</small><button type="button" class="lnk" data-tstop="${t.id}">${t.rang ? "Vale" : "Parar"}</button></div>`).join("");
+}
+function stepTo(k) {
+  const r = recipes[ui.id]; if (!r) return;
+  if (k >= r.p.length) { A.setStatus(`¡Que aproveche! ${r.n} terminada.`); A.buzz(30); return showRecipe(ui.id); }
+  if (k >= 0) showCook(ui.id, k);
+}
+function showCook(id, step) {
+  const r = recipes[id]; if (!r) return;
+  setView("cook"); ui.id = id; ui.step = Math.max(0, Math.min(step, r.p.length - 1));
+  A.setTitle(r.n, true);
+  const n = r.p.length, s = r.p[ui.step], last = ui.step === n - 1, sv = servOf(r), f = sv / r.r;
+  const tms = stepTimers(s);
+  A.body().innerHTML = `
+    <button type="button" class="back" id="cback">‹ Receta</button>
+    <div class="cook" id="cook">
+      <div class="cook-top"><span>Paso ${ui.step + 1} de ${n}</span><span class="cook-bar"><span style="width:${((ui.step + 1) / n) * 100}%"></span></span></div>
+      <div class="ctimers" id="ctimers" hidden></div>
+      <p class="cook-t">${A.esc(s)}</p>
+      ${tms.length ? `<div class="cook-tm">${tms.map((t) => `<button type="button" class="btn ghost" data-timer="${t}">⏱ Temporizador ${fmtDur(t)}</button>`).join("")}</div>` : ""}
+      <details class="cook-ings"${ui.step === 0 ? " open" : ""}><summary>Ingredientes para ${plural(sv, "ración", "raciones")}</summary>
+        <ul>${r.ings.map((i) => `<li><span>${A.esc(i.n)}</span><small>${A.esc(scaleQty(i.q, f) || "")}</small></li>`).join("")}</ul></details>
+    </div>
+    <div class="bfoot"><button type="button" class="btn ghost" id="cprev"${ui.step ? "" : " disabled"}>‹ Anterior</button>
+      <button type="button" class="btn" id="cnext">${last ? "Terminar 🎉" : "Siguiente ›"}</button></div>`;
+  paintTimers();
+  $$("cback").onclick = () => cookBack();
+  $$("cprev").onclick = () => stepTo(ui.step - 1);
+  $$("cnext").onclick = () => stepTo(ui.step + 1);
+  $$("cook").onclick = (e) => {
+    const t = e.target.closest("[data-timer]");
+    if (t) { startTimer(r, +t.dataset.timer); A.buzz(); A.setStatus(`Temporizador de ${fmtDur(+t.dataset.timer)} en marcha.`); return; }
+    const x = e.target.closest("[data-tstop]");
+    if (x) { const k = timers.findIndex((tt) => tt.id === x.dataset.tstop); if (k >= 0) timers.splice(k, 1); paintTimers(); }
+  };
+  // Deslizar a los lados también pasa de paso (con las manos ocupadas es más fácil).
+  let x0 = null;
+  $$("cook").onpointerdown = (e) => { x0 = e.clientX; };
+  $$("cook").onpointerup = (e) => {
+    if (x0 == null) return; const dx = e.clientX - x0; x0 = null;
+    if (Math.abs(dx) > 70) stepTo(ui.step + (dx < 0 ? 1 : -1));
+  };
+}
+
+// ---------- Menú de la semana ----------
+const ymd = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const nextDays = () => Array.from({ length: 7 }, (_, k) => { const d = new Date(); d.setDate(d.getDate() + k); return ymd(d); });
+const dateOf = (d) => new Date(`${d}T12:00`);
+function dayName(d) {
+  const [hoy, man] = nextDays();
+  return d === hoy ? "hoy" : d === man ? "mañana" : dateOf(d).toLocaleDateString("es-ES", { weekday: "long", day: "numeric" });
+}
+const delDay = (d) => { const n = dayName(d); return n === "hoy" || n === "mañana" ? `de ${n}` : `del ${n}`; };
+const dayShort = (d) => { const [hoy, man] = nextDays(); return d === hoy ? "Hoy" : d === man ? "Mañana" : cap(dateOf(d).toLocaleDateString("es-ES", { weekday: "short", day: "numeric" }).replace(".", "")); };
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+// Los días que ya han pasado se quitan solos.
+function plan() {
+  const st = A.st, hoy = ymd();
+  if (!Array.isArray(st.plan)) st.plan = [];
+  if (st.plan.some((e) => e.d < hoy)) st.plan = st.plan.filter((e) => e.d >= hoy);
+  return st.plan;
+}
+function addToPlan(id, d) {
+  const r = recipes[id]; if (!r) return;
+  plan().push({ d, n: r.n, s: servOf(r) });
+  A.st.plan.sort((a, b) => a.d.localeCompare(b.d));
+  A.save();
+}
+// Lo que falta para todo el menú, sin repetir lo que se usa en varias recetas ni lo que ya está en la lista.
+function planMissing() {
+  const by = new Map(recipes.map((r) => [r.n, r])), out = new Map();
+  for (const e of plan()) {
+    const r = by.get(e.n); if (!r) continue;
+    for (const i of check(r).missing) if (!inList(i.k) && !out.has(i.k)) out.set(i.k, i.n);
+  }
+  return [...out.values()];
+}
+function showPlan() {
+  keepScroll();
+  setView("plan"); ui.pickDay = null; ui.from = null;
+  A.setTitle("Menú de la semana", true);
+  const by = new Map(recipes.map((r) => [r.n, r])), p = plan(), miss = planMissing();
+  A.body().innerHTML = `
+    <button type="button" class="back" id="cback">‹ Recetas</button>
+    <div class="plan" id="cplanl">
+      <p class="note">Elige qué vas a cocinar cada día y apunta de una vez todo lo que te falta.</p>
+      ${nextDays().map((d) => `<section class="pday"><h3 class="cgroup">${A.esc(cap(dayName(d)))}</h3>
+        ${p.map((e, k) => [e, k]).filter(([e]) => e.d === d).map(([e, k]) => {
+          const r = by.get(e.n); if (!r) return "";
+          const m = check(r).missing.length;
+          return `<div class="pent"><button type="button" class="rc" data-open="${k}">${pic(r)}<span class="ri"><span class="rn">${A.esc(r.n)}</span>
+            <span class="rm">${A.esc(`${mins(r.t)} · ${plural(e.s, "ración", "raciones")}`)}</span>
+            <span class="rh${m ? "" : " ok"}">${m ? `Te ${m === 1 ? "falta 1 ingrediente" : `faltan ${m} ingredientes`}` : "✓ Tienes todo"}</span></span></button>
+            <button type="button" class="pdel" data-del="${k}" aria-label="Quitar ${A.esc(r.n)} del menú">×</button></div>`;
+        }).join("")}
+        <button type="button" class="padd" data-addday="${d}">+ Añadir receta</button></section>`).join("")}
+    </div>
+    <div class="bfoot"><span>${p.length ? plural(p.length, "receta", "recetas") : "Menú vacío"}</span>
+      ${miss.length ? `<button class="btn" type="button" id="pmiss">Apuntar lo que falta (${miss.length})</button>`
+        : p.length ? `<span class="ready">✓ Nada que comprar</span>` : ""}</div>`;
+  lazyBg($$("cplanl"));
+  $$("cback").onclick = () => cookBack();
+  $$("cplanl").onclick = (e) => {
+    const o = e.target.closest("[data-open]");
+    if (o) { const k = +o.dataset.open, r = by.get(p[k].n); ui.from = "plan"; ui.planIdx = k; ui.serv[r.id] = p[k].s; return showRecipe(r.id); }
+    const del = e.target.closest("[data-del]");
+    if (del) { p.splice(+del.dataset.del, 1); A.buzz(); A.save(); return showPlan(); }
+    const add = e.target.closest("[data-addday]");
+    if (add) { ui.pickDay = add.dataset.addday; ui.mode = "todas"; ui.q = ""; return showList(); }
+  };
+  const pm = $$("pmiss");
+  if (pm) pm.onclick = async () => {
+    pm.disabled = true;
+    for (const n of miss) await A.addItem({ query: n });
+    A.save(); A.render(); A.buzz(20);
+    A.setStatus(`Apuntado para el menú: ${miss.join(", ")}.`);
+    showPlan();
+  };
+}
+
 function showPantry() {
   keepScroll();
-  ui.view = "pantry";
+  setView("pantry");
   A.setTitle("Lo que tengo en casa", true);
   const all = new Map();
   for (const r of recipes) for (const i of r.ings) if (!all.has(i.k)) all.set(i.k, i.n);
