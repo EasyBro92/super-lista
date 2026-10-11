@@ -1,0 +1,30 @@
+name: Probar fuentes de precios
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Probar
+        run: node tools/probar-precios.mjs
+      - name: Guardar resultado en su rama
+        run: |
+          git config user.name "super-lista-bot"
+          git config user.email "super-lista-bot@users.noreply.github.com"
+          mv out/probe /tmp/probe
+          git checkout --orphan pruebas-precios
+          git rm -rq --cached . && git clean -fdq
+          cp -r /tmp/probe/. .
+          git add -A
+          git commit -qm "Prueba de fuentes de precios"
+          git push -f origin pruebas-precios
