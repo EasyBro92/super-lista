@@ -1,6 +1,6 @@
 import { parseCommand, search, indexCatalog, guess, norm, capital, tokens } from "./parser.js";
 import { BASICS } from "./basics.js";
-import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas } from "./cocina.js";
+import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas, homeInfo } from "./cocina.js";
 import { barcodeSVG, bestFormat } from "./barcode.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
 
@@ -296,8 +296,84 @@ function renderSummary() {
     ${(() => { const k = (st.cards ?? []).findIndex((c) => c.store === l.store); return k < 0 ? "" : `<button type="button" class="sum-cmp card" data-showcard="${k}"><span aria-hidden="true">💳</span> Tarjeta ${esc(st.cards[k].name)} <b>Enseñar en caja ›</b></button>`; })()}
     ${left.length && pricedStores().length > 1 ? `<button type="button" class="sum-cmp" data-compare><span aria-hidden="true">⚖️</span> ¿Dónde sale más barata? <b>Comparar súpers ›</b></button>` : ""}`;
 }
+// ---------- Pantalla de inicio: una tarjeta grande con foto por sección, para deslizar ----------
+let home = !location.hash.includes("unirse=");
+function showHome(on, push = true) {
+  if (home === on) return;
+  home = on;
+  if (!on && push) history.pushState({ v: "lista" }, "");
+  render();
+  scrollTo({ top: 0 });
+}
+// Botón «atrás» del móvil desde la lista: vuelve al inicio.
+addEventListener("popstate", () => { if (!home && !sheet.open) showHome(true, false); });
+// Nombre de la foto de cada tarjeta en recetas-fotos.json (sin el prefijo «Inicio »)
+const FOTO_NAME = { list: "Lista", recipes: "Recetas", plan: "Menú", tengo: "En casa", history: "Compras" };
+// Encuadre de las fotos apaisadas en la tarjeta vertical (por defecto, el centro)
+const FOTO_POS = { list: "24% 50%" };
+const HOME_CARDS = [
+  ["list", "Lista", "🛒", 150, "Apunta, dicta o escanea lo que necesitas y márcalo en el súper."],
+  ["recipes", "Recetas", "🍳", 25, "Recetas con foto para cada momento del día, con raciones y paso a paso."],
+  ["plan", "Menú", "📅", 270, "Planifica la semana y apunta de una vez todo lo que te falta."],
+  ["tengo", "Con lo que tengo", "🏠", 200, "Qué puedes cocinar con lo que tienes en casa y qué caduca pronto."],
+  ["history", "Compras", "🧾", 330, "Tus compras anteriores, lo que gastaste y tus tarjetas de cliente."],
+];
+let homeHTML = "";
+async function renderHome() {
+  const h = new Date().getHours();
+  $("homeHi").textContent = h >= 6 && h < 14 ? "¡Buenos días!" : h >= 14 && h < 21 ? "¡Buenas tardes!" : "¡Buenas noches!";
+  const info = await homeInfo().catch(() => null);
+  const l = list(), left = l.items.filter((i) => !i.done);
+  const total = left.reduce((a, i) => a + (itemPrice(i) ?? 0), 0);
+  const last = st.history.at(-1), nc = (st.cards ?? []).length;
+  const live = {
+    list: left.length ? `${left.length} por comprar${total ? ` · ${eur(total)}` : ""}` : "Tu lista está vacía",
+    recipes: info ? `${info.momentEmo} ${info.para}: ${info.inMoment} recetas` : "",
+    plan: info?.hoy.length ? `Hoy: ${info.hoy[0]}` : info?.planN ? `${info.planN} recetas esta semana` : "Aún sin planificar",
+    tengo: info?.soon.length ? `⏰ ${info.soon[0].n} caduca pronto` : info?.ready ? `Puedes hacer ${info.ready} recetas ya` : "Marca lo que tienes en casa",
+    history: last ? `Última: ${new Date(last.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}${last.total ? ` · ${eur(last.total)}` : ""}${nc ? ` · ${nc} tarjeta${nc === 1 ? "" : "s"}` : ""}` : nc ? `${nc} tarjeta${nc === 1 ? "" : "s"} de cliente` : "Aún no has terminado ninguna compra",
+  };
+  // Lista y Compras: si aún no hay foto propia, las fotos de tus productos.
+  const prodImgs = (items) => items.map((i) => i.prod?.img).filter(Boolean).slice(0, 4);
+  const mosaic = { list: prodImgs(left), history: prodImgs(last?.items ?? []) };
+  const html = HOME_CARDS.map(([k, t, e, hue, d]) => {
+    const img = info?.fotos?.[FOTO_NAME[k]]?.img ?? info?.alt?.[FOTO_NAME[k]];
+    const mo = !img && mosaic[k]?.length ? `<span class="hc-mosaic">${mosaic[k].map((u) => `<span style="background-image:url('${cssUrl(u)}')"></span>`).join("")}</span>` : "";
+    return `<button type="button" class="hcard" data-go="${k}" style="--h:${hue}">
+      <span class="hc-bg"${img ? ` style="background-image:url('${cssUrl(img)}')${FOTO_POS[k] && info?.fotos?.[FOTO_NAME[k]] ? `;background-position:${FOTO_POS[k]}` : ""}"` : ""}>${mo}${img || mo ? "" : `<span class="hc-big" aria-hidden="true">${e}</span>`}</span>
+      <span class="hc-body"><span class="hc-e" aria-hidden="true">${e}</span><b class="hc-t">${esc(t)}</b><span class="hc-d">${esc(d)}</span>
+        ${live[k] ? `<span class="hc-live">${esc(live[k])}</span>` : ""}<span class="hc-go">Abrir ›</span></span></button>`;
+  }).join("");
+  if (html !== homeHTML) {
+    $("hcards").innerHTML = html; homeHTML = html;
+    // Crédito de las fotos (licencias CC de Wikimedia Commons)
+    const cred = Object.values(info?.fotos ?? {}).filter((f) => f?.autor);
+    $("homeCred").innerHTML = cred.length ? `Fotos: ${cred.map((f) => `<a href="${esc(f.fuente)}" target="_blank" rel="noopener">${esc(f.autor)}</a> (${esc(f.licencia)})`).join(" · ")}` : "";
+    $("hdots").innerHTML = HOME_CARDS.map((_, k) => `<span${k === 0 ? ' class="on"' : ""}></span>`).join("");
+  }
+}
+function goSection(k) {
+  buzz();
+  if (k === "home") { closeSheet(); return showHome(true); }
+  if (k === "list") { closeSheet(); return showHome(false); }
+  if (k === "recipes") openRecipes();
+  else if (k === "plan" || k === "pantry" || k === "tengo") openRecipes(null, null, k);
+  else if (k === "history") openHistory();
+}
+$("hcards").addEventListener("click", (e) => { const b = e.target.closest("[data-go]"); if (b) goSection(b.dataset.go); });
+$("hcards").addEventListener("scroll", () => {
+  const c = $("hcards"), w = c.firstElementChild?.offsetWidth || 1;
+  const k = Math.round(c.scrollLeft / (w + 14));
+  [...$("hdots").children].forEach((d, i) => d.classList.toggle("on", i === k));
+}, { passive: true });
+
 function render() {
   const l = list();
+  document.body.classList.toggle("home", home);
+  $("home").hidden = !home;
+  for (const b of $("tabbar").children) b.toggleAttribute("aria-current", false);
+  $("tabbar").querySelector(`[data-tab="${home ? "home" : "list"}"]`)?.setAttribute("aria-current", "page");
+  if (home) renderHome();
   renderIdeas($("ideas")).catch(() => {});
   renderDeals().catch(() => {});
   $("listName").textContent = l.sid ? `${l.name} 👥` : l.name;
@@ -399,7 +475,7 @@ $("sheetClose").addEventListener("click", sheetBack);
 sheet.addEventListener("cancel", (e) => { if (sheet.classList.contains("cooking") && cookBack()) e.preventDefault(); });
 sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSheet(); });
 // Si la hoja se ha vuelto a abrir con otro contenido (p. ej. del menú a «Editar»), no se borra.
-sheet.addEventListener("close", () => { if (sheet.open) return; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); });
+sheet.addEventListener("close", () => { if (sheet.open) return; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
 
 async function openPicker(id, query) {
   const l = list();
@@ -893,11 +969,8 @@ $("histBtn").addEventListener("click", openHistory);
 $("cookBtn").addEventListener("click", () => openRecipes());
 $("tabbar").addEventListener("click", (e) => {
   const t = e.target.closest("[data-tab]")?.dataset.tab; if (!t) return;
-  buzz();
-  if (t === "list") { closeSheet(); scrollTo({ top: 0, behavior: "smooth" }); }
-  else if (t === "recipes") openRecipes();
-  else if (t === "plan" || t === "pantry") openRecipes(null, null, t);
-  else if (t === "history") openHistory();
+  if (t === "list" && !home && !sheet.open) { buzz(); return scrollTo({ top: 0, behavior: "smooth" }); }
+  goSection(t);
 });
 $("ideas").addEventListener("click", (e) => {
   const r = e.target.closest("[data-recipe]"); if (r) return openRecipes(+r.dataset.recipe);

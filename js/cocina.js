@@ -92,11 +92,29 @@ function prep(r, idx) {
   r.lleva = allergens(r);
   return r;
 }
-let baseCount = 0;
+let baseCount = 0, homeFotos = {};
+// Datos para las tarjetas de la pantalla de inicio.
+export async function homeInfo() {
+  await loadRecipes();
+  const [mo, emo, para] = MOMENT.get(nowMoment());
+  const staples = new Set(STAPLES.map(key));
+  const ready = recipes.filter((r) => allowed(r) && !check(r).missing.length && r.ings.some((i) => !i.opt && !staples.has(i.k))).length;
+  const hoy = plan().filter((e) => e.d === ymd()).map((e) => e.n);
+  const pick = (f) => recipes.filter((r) => r.foto && !r.mine && f(r))[Math.floor(Date.now() / 864e5) % 7];
+  const today = recipes.find((r) => r.n === hoy[0] && r.foto);
+  return {
+    total: recipes.length, moment: mo, momentEmo: emo, para, inMoment: recipes.filter((r) => r.m?.[mo]).length,
+    ready, pantryN: Object.keys(pantry()).length, soon: expiring(2), planN: plan().length, hoy,
+    fotos: homeFotos,
+    // Si aún no hay foto propia de la tarjeta, una receta que encaje.
+    alt: { Recetas: pick((r) => r.m?.[mo])?.foto.img, "Menú": (today ?? pick((r) => r.m?.Comida))?.foto.img, "En casa": pick((r) => r.filters.includes("Rápidas"))?.foto.img },
+  };
+}
 function loadRecipes() {
   const get = (u, d) => fetch(u).then((r) => (r.ok ? r.json() : d)).catch(() => d);
   loading ??= Promise.all([get("data/recetas.json", []), get("data/recetas-fotos.json", {})]).then(([rs, fotos]) => {
     rs.forEach((r, idx) => { prep(r, idx); r.foto = fotos[r.n] ?? null; });
+    homeFotos = Object.fromEntries(Object.entries(fotos).filter(([k]) => k.startsWith("Inicio ")).map(([k, v]) => [k.slice(7), v]));
     A.markGeneric(rs.flatMap((r) => r.i.map((x) => x[0])));
     baseCount = rs.length;
     recipes = rs;
@@ -198,6 +216,7 @@ export async function openRecipes(id, moment, view) {
   if (moment && (MOMENT.has(moment) || moment === ALL) && moment !== ui.moment) { ui.moment = moment; ui.tag = "Todas"; ui.scroll = 0; }
   if (view === "plan") return showPlan();
   if (view === "pantry") return showPantry();
+  if (view === "tengo") { ui.mode = "tengo"; ui.q = ""; return showList(); }
   if (view?.startsWith("use:")) { ui.q = view.slice(4); ui.mode = "todas"; ui.moment = ALL; ui.tag = "Todas"; return showList(); }
   if (id != null && recipes[id]) { ui.view = "list"; return showRecipe(id); }
   showList(true);

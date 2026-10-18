@@ -19,6 +19,13 @@
 </head>
 <body>
 <div class="wrap">
+  <section class="homescr" id="home" aria-label="Inicio" hidden>
+    <div class="home-top"><p class="home-hi" id="homeHi">Hola</p><h1>Super Lista</h1></div>
+    <div class="hcards" id="hcards"></div>
+    <div class="hdots" id="hdots" aria-hidden="true"></div>
+    <p class="home-tip">Desliza para ver todas las secciones</p>
+    <p class="home-cred" id="homeCred"></p>
+  </section>
   <header>
     <div class="top">
       <button class="listname" id="listBtn" type="button" aria-haspopup="dialog">
@@ -69,7 +76,8 @@
     </form>
   </div>
   <nav class="tabbar" id="tabbar" aria-label="Secciones">
-    <button type="button" data-tab="list" aria-current="page"><span aria-hidden="true">🛒</span>Lista</button>
+    <button type="button" data-tab="home" aria-current="page"><span aria-hidden="true">✨</span>Inicio</button>
+    <button type="button" data-tab="list"><span aria-hidden="true">🛒</span>Lista</button>
     <button type="button" data-tab="recipes"><span aria-hidden="true">🍳</span>Recetas</button>
     <button type="button" data-tab="plan"><span aria-hidden="true">📅</span>Menú</button>
     <button type="button" data-tab="pantry"><span aria-hidden="true">🏠</span>En casa</button>
