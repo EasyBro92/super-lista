@@ -1,6 +1,7 @@
 import { parseCommand, search, indexCatalog, guess, norm, capital, tokens } from "./parser.js";
 import { BASICS } from "./basics.js";
 import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas } from "./cocina.js";
+import { barcodeSVG, bestFormat } from "./barcode.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
 
 const STORES = [
@@ -60,7 +61,7 @@ const list = () => st.lists.find((l) => l.id === st.current) ?? st.lists[0];
 const catalogs = new Map(); // slug -> productos indexados
 const loading = new Map();
 let meta = null;
-fetch("data/meta.json").then((r) => (r.ok ? r.json() : null)).then((m) => { meta = m; renderSummary(); }).catch(() => {});
+fetch("data/meta.json").then((r) => (r.ok ? r.json() : null)).then((m) => { meta = m; renderSummary(); renderDeals().catch(() => {}); }).catch(() => {});
 
 function loadStore(slug) {
   if (catalogs.has(slug)) return Promise.resolve(catalogs.get(slug));
@@ -109,7 +110,7 @@ function bestProd(cat, query) {
 function pick(prod) {
   if (!prod) return null;
   const o = { n: prod.n, s: prod.s };
-  for (const k of ["img", "p", "u", "f", "e", "b", "c"]) if (prod[k] != null) o[k] = prod[k];
+  for (const k of ["img", "p", "u", "f", "e", "b", "c", "pb", "pd"]) if (prod[k] != null) o[k] = prod[k];
   return o;
 }
 
@@ -264,6 +265,9 @@ function photoHTML(url, emoji, label = "", only = null) {
   return `<span class="photo" role="img" aria-label="${esc(label)}">${emo}<span class="photo-img" style="background-image:url('${cssUrl(url)}')"></span>${logoHTML(only)}</span>`;
 }
 function thumbHTML(prod, emoji) { return photoHTML(prod?.img, emoji, prod?.n, onlyAt(prod)); }
+// Ha bajado de precio en el último catálogo (precio de antes en «pb»).
+const dropPct = (p) => p?.pb != null && p.p != null && p.p < p.pb ? Math.round((1 - p.p / p.pb) * 100) : 0;
+const dropHTML = (p) => { const d = dropPct(p); return d >= 3 ? `<span class="drop" title="Antes ${eur(p.pb)}">⬇ ${d}%</span>` : ""; };
 const itemPrice = (i) => (i.prod?.p != null ? i.prod.p * (i.count || 1) : null);
 
 function renderStores() {
@@ -289,11 +293,13 @@ function renderSummary() {
         <button type="button" data-view="grid" aria-pressed="${view === "grid"}" title="Cuadrícula con fotos"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></button>
         <button type="button" data-view="list" aria-pressed="${view === "list"}" title="Lista"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
     </div>
+    ${(() => { const k = (st.cards ?? []).findIndex((c) => c.store === l.store); return k < 0 ? "" : `<button type="button" class="sum-cmp card" data-showcard="${k}"><span aria-hidden="true">💳</span> Tarjeta ${esc(st.cards[k].name)} <b>Enseñar en caja ›</b></button>`; })()}
     ${left.length && pricedStores().length > 1 ? `<button type="button" class="sum-cmp" data-compare><span aria-hidden="true">⚖️</span> ¿Dónde sale más barata? <b>Comparar súpers ›</b></button>` : ""}`;
 }
 function render() {
   const l = list();
   renderIdeas($("ideas")).catch(() => {});
+  renderDeals().catch(() => {});
   $("listName").textContent = l.sid ? `${l.name} 👥` : l.name;
   syncCurrent();
   document.body.classList.toggle("shop", !!st.shop);
@@ -341,7 +347,7 @@ function rowHTML(it, l) {
     <span class="info"><span class="name">${esc(it.label)}</span><span class="sub">${esc(sub)}</span></span>
     <span class="right">
       <button class="qty" type="button" data-qty="${it.id}">${esc(it.qty || "1")}</button>
-      ${price != null ? `<span class="price">${eur(price)}</span>` : ""}
+      ${price != null ? `<span class="price">${dropHTML(p)}${eur(price)}</span>` : ""}
     </span>
     <span class="check" role="checkbox" aria-checked="${it.done}" aria-label="Comprado">${CHECK_SVG}</span>
     </div>
@@ -353,7 +359,7 @@ function tileHTML(it, l) {
   const q = it.qty && it.qty !== "1" ? it.qty : it.count > 1 ? `×${it.count}` : "";
   return `<li class="item gt${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}${incoming.has(it.id) ? " incoming" : ""}" data-id="${it.id}"
       role="checkbox" aria-checked="${it.done}" aria-label="${esc(it.label)}${q ? `, ${esc(q)}` : ""}" tabindex="0">
-    <span class="gt-ph">${thumbHTML(p, it.emoji)}${q ? `<span class="gt-q">${esc(q)}</span>` : ""}<span class="gt-cat" aria-hidden="true">${(CAT_LOOK[CATS.includes(it.cat) ? it.cat : "Otros"] ?? CAT_LOOK.Otros)[0]}</span><span class="gt-ck" aria-hidden="true">${CHECK_SVG}</span></span>
+    <span class="gt-ph">${thumbHTML(p, it.emoji)}${q ? `<span class="gt-q">${esc(q)}</span>` : ""}${dropHTML(p)}<span class="gt-cat" aria-hidden="true">${(CAT_LOOK[CATS.includes(it.cat) ? it.cat : "Otros"] ?? CAT_LOOK.Otros)[0]}</span><span class="gt-ck" aria-hidden="true">${CHECK_SVG}</span></span>
     <span class="gt-n">${esc(it.label)}</span>
     <span class="gt-s">${esc(it.note || (p ? [p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : ""))}</span>
     ${price != null ? `<span class="gt-p">${eur(price)}</span>` : ""}
@@ -578,18 +584,69 @@ async function openCompare() {
 }
 
 function openHistory() {
-  if (!st.history.length) return openSheet("Historial", `<p class="note">Aquí verás cada compra cuando pulses «Terminar compra».</p>`);
-  openSheet("Historial", `<div class="hist">${st.history.slice().reverse().map((h, k) => {
+  const nc = (st.cards ?? []).length;
+  const top = `<button type="button" class="pantry-btn" id="hCards"><span>💳 Tarjetas de cliente</span><span class="lnk">${nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir"}</span></button>`;
+  if (!st.history.length) { openSheet("Compras", `${top}<p class="note">Aquí verás cada compra cuando pulses «Terminar compra».</p>`); $("hCards").onclick = () => openCards(); return; }
+  openSheet("Compras", `${top}<div class="hist">${st.history.slice().reverse().map((h, k) => {
     const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
     return `<article><div class="h"><span>${esc(d)} · ${esc(STORE_NAME[h.store] ?? "")}</span><span>${h.total ? eur(h.total) : ""}</span></div>
       <p>${esc(h.items.map((i) => i.label).join(", "))}</p>
       <div class="row"><button class="btn ghost" type="button" data-repeat="${st.history.length - 1 - k}">Volver a apuntar</button></div></article>`;
   }).join("")}</div>`);
+  $("hCards").onclick = () => openCards();
   $("sheetBody").onclick = async (e) => {
     const b = e.target.closest("[data-repeat]"); if (!b) return;
     const h = st.history[+b.dataset.repeat];
     for (const i of h.items) await addItem({ query: i.label, qty: i.qty, count: i.count || 1 }, i.prod);
     save(); render(); closeSheet(); setStatus(`Apuntados ${h.items.length} productos de esa compra.`);
+  };
+}
+
+// ---------- Tarjetas de cliente (como Stocard o Bring!) ----------
+const logoOf = (s) => STORE_NAME[s] && s !== "any" ? `img/logos/${s}.png` : "";
+function openCards() {
+  const cs = (st.cards ??= []);
+  openSheet("Tarjetas de cliente", `
+    <p class="note">Guarda las tarjetas de tus súpers y enséñalas en la caja sin sacar la cartera. Funcionan sin cobertura.</p>
+    ${cs.length ? `<div class="cards">${cs.map((c, k) => `<button type="button" class="lcard" data-card="${k}">
+      <span class="clogo big" style="${logoOf(c.store) ? `background-image:url('${logoOf(c.store)}')` : ""}" aria-hidden="true">${logoOf(c.store) ? "" : "💳"}</span>
+      <span class="lcard-t"><b>${esc(c.name)}</b><small>${esc(c.code)}</small></span><span class="lnk">Enseñar</span></button>`).join("")}</div>` : ""}
+    <h3 class="cgroup">Añadir una tarjeta</h3>
+    <label class="field">Súper<select id="cStore">${STORES.slice(1).map(([s, n]) => `<option value="${s}"${s === list().store ? " selected" : ""}>${esc(n)}</option>`).join("")}<option value="otro">Otra tienda</option></select></label>
+    <label class="field">Número de la tarjeta<input id="cCode" autocomplete="off" autocapitalize="characters" placeholder="El número que hay debajo del código de barras"></label>
+    <div class="row"><button class="btn ghost" type="button" id="cScan">📷 Escanear la tarjeta</button><button class="btn" type="button" id="cAdd">Guardar tarjeta</button></div>
+    <p class="note" id="cErr" hidden></p>`);
+  $("sheetBody").querySelector(".cards")?.addEventListener("click", (e) => { const b = e.target.closest("[data-card]"); if (b) showCard(+b.dataset.card); });
+  $("cScan").onclick = () => {
+    const storeSel = $("cStore").value;
+    openScan({ cards: true, title: "Escanear la tarjeta", note: "Apunta la cámara al código de barras de la tarjeta.", handler: async (code) => {
+      if (!scanner) return; await stopScan(); addCard(storeSel, code);
+    } });
+  };
+  $("cAdd").onclick = () => {
+    const code = $("cCode").value.replace(/\s+/g, "").trim();
+    if (!/^[\x20-\x7e]{4,40}$/.test(code)) { $("cErr").hidden = false; $("cErr").textContent = "Escribe el número de la tarjeta (solo letras y números)."; return; }
+    addCard($("cStore").value, code);
+  };
+}
+function addCard(store, code) {
+  (st.cards ??= []).push({ store, name: STORE_NAME[store] ?? "Tarjeta", code, fmt: bestFormat(code) });
+  save(); buzz(20); setStatus(`💳 Tarjeta de ${STORE_NAME[store] ?? "la tienda"} guardada.`);
+  showCard(st.cards.length - 1);
+}
+function showCard(k) {
+  const c = st.cards?.[k]; if (!c) return;
+  openSheet(`Tarjeta ${c.name}`, `<div class="bigcard">
+      ${logoOf(c.store) ? `<span class="clogo huge" style="background-image:url('${logoOf(c.store)}')" aria-hidden="true"></span>` : ""}
+      <div class="bc-wrap">${barcodeSVG(c.code, c.fmt) || `<p class="note">Este número no se puede dibujar como código de barras; díctalo en la caja.</p>`}</div>
+      <p class="bc-num">${esc(c.code)}</p></div>
+    <p class="note">Sube el brillo de la pantalla para que el lector de la caja la lea a la primera.</p>
+    <div class="row"><button class="btn ghost" type="button" id="cBack">Mis tarjetas</button><button class="btn danger" type="button" id="cDel">Borrar tarjeta</button></div>`, "carding");
+  $("cBack").onclick = openCards;
+  $("cDel").onclick = (e) => {
+    const b = e.currentTarget;
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Toca otra vez para borrarla"; return; }
+    st.cards.splice(k, 1); save(); openCards();
   };
 }
 
@@ -609,11 +666,38 @@ function finishShopping() {
 
 // ---------- Catálogo para marcar productos (como Softlist) ----------
 let browse = null;
-async function openBrowse() {
+const DEALS_TAB = "⬇ Bajadas";
+// Lo que más ha bajado; primero comida y bebida, que es lo que más se compra.
+const NON_FOOD = new Set(["Limpieza", "Higiene", "Bebé y mascotas"]);
+function deals(cat, n) {
+  return cat.filter((p) => dropPct(p) >= 5).sort((a, b) => NON_FOOD.has(a.c) - NON_FOOD.has(b.c) || dropPct(b) - dropPct(a)).slice(0, n);
+}
+// Tira de «Ha bajado de precio» en la pantalla principal (como los folletos de Bring!).
+let dealsHTML = "";
+async function renderDeals() {
+  const el = $("deals"), l = list();
+  const stores = l.store === "any" ? pricedStores() : [l.store];
+  if (!stores.length || (l.store !== "any" && !meta?.stores?.[l.store]?.prices)) { el.hidden = true; return; }
+  const cat = (await Promise.all(stores.map(loadStore))).flat();
+  if (list() !== l) return;
+  const ds = deals(cat, 12);
+  if (!ds.length) { el.hidden = true; return; }
+  const inL = new Set(l.items.filter((i) => !i.done).map((i) => i.prod && `${i.prod.s}|${i.prod.n}`));
+  const html = `<div class="ideas-head"><h2>⬇ Ha bajado de precio</h2><button type="button" class="lnk" data-deals-all>Ver todo</button></div>
+    <p class="deals-sub">${l.store === "any" ? "En los súpers con precios" : `En ${esc(STORE_NAME[l.store])}`}, comparado con la semana pasada. Toca para apuntarlo.</p>
+    <div class="ideas-row">${ds.map((p, k) => `<button type="button" class="deal" data-deal="${k}" aria-pressed="${inL.has(`${p.s}|${p.n}`)}">
+      <span class="deal-ph">${photoHTML(p.img, guess(p.n).emoji, p.n, onlyAt(p))}<span class="drop">⬇ ${dropPct(p)}%</span><span class="tck" aria-hidden="true">${CHECK_SVG}</span></span>
+      <span class="deal-n">${esc(p.n)}</span>
+      <span class="deal-p"><b>${eur(p.p)}</b> <s>${eur(p.pb)}</s>${l.store === "any" ? ` · ${esc(STORE_NAME[p.s])}` : ""}</span></button>`).join("")}</div>`;
+  el._deals = ds;
+  if (html !== dealsHTML) { el.innerHTML = html; dealsHTML = html; }
+  el.hidden = false;
+}
+async function openBrowse(tab) {
   const l = list();
   const freq = Object.values(st.freq).sort((a, b) => b.count - a.count || b.last - a.last).slice(0, 24).map((f) => f.label);
-  const tabs = [...(freq.length ? ["Frecuentes"] : []), ...Object.keys(BASICS)];
-  browse = { tab: tabs[0], q: "", cat: [], tiles: new Map(), added: 0 };
+  const tabs = [...(freq.length ? ["Frecuentes"] : []), DEALS_TAB, ...Object.keys(BASICS)];
+  browse = { tab: tab && tabs.includes(tab) ? tab : tabs[0], q: "", cat: [], tiles: new Map(), added: 0 };
   openSheet("Añadir productos", `
     <label class="vh" for="bq">Buscar producto</label>
     <input id="bq" class="bsearch" type="search" placeholder="Buscar en ${esc(STORE_NAME[l.store])}…" enterkeyhint="search" autocomplete="off">
@@ -650,7 +734,11 @@ function renderBrowse() {
     for (const p of search(browse.cat, browse.q, 40)) tiles.set(`p:${p.s}:${p.n}:${p.f ?? ""}`, { label: p.n, prod: pick(p), sub: [p.f, p.p != null ? eur(p.p) : ""].filter(Boolean).join(" · ") });
     if (!tiles.size) tiles.set(`b:${capital(browse.q)}`, { label: capital(browse.q), prod: null });
   } else {
-    names = browse.tab === "Frecuentes" ? browse.freq : BASICS[browse.tab] ?? [];
+    if (browse.tab === DEALS_TAB) {
+      for (const p of deals(browse.cat, 60)) tiles.set(`p:${p.s}:${p.n}:${p.f ?? ""}`, { label: p.n, prod: pick(p), sub: `${eur(p.p)} · antes ${eur(p.pb)}` });
+      if (!tiles.size) { $("bgrid").innerHTML = `<p class="note">Ahora mismo no hay bajadas de precio en este súper.</p>`; updateBrowseCount(); return; }
+    }
+    names = browse.tab === DEALS_TAB ? [] : browse.tab === "Frecuentes" ? browse.freq : BASICS[browse.tab] ?? [];
     for (const n of names) {
       const f = st.freq[norm(n)];
       tiles.set(`b:${n}`, { label: n, prod: f?.prod ?? st.memory[memKey(n, list().store)] ?? bestProd(browse.cat, n) });
@@ -659,7 +747,7 @@ function renderBrowse() {
   $("bgrid").innerHTML = [...tiles].map(([k, t]) => {
     const on = !!inListByLabel(t.label);
     return `<button type="button" class="tile" data-tile="${esc(k)}" aria-pressed="${on}">
-      <span class="tph">${photoHTML(t.prod?.img, guess(t.label).emoji, t.label, onlyAt(t.prod))}<span class="tck" aria-hidden="true">${CHECK_SVG}</span></span>
+      <span class="tph">${photoHTML(t.prod?.img, guess(t.label).emoji, t.label, onlyAt(t.prod))}${dropHTML(t.prod)}<span class="tck" aria-hidden="true">${CHECK_SVG}</span></span>
       <span class="tn">${esc(t.label)}</span>${t.sub ? `<span class="ts">${esc(t.sub)}</span>` : ""}</button>`;
   }).join("");
   updateBrowseCount();
@@ -755,13 +843,14 @@ let scanner = null;
 function loadScript(src) {
   return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.append(s); });
 }
-async function openScan() {
-  openSheet("Escanear código de barras", `<div id="reader" class="scan-box"></div><p class="note" id="scanNote">Apunta la cámara al código de barras del envase.</p>`);
+async function openScan({ handler = onCode, title = "Escanear código de barras", note = "Apunta la cámara al código de barras del envase.", cards = false } = {}) {
+  openSheet(title, `<div id="reader" class="scan-box"></div><p class="note" id="scanNote">${esc(note)}</p>`);
   try {
     if (!window.Html5Qrcode) await loadScript("https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js");
     const F = window.Html5QrcodeSupportedFormats;
-    scanner = new window.Html5Qrcode("reader", { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], verbose: false });
-    await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 260, height: 140 } }, onCode, () => {});
+    const formats = [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, ...(cards ? [F.CODE_128, F.CODE_39, F.ITF, F.CODABAR] : [])];
+    scanner = new window.Html5Qrcode("reader", { formatsToSupport: formats, verbose: false });
+    await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 280, height: 140 } }, handler, () => {});
   } catch {
     $("scanNote").textContent = "No puedo abrir la cámara. Revisa que la app tenga permiso de cámara en los ajustes del móvil.";
   }
@@ -798,7 +887,7 @@ $("bar").addEventListener("submit", (e) => {
   $("q").value = ""; handle(v);
 });
 $("micBtn").addEventListener("click", () => { if (voice?.on) { voice.stop(); return; } startVoice(); });
-$("scanBtn").addEventListener("click", openScan);
+$("scanBtn").addEventListener("click", () => openScan());
 $("listBtn").addEventListener("click", openLists);
 $("histBtn").addEventListener("click", openHistory);
 $("cookBtn").addEventListener("click", () => openRecipes());
@@ -814,6 +903,7 @@ $("ideas").addEventListener("click", (e) => {
   const r = e.target.closest("[data-recipe]"); if (r) return openRecipes(+r.dataset.recipe);
   const m = e.target.closest("[data-cook-moment]"); if (m) return openRecipes(null, m.dataset.cookMoment);
   if (e.target.closest("[data-cook-plan]")) return openRecipes(null, null, "plan");
+  const u = e.target.closest("[data-cook-use]"); if (u) return openRecipes(null, null, `use:${u.dataset.cookUse}`);
   if (e.target.closest("[data-cook-all]")) openRecipes(null, "Todo");
 });
 initCocina({ st, list, addItem, markGeneric, save, render, setStatus, buzz, esc, openSheet, sheet, CHECK_SVG,
@@ -844,8 +934,19 @@ $("list").addEventListener("click", (e) => {
   toggleItem(li.dataset.id);
 });
 $("toastUndo").addEventListener("click", undo);
+$("deals").addEventListener("click", async (e) => {
+  if (e.target.closest("[data-deals-all]")) return openBrowse(DEALS_TAB);
+  const b = e.target.closest("[data-deal]"); if (!b) return;
+  const p = $("deals")._deals?.[+b.dataset.deal]; if (!p) return;
+  const ex = list().items.find((i) => !i.done && i.prod?.n === p.n && i.prod?.s === p.s);
+  if (ex) { list().items = list().items.filter((i) => i !== ex); save(); render(); setStatus(`Quitado: ${ex.label}`); return; }
+  b.setAttribute("aria-pressed", "true");
+  const it = await addItem({ query: p.n }, pick(p));
+  save(); render(); flyIn([it.id]); setStatus(`Apuntado: ${it.label} a ${eur(p.p)} (antes ${eur(p.pb)}).`);
+});
 $("summary").addEventListener("click", (e) => {
   if (e.target.closest("[data-compare]")) return openCompare();
+  const sc = e.target.closest("[data-showcard]"); if (sc) return showCard(+sc.dataset.showcard);
   const v = e.target.closest("[data-view]");
   if (v && v.dataset.view !== (st.view ?? "grid")) { st.view = v.dataset.view; persist(); render(); buzz(); }
 });

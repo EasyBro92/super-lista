@@ -198,6 +198,7 @@ export async function openRecipes(id, moment, view) {
   if (moment && (MOMENT.has(moment) || moment === ALL) && moment !== ui.moment) { ui.moment = moment; ui.tag = "Todas"; ui.scroll = 0; }
   if (view === "plan") return showPlan();
   if (view === "pantry") return showPantry();
+  if (view?.startsWith("use:")) { ui.q = view.slice(4); ui.mode = "todas"; ui.moment = ALL; ui.tag = "Todas"; return showList(); }
   if (id != null && recipes[id]) { ui.view = "list"; return showRecipe(id); }
   showList(true);
 }
@@ -225,16 +226,21 @@ export async function renderIdeas(el) {
   const inMo = (r) => !!r.m?.[mo];
   // Lo que tienes en el menú de hoy va primero.
   const hoy = new Set(plan().filter((e) => e.d === ymd()).map((e) => e.n)), np = plan().length;
+  // Y luego las que aprovechan lo que caduca pronto.
+  const soon = expiring(2), soonK = new Map(soon.map((x) => [x.k, x.n]));
+  const uses = (r) => r.ings.find((i) => soonK.has(i.k))?.n;
   const rows = recipes.filter((r) => hoy.has(r.n) || (r.foto && allowed(r))).map((r) => ({ r, c: check(r) }));
-  rows.sort((a, b) => hoy.has(b.r.n) - hoy.has(a.r.n) || inMo(b.r) - inMo(a.r) || (cooking ? Math.min(a.c.missing.length, 4) - Math.min(b.c.missing.length, 4) : 0) || rot(a.r) - rot(b.r));
+  rows.sort((a, b) => hoy.has(b.r.n) - hoy.has(a.r.n) || !!uses(b.r) - !!uses(a.r) || inMo(b.r) - inMo(a.r) || (cooking ? Math.min(a.c.missing.length, 4) - Math.min(b.c.missing.length, 4) : 0) || rot(a.r) - rot(b.r));
   const pick = rows.slice(0, 8);
   const html = `<div class="ideas-head"><h2>¿Qué cocino hoy?</h2><button type="button" class="lnk" data-cook-all>Ver las ${recipes.length} recetas</button></div>
+    ${soon.length ? `<button type="button" class="expbar" data-cook-use="${A.esc(soon[0].n)}"><span aria-hidden="true">⏰</span>
+      <span><b>${A.esc(soon.slice(0, 3).map((x) => `${x.n} (${whenTxt(x.left).replace("caduca ", "").replace("caducó ", "caducó ")})`).join(", "))}</b> · Recetas para aprovecharlo ›</span></button>` : ""}
     <div class="ideas-pills"><button type="button" class="ideas-mo" data-cook-moment="${mo}"><span aria-hidden="true">${emo}</span> ${para} · ver ${recipes.filter(inMo).length} recetas</button>
       <button type="button" class="ideas-mo" data-cook-plan><span aria-hidden="true">📅</span> ${np ? `Tu menú · ${plural(np, "receta", "recetas")}` : "Planificar el menú"}</button></div>
     <div class="ideas-row">${pick.map(({ r, c }) => `<button type="button" class="idea" data-recipe="${r.id}">
       <span class="idea-ph" style="${r.foto ? `background-image:url('${A.esc(r.foto.img)}')` : ""}">${r.foto ? "" : A.esc(r.e)}</span>
       <span class="idea-n">${A.esc(r.n)}</span>
-      <span class="idea-m${c.missing.length && !hoy.has(r.n) ? "" : " ok"}">${hoy.has(r.n) ? "📅 En tu menú de hoy" : c.missing.length ? (cooking ? `Faltan ${c.missing.length}` : mins(r.t)) : "✓ Tienes todo"}</span></button>`).join("")}</div>`;
+      <span class="idea-m${c.missing.length && !hoy.has(r.n) ? "" : " ok"}">${hoy.has(r.n) ? "📅 En tu menú de hoy" : uses(r) ? `⏰ Aprovecha: ${A.esc(uses(r))}` : c.missing.length ? (cooking ? `Faltan ${c.missing.length}` : mins(r.t)) : "✓ Tienes todo"}</span></button>`).join("")}</div>`;
   if (html !== ideasHTML) { el.innerHTML = html; ideasHTML = html; }
   el.hidden = false;
 }
@@ -838,47 +844,96 @@ function showPlan() {
   };
 }
 
+// ---------- Caducidades ----------
+const exps = () => (A.st.exp ??= {});
+const daysLeft = (d) => Math.round((dateOf(d) - dateOf(ymd())) / 864e5);
+const whenTxt = (n) => n < 0 ? (n === -1 ? "caducó ayer" : `caducó hace ${-n} días`) : n === 0 ? "caduca hoy" : n === 1 ? "caduca mañana" : `caduca en ${n} días`;
+// Lo que caduca en los próximos días (y lo caducado hace poco), de lo que sigue en casa.
+export function expiring(days = 3) {
+  if (!A) return [];
+  const p = pantry(), e = exps();
+  for (const k of Object.keys(e)) if (!(k in p) || daysLeft(e[k]) < -7) delete e[k];
+  return Object.entries(e).map(([k, d]) => ({ k, n: p[k], d, left: daysLeft(d) })).filter((x) => x.left <= days).sort((a, b) => a.left - b.left);
+}
 function showPantry() {
   keepScroll();
   setView("pantry");
   A.setTitle("Lo que tengo en casa", true);
+  ui.pmode ??= "have";
   const all = new Map();
   for (const r of recipes) for (const i of r.ings) if (!all.has(i.k)) all.set(i.k, i.n);
   for (const [k, n] of Object.entries(pantry())) if (!all.has(k)) all.set(k, n);
   const last = A.st.history.at(-1);
   A.body().innerHTML = `
     <button type="button" class="back" id="cback">‹ Recetas</button>
-    <p class="note">Marca lo que tienes. Al pulsar «Terminar compra», lo comprado se marca solo.</p>
+    <div class="seg" id="pmode" role="group" aria-label="Qué hacer">
+      <button type="button" data-pm="have" aria-pressed="${ui.pmode === "have"}">🏠 Lo que tengo</button>
+      <button type="button" data-pm="exp" aria-pressed="${ui.pmode === "exp"}">⏰ Caducidades</button></div>
+    <p class="note" id="pnote"></p>
     <label class="vh" for="pq">Buscar ingrediente</label>
     <input id="pq" class="bsearch" type="search" placeholder="Buscar ingrediente…" autocomplete="off">
-    <div class="row">${last ? `<button class="btn ghost small" type="button" id="plast">Lo de mi última compra</button>` : ""}
+    <div class="row" id="pacts">${last ? `<button class="btn ghost small" type="button" id="plast">Lo de mi última compra</button>` : ""}
       <button class="btn ghost small" type="button" id="pclear">Desmarcar todo</button></div>
     <div class="pgrid" id="pgrid"></div>
     <div class="bfoot"><span id="pcount"></span><button class="btn" type="button" id="pdone">Ver recetas</button></div>`;
+  let editing = null;
   const fill = () => {
+    const ex = ui.pmode === "exp", e = exps();
+    $$("pnote").textContent = ex ? "Toca un ingrediente para ponerle fecha. Lo que caduca pronto sale primero en las ideas de recetas."
+      : "Marca lo que tienes. Al pulsar «Terminar compra», lo comprado se marca solo.";
+    $$("pacts").hidden = ex;
     const qt = tokens($$("pq").value);
-    const items = [...all].filter(([k]) => qt.every((w) => k.split(" ").some((t) => t.startsWith(w))));
+    const items = [...all].filter(([k]) => (!ex || has(k)) && qt.every((w) => k.split(" ").some((t) => t.startsWith(w))));
     const by = {};
     for (const [k, n] of items) (by[sectionOf(n)] ??= []).push([k, n]);
-    $$("pgrid").innerHTML = ORDER.filter((s) => by[s]).map((s) => `<h3 class="cgroup">${A.esc(s)}</h3><div class="pchips">${
-      by[s].sort((a, b) => a[1].localeCompare(b[1], "es")).map(([k, n]) =>
-        `<button type="button" class="pc" data-k="${A.esc(k)}" data-n="${A.esc(n)}" aria-pressed="${has(k)}"><span aria-hidden="true">${A.esc(guess(n).emoji)}</span>${A.esc(n)}</button>`).join("")
+    const soon = expiring(3);
+    const chip = ([k, n]) => {
+      const d = e[k], left = d ? daysLeft(d) : null;
+      const badge = d ? `<small class="pexp${left <= 0 ? " bad" : left <= 3 ? " soon" : ""}">${left < 0 ? "caducado" : left === 0 ? "hoy" : left === 1 ? "mañana" : dateOf(d).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</small>` : "";
+      return `<button type="button" class="pc${ex ? " ex" : ""}" data-k="${A.esc(k)}" data-n="${A.esc(n)}" aria-pressed="${ex ? k === editing : has(k)}"><span aria-hidden="true">${A.esc(guess(n).emoji)}</span>${A.esc(n)}${badge}</button>`;
+    };
+    const panel = editing ? (() => {
+      const n = pantry()[editing] ?? all.get(editing), d = e[editing];
+      const q = (k, t) => { const x = new Date(); x.setDate(x.getDate() + k); return `<button type="button" class="chip" data-set="${ymd(x)}">${t}</button>`; };
+      return `<div class="pexpbox" id="pexpbox"><b>${A.esc(guess(n).emoji)} ${A.esc(n)}</b><span>${d ? A.esc(whenTxt(daysLeft(d))) : "¿Cuándo caduca?"}</span>
+        <div class="row">${q(0, "Hoy")}${q(1, "Mañana")}${q(3, "En 3 días")}${q(7, "En una semana")}${q(30, "En un mes")}</div>
+        <div class="row"><label class="vh" for="pdate">Otra fecha</label><input type="date" id="pdate" value="${d ?? ""}" min="${ymd()}">
+          ${d ? `<button type="button" class="btn danger small" data-set="">Quitar fecha</button>` : ""}<button type="button" class="lnk" data-close>Cerrar</button></div></div>`;
+    })() : "";
+    $$("pgrid").innerHTML = panel + (soon.length && !qt.length ? `<h3 class="cgroup">⏰ Caduca pronto</h3><div class="pchips">${soon.map((x) => chip([x.k, x.n])).join("")}</div>` : "")
+      + (ex && !items.length ? `<p class="note">Primero marca en «Lo que tengo» los ingredientes que hay en casa.</p>` : "")
+      + ORDER.filter((s) => by[s]).map((s) => `<h3 class="cgroup">${A.esc(s)}</h3><div class="pchips">${
+      by[s].sort((a, b) => a[1].localeCompare(b[1], "es")).map(chip).join("")
     }</div>`).join("") || `<p class="note">No encuentro ese ingrediente.</p>`;
+    const pd = $$("pdate"); if (pd) pd.onchange = () => { if (pd.value) { exps()[editing] = pd.value; A.save(); editing = null; fill(); } };
     count();
   };
-  const count = () => { $$("pcount").textContent = `${plural(Object.keys(pantry()).length, "ingrediente", "ingredientes")} en casa`; };
+  const count = () => {
+    const n = Object.keys(pantry()).length, s = expiring(3).length;
+    $$("pcount").textContent = `${plural(n, "ingrediente", "ingredientes")} en casa${s ? ` · ${s} caduca${s === 1 ? "" : "n"} pronto` : ""}`;
+  };
   fill();
   $$("pq").oninput = fill;
+  $$("pmode").onclick = (e) => {
+    const b = e.target.closest("[data-pm]"); if (!b) return;
+    ui.pmode = b.dataset.pm; editing = null;
+    for (const c of $$("pmode").children) c.setAttribute("aria-pressed", String(c === b));
+    A.buzz(); fill();
+  };
   $$("pgrid").onclick = (e) => {
+    const set = e.target.closest("[data-set]");
+    if (set) { if (set.dataset.set) exps()[editing] = set.dataset.set; else delete exps()[editing]; A.buzz(); A.save(); editing = null; return fill(); }
+    if (e.target.closest("[data-close]")) { editing = null; return fill(); }
     const b = e.target.closest("[data-k]"); if (!b) return;
+    if (ui.pmode === "exp") { editing = editing === b.dataset.k ? null : b.dataset.k; fill(); $$("pgrid").scrollTop = 0; return; }
     const p = pantry();
-    if (b.dataset.k in p) delete p[b.dataset.k]; else p[b.dataset.k] = b.dataset.n;
+    if (b.dataset.k in p) { delete p[b.dataset.k]; delete exps()[b.dataset.k]; } else p[b.dataset.k] = b.dataset.n;
     b.setAttribute("aria-pressed", String(b.dataset.k in p));
     A.buzz(); A.save(); count();
   };
   const pl = $$("plast");
   if (pl) pl.onclick = () => { learnPurchase(last.items); A.save(); fill(); A.buzz(); };
-  $$("pclear").onclick = () => { A.st.pantry = {}; A.save(); fill(); };
+  $$("pclear").onclick = () => { A.st.pantry = {}; A.st.exp = {}; A.save(); fill(); };
   $$("cback").onclick = () => showList(true);
   $$("pdone").onclick = () => { ui.mode = "tengo"; showList(); };
 }

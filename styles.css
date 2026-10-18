@@ -500,3 +500,50 @@ body.shop .gt-n{font-size:1.05rem}
 .emojis.moms button{font:600 .85rem var(--body);padding:7px 10px;border-radius:999px;color:var(--fg)}
 .emojis button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent)}
 .erow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Bajadas de precio */
+.drop{display:inline-block;background:#e0332b;color:#fff;font:800 .68rem var(--body);border-radius:999px;padding:2px 7px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.price .drop{margin-right:6px;vertical-align:1px}
+.gt-ph .drop,.tph .drop,.deal-ph .drop{position:absolute;left:5px;bottom:5px;z-index:1}
+.deals{margin-top:24px}
+.deals-sub{margin:-6px 0 0;font-size:.82rem;color:var(--muted)}
+.deal{flex:none;width:126px;display:flex;flex-direction:column;gap:4px;border:0;background:none;padding:0;text-align:left;cursor:pointer;color:var(--fg);scroll-snap-align:start}
+.deal-ph{position:relative;display:block;width:126px;height:126px;border-radius:16px;background:#fff;border:2px solid var(--line);overflow:hidden}
+.deal-ph .photo{position:absolute;inset:0}
+.deal-ph .photo-img{inset:8px}
+.deal-ph .emo{font-size:46px}
+.deal-ph .tck{top:6px;right:6px}
+.deal[aria-pressed="true"] .deal-ph{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.deal[aria-pressed="true"] .tck{transform:scale(1)}
+.deal:active .deal-ph{transform:scale(.96)}
+.deal-n{font-weight:600;font-size:.8rem;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.deal-p{font-size:.8rem;font-variant-numeric:tabular-nums;color:var(--muted)}
+.deal-p b{color:#e0332b;font-size:.92rem}
+body.shop .deals{display:none}
+
+/* Tarjetas de cliente */
+.field select{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:500 1rem var(--body);background:var(--bg);color:var(--fg)}
+.cards{display:flex;flex-direction:column;gap:8px}
+.lcard{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:16px;padding:10px 12px;background:linear-gradient(135deg,var(--surface),var(--accent-soft));cursor:pointer;text-align:left;color:var(--fg)}
+.lcard-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.lcard-t small{color:var(--muted);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
+.clogo.big{width:44px;height:44px;border-radius:12px;font-size:24px}
+.clogo.huge{width:64px;height:64px;border-radius:16px}
+.bigcard{display:flex;flex-direction:column;align-items:center;gap:12px;background:#fff;color:#111;border-radius:18px;padding:18px 14px;box-shadow:0 0 0 1px var(--line)}
+.bc-wrap{width:100%}
+.bc{display:block;width:100%;height:120px}
+.bc-num{margin:0;font:700 1.25rem ui-monospace,monospace;letter-spacing:.12em;text-align:center;overflow-wrap:anywhere}
+.sum-cmp.card{background:color-mix(in srgb,#f5b301 18%,var(--surface))}
+
+/* Caducidades */
+.pc .pexp{font:700 .7rem var(--body);border-radius:999px;padding:1px 7px;background:var(--bg);color:var(--muted);margin-left:2px}
+.pc .pexp.soon{background:#fde7c8;color:#8a4a00}
+.pc .pexp.bad{background:#fbd5d0;color:#9b1c10}
+.pc.ex[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+.pexpbox{display:flex;flex-direction:column;gap:8px;border:2px solid var(--accent);border-radius:14px;padding:12px;background:var(--surface);margin-bottom:6px}
+.pexpbox>span{font-size:.85rem;color:var(--muted)}
+.pexpbox input[type=date]{border:1px solid var(--line);border-radius:10px;padding:7px 10px;font:500 .95rem var(--body);background:var(--bg);color:var(--fg)}
+.expbar{display:flex;align-items:center;gap:10px;border:0;border-radius:14px;padding:10px 12px;background:#fde7c8;color:#5a3200;font:500 .86rem var(--body);cursor:pointer;text-align:left}
+.expbar>span:first-child{font-size:1.4rem}
+@media (prefers-color-scheme: dark){.expbar{background:#4a3214;color:#ffe2b8}.pc .pexp.soon{background:#4a3214;color:#ffd59a}.pc .pexp.bad{background:#4d1d18;color:#ffb4a8}}
+.bfoot .btn{white-space:nowrap}

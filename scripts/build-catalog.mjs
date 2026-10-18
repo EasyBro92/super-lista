@@ -27,7 +27,31 @@ Object.assign(STORES.consum, { source: "Tienda online de Consum", prices: true, 
 Object.assign(STORES.dia, { source: "Buscador de la tienda online de Dia", prices: true, fetch: withOff("dia", fetchDia) });
 Object.assign(STORES.alcampo, { source: "Buscador de la tienda online de Alcampo", prices: true, fetch: withOff("alcampo", fetchAlcampo) });
 
+// Bajadas de precio: si un producto cuesta menos que en el catálogo anterior, se guarda el precio de antes («pb»)
+// y el día («pd»). Se mantiene 14 días mientras siga más barato.
+export function applyDrops(items, prevItems, today = new Date().toISOString().slice(0, 10)) {
+  const old = new Map(prevItems.map((p) => [`${p.n}|${p.f ?? ""}`, p]));
+  const limit = new Date(Date.parse(today) - 14 * 864e5).toISOString().slice(0, 10);
+  let n = 0;
+  for (const p of items) {
+    delete p.pb; delete p.pd;
+    const o = old.get(`${p.n}|${p.f ?? ""}`);
+    if (p.p == null || !o || o.p == null) continue;
+    if (p.p < o.p - 0.005) { p.pb = o.p; p.pd = today; }
+    else if (o.pb != null && o.pd >= limit && p.p < o.pb - 0.005) { p.pb = o.pb; p.pd = o.pd; }
+    if (p.pb != null) n++;
+  }
+  return n;
+}
+async function markDrops(slug, items) {
+  let prevItems = [];
+  try { prevItems = JSON.parse(await readFile(`data/stores/${slug}.json`, "utf8")); } catch {}
+  console.log(`  ${applyDrops(items, prevItems)} bajadas de precio`);
+}
+
 const only = process.argv.slice(2);
+if (import.meta.url === `file://${process.argv[1]}`) await main();
+async function main() {
 let meta = { stores: {} };
 try { meta = JSON.parse(await readFile("data/meta.json", "utf8")); } catch {}
 
@@ -41,6 +65,7 @@ for (const [slug, s] of Object.entries(STORES)) {
     if (items.length < 20) throw new Error(`solo ${items.length} productos`);
     // Open Food Facts a veces responde a medias: si sale menos de la mitad que la última vez, se conserva lo anterior.
     if (prev.count && items.length < prev.count / 2) throw new Error(`solo ${items.length} productos (antes ${prev.count})`);
+    if (s.prices) await markDrops(slug, items);
     await writeJSON(`data/stores/${slug}.json`, items);
     meta.stores[slug].count = items.length;
     meta.stores[slug].updated = new Date().toISOString();
@@ -54,3 +79,4 @@ for (const [slug, s] of Object.entries(STORES)) {
 }
 meta.generated = new Date().toISOString();
 await writeJSON("data/meta.json", meta);
+}
