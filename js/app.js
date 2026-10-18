@@ -294,7 +294,16 @@ function renderSummary() {
         <button type="button" data-view="list" aria-pressed="${view === "list"}" title="Lista"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
     </div>
     ${(() => { const k = (st.cards ?? []).findIndex((c) => c.store === l.store); return k < 0 ? "" : `<button type="button" class="sum-cmp card" data-showcard="${k}"><span aria-hidden="true">💳</span> Tarjeta ${esc(st.cards[k].name)} <b>Enseñar en caja ›</b></button>`; })()}
-    ${left.length && pricedStores().length > 1 ? `<button type="button" class="sum-cmp" data-compare><span aria-hidden="true">⚖️</span> ¿Dónde sale más barata? <b>Comparar súpers ›</b></button>` : ""}`;
+    ${left.length && pricedStores().length > 1 ? `<button type="button" class="sum-cmp" data-compare><span aria-hidden="true">⚖️</span> ¿Dónde sale más barata? <b>Comparar súpers ›</b></button>` : ""}
+    ${budgetLine(total)}
+    ${new Set(left.map((i) => i.cat)).size > 1 ? `<button type="button" class="sum-cmp aisle" data-aisles><span aria-hidden="true">🧭</span> Pasillos en el orden de ${l.store === "any" ? "tu súper" : esc(STORE_NAME[l.store] ?? "tu súper")} <b>${st.aisles?.[l.store] ? "Cambiar ›" : "Ordenar ›"}</b></button>` : ""}`;
+}
+// Aviso del tope de gasto del mes (como el presupuesto de Listonic).
+function budgetLine(total) {
+  if (!st.budget) return "";
+  const spent = monthSpent(), after = spent + total;
+  if (after <= st.budget) return total ? `<p class="sum-budget">Este mes llevas ${eur(spent)} de ${eur(st.budget)}; con esta compra te quedarían ${eur(st.budget - after)}.</p>` : "";
+  return `<p class="sum-budget over">⚠️ Con esta compra te pasarías del tope del mes en ${eur(after - st.budget)} (llevas ${eur(spent)} de ${eur(st.budget)}).</p>`;
 }
 // ---------- Pantalla de inicio: una tarjeta grande con foto por sección, para deslizar ----------
 let home = !location.hash.includes("unirse=");
@@ -326,12 +335,13 @@ async function renderHome() {
   const l = list(), left = l.items.filter((i) => !i.done);
   const total = left.reduce((a, i) => a + (itemPrice(i) ?? 0), 0);
   const last = st.history.at(-1), nc = (st.cards ?? []).length;
+  const ro = runningOut(), spent = monthSpent();
   const live = {
-    list: left.length ? `${left.length} por comprar${total ? ` · ${eur(total)}` : ""}` : "Tu lista está vacía",
+    list: left.length ? `${left.length} por comprar${total ? ` · ${eur(total)}` : ""}` : ro.length ? `⏰ Se te puede acabar: ${ro.slice(0, 2).map((r) => r.label.toLowerCase()).join(" y ")}` : "Tu lista está vacía",
     recipes: info ? `${info.momentEmo} ${info.para}: ${info.inMoment} recetas` : "",
     plan: info?.hoy.length ? `Hoy: ${info.hoy[0]}` : info?.planN ? `${info.planN} recetas esta semana` : "Aún sin planificar",
     tengo: info?.soon.length ? `⏰ ${info.soon[0].n} caduca pronto` : info?.ready ? `Puedes hacer ${info.ready} recetas ya` : "Marca lo que tienes en casa",
-    history: last ? `Última: ${new Date(last.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}${last.total ? ` · ${eur(last.total)}` : ""}${nc ? ` · ${nc} tarjeta${nc === 1 ? "" : "s"}` : ""}` : nc ? `${nc} tarjeta${nc === 1 ? "" : "s"} de cliente` : "Aún no has terminado ninguna compra",
+    history: spent ? `Este mes: ${eur(spent)}${st.budget ? ` de ${eur(st.budget)}` : ""}` : last ? `Última: ${new Date(last.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}${last.total ? ` · ${eur(last.total)}` : ""}${nc ? ` · ${nc} tarjeta${nc === 1 ? "" : "s"}` : ""}` : nc ? `${nc} tarjeta${nc === 1 ? "" : "s"} de cliente` : "Aún no has terminado ninguna compra",
   };
   // Lista y Compras: si aún no hay foto propia, las fotos de tus productos.
   const prodImgs = (items) => items.map((i) => i.prod?.img).filter(Boolean).slice(0, 4);
@@ -410,7 +420,7 @@ function render() {
   const one = (it) => grid ? tileHTML(it, l) : rowHTML(it, l);
   const head = (c, n) => { const [e, h] = CAT_LOOK[c] ?? CAT_LOOK.Otros; return `<h2 style="--h:${h}"><span class="cat-ic" aria-hidden="true">${e}</span>${esc(c)}<span class="cat-n">${n}</span></h2>`; };
   // En cuadrícula todo va seguido por pasillos (el color de la ficha dice cuál); en lista, con un título por pasillo.
-  const order = CATS.filter((c) => by[c]);
+  const order = aisleOrder(l.store).filter((c) => by[c]);
   el.innerHTML = (grid ? `<section class="cat"><ul class="items">${order.map((c) => by[c].sort((a, b) => a.added - b.added)
       .map((it) => one(it).replace('class="item gt', `style="--h:${(CAT_LOOK[c] ?? CAT_LOOK.Otros)[1]}" class="item gt`)).join("")).join("")}</ul></section>`
     : order.map((c) => `<section class="cat" style="--h:${(CAT_LOOK[c] ?? CAT_LOOK.Otros)[1]}">${head(c, by[c].length)}
@@ -452,10 +462,13 @@ function tileHTML(it, l) {
 }
 function renderFavs() {
   const inList = new Set(list().items.filter((i) => !i.done).map((i) => norm(i.label)));
+  // Primero lo que se te puede estar acabando (lo compras cada X días y ya toca), luego lo que más compras.
+  const due = new Map(runningOut().map((r) => [r.k, r]));
   const favs = Object.entries(st.freq).filter(([k]) => !inList.has(k))
-    .sort((a, b) => b[1].count - a[1].count || b[1].last - a[1].last).slice(0, 12);
+    .sort((a, b) => due.has(b[0]) - due.has(a[0]) || b[1].count - a[1].count || b[1].last - a[1].last).slice(0, 12);
   $("favs").hidden = !favs.length;
-  $("favs").innerHTML = favs.map(([k, f]) => `<button class="fav" type="button" data-fav="${esc(k)}">${thumbHTML(f.prod, f.emoji)}${esc(f.label)}</button>`).join("");
+  $("favs").innerHTML = favs.map(([k, f]) => { const d = due.get(k);
+    return `<button class="fav${d ? " due" : ""}" type="button" data-fav="${esc(k)}"${d ? ` title="Sueles comprarlo cada ${d.every} días y hace ${d.days}"` : ""}>${thumbHTML(f.prod, f.emoji)}${d ? '<span class="due-ic" aria-hidden="true">⏰</span>' : ""}${esc(f.label)}</button>`; }).join("");
 }
 
 // ---------- Hojas ----------
@@ -672,9 +685,9 @@ function openHistory() {
   const nc = (st.cards ?? []).length;
   const top = `<button type="button" class="pantry-btn" id="hCards"><span>💳 Tarjetas de cliente</span><span class="lnk">${nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir"}</span></button>
     <button type="button" class="pantry-btn" id="hBackup"><span>💾 Copia de seguridad</span><span class="lnk">${st.lastBackup ? `Última: ${new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}` : "Hacer ahora"}</span></button>`;
-  const wire = () => { $("hCards").onclick = () => openCards(); $("hBackup").onclick = () => openBackup(); };
+  const wire = () => { $("hCards").onclick = () => openCards(); $("hBackup").onclick = () => openBackup(); if ($("spBudget")) wireSpend(); };
   if (!st.history.length) { openSheet("Compras", `${top}<p class="note">Aquí verás cada compra cuando pulses «Terminar compra».</p>`); wire(); return; }
-  openSheet("Compras", `${top}<div class="hist">${st.history.slice().reverse().map((h, k) => {
+  openSheet("Compras", `${spendHTML()}${top}<div class="hist">${st.history.slice().reverse().map((h, k) => {
     const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
     return `<article><div class="h"><span>${esc(d)} · ${esc(STORE_NAME[h.store] ?? "")}</span><span>${h.total ? eur(h.total) : ""}</span></div>
       <p>${esc(h.items.map((i) => i.label).join(", "))}</p>
@@ -739,6 +752,82 @@ async function readBackup(f) {
     } catch { return openBackup("No he podido guardar la copia: el móvil no tiene espacio para la app."); }
     location.reload();
   };
+}
+
+// ---------- Se te acaba (como las sugerencias de Listonic y Bring!) ----------
+// Mira cada cuánto compras cada cosa en tus compras terminadas y avisa cuando ya toca.
+const DAY = 864e5;
+function runningOut() {
+  const dates = {};
+  for (const h of st.history) for (const i of h.items ?? []) {
+    const k = norm(i.label), d = Math.floor(h.date / DAY);
+    const a = (dates[k] ??= { label: i.label, d: [] }); if (a.d.at(-1) !== d) a.d.push(d);
+  }
+  const today = Math.floor(Date.now() / DAY), inList = new Set(list().items.filter((i) => !i.done).map((i) => norm(i.label)));
+  return Object.entries(dates).filter(([k, a]) => a.d.length >= 2 && !inList.has(k)).map(([k, a]) => {
+    const ds = a.d.sort((x, y) => x - y), every = Math.max(1, Math.round((ds.at(-1) - ds[0]) / (ds.length - 1)));
+    return { k, label: a.label, every, days: today - ds.at(-1) };
+  }).filter((r) => r.every >= 2 && r.days >= Math.round(r.every * 0.9)).sort((a, b) => b.days / b.every - a.days / a.every);
+}
+
+// ---------- Gasto al mes (como Listonic o AnyList) ----------
+const monthKey = (t) => { const d = new Date(t); return d.getFullYear() * 12 + d.getMonth(); };
+function monthSpent(t = Date.now()) { const k = monthKey(t); return st.history.reduce((s, h) => s + (monthKey(h.date) === k ? h.total || 0 : 0), 0); }
+function spendHTML() {
+  const now = new Date(), months = [];
+  for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 15); months.push({ d, t: monthSpent(d) }); }
+  const cur = months[5].t, b = st.budget, max = Math.max(...months.map((m) => m.t), b || 0, 1);
+  const byStore = {};
+  for (const h of st.history) if (monthKey(h.date) === monthKey(now) && h.total) byStore[h.store] = (byStore[h.store] ?? 0) + h.total;
+  const mName = (d) => d.toLocaleDateString("es-ES", { month: "short" }).replace(".", "");
+  return `<section class="spend" aria-label="Gasto al mes">
+    <div class="sp-head"><div><span class="sp-lbl">Gastado en ${esc(now.toLocaleDateString("es-ES", { month: "long" }))}</span><b class="sp-big">${eur(cur)}</b></div>
+      <button type="button" class="pill-btn" id="spBudget">${b ? `Tope ${eur(b)}` : "Poner un tope"}</button></div>
+    <div id="spEdit"></div>
+    ${b ? `<div class="sp-meter${cur > b ? " over" : ""}" role="img" aria-label="${Math.round((cur / b) * 100)} % del tope"><span style="width:${Math.min(100, (cur / b) * 100)}%"></span></div>
+      <p class="sp-note${cur > b ? " over" : ""}">${cur > b ? `Te has pasado ${eur(cur - b)} este mes.` : `Te quedan ${eur(b - cur)} hasta fin de mes.`}</p>` : ""}
+    <div class="sp-bars">${months.map((m, i) => `<div class="sp-col${i === 5 ? " now" : ""}"><span class="sp-v">${m.t ? Math.round(m.t) + " €" : ""}</span>
+      <span class="sp-bar" style="height:${Math.max(2, (m.t / max) * 100)}%"></span><span class="sp-m">${esc(mName(m.d))}</span></div>`).join("")}</div>
+    ${Object.keys(byStore).length ? `<div class="sp-stores">${Object.entries(byStore).sort((a, c) => c[1] - a[1]).map(([s2, t]) =>
+      `<span>${esc(STORE_NAME[s2] ?? "Otro")} <b>${eur(t)}</b></span>`).join("")}</div>` : ""}
+    <p class="note">Cuenta el precio aproximado de lo que marcas al pulsar «Terminar compra».</p></section>`;
+}
+function wireSpend() {
+  $("spBudget").onclick = () => {
+    $("spEdit").innerHTML = `<form class="sp-form" id="spForm"><label class="vh" for="spIn">Tope de gasto al mes en euros</label>
+      <input id="spIn" type="number" inputmode="decimal" min="0" step="10" placeholder="Tope al mes, en €" value="${st.budget ?? ""}">
+      <button class="btn" type="submit">Guardar</button>${st.budget ? '<button class="btn ghost" type="button" id="spOff">Quitar</button>' : ""}</form>`;
+    $("spIn").focus();
+    $("spForm").onsubmit = (e) => { e.preventDefault(); const v = parseFloat($("spIn").value); st.budget = v > 0 ? Math.round(v) : undefined; save(); render(); openHistory(); };
+    if ($("spOff")) $("spOff").onclick = () => { delete st.budget; save(); render(); openHistory(); };
+  };
+}
+
+// ---------- Orden de los pasillos de cada súper (como AnyList u OurGroceries) ----------
+function aisleOrder(store) {
+  const o = st.aisles?.[store];
+  return o ? [...o.filter((c) => CATS.includes(c)), ...CATS.filter((c) => !o.includes(c))] : CATS;
+}
+function openAisles() {
+  const l = list(), name = l.store === "any" ? "tu súper" : STORE_NAME[l.store] ?? "tu súper";
+  const draw = () => {
+    const o = aisleOrder(l.store);
+    openSheet(`Pasillos de ${name}`, `<p class="note">Pon los pasillos en el orden en que recorres ${esc(name)}. La lista se ordenará igual y no tendrás que volver atrás.</p>
+      <ol class="aisles">${o.map((c, i) => `<li><span class="a-n">${i + 1}</span><span class="a-ic" aria-hidden="true">${(CAT_LOOK[c] ?? CAT_LOOK.Otros)[0]}</span><span class="a-t">${esc(c)}</span>
+        <button type="button" class="icon a-mv" data-up="${i}" aria-label="Subir ${esc(c)}"${i ? "" : " disabled"}>↑</button>
+        <button type="button" class="icon a-mv" data-down="${i}" aria-label="Bajar ${esc(c)}"${i === o.length - 1 ? " disabled" : ""}>↓</button></li>`).join("")}</ol>
+      ${st.aisles?.[l.store] ? '<button class="btn ghost" type="button" id="aReset">Volver al orden normal</button>' : ""}`);
+    $("sheetBody").onclick = (e) => {
+      const up = e.target.closest("[data-up]"), dn = e.target.closest("[data-down]");
+      if (!up && !dn) return;
+      const i = +(up ?? dn).dataset[up ? "up" : "down"], j = up ? i - 1 : i + 1, o2 = aisleOrder(l.store).slice();
+      [o2[i], o2[j]] = [o2[j], o2[i]];
+      (st.aisles ??= {})[l.store] = o2; save(); render(); buzz(); draw();
+      $("sheetBody").querySelector(`[data-${up ? "up" : "down"}="${j}"]`)?.focus();
+    };
+    if ($("aReset")) $("aReset").onclick = () => { delete st.aisles[l.store]; save(); render(); draw(); };
+  };
+  draw();
 }
 
 // ---------- Tarjetas de cliente (como Stocard o Bring!) ----------
@@ -1082,6 +1171,7 @@ $("deals").addEventListener("click", async (e) => {
 });
 $("summary").addEventListener("click", (e) => {
   if (e.target.closest("[data-compare]")) return openCompare();
+  if (e.target.closest("[data-aisles]")) return openAisles();
   const sc = e.target.closest("[data-showcard]"); if (sc) return showCard(+sc.dataset.showcard);
   const v = e.target.closest("[data-view]");
   if (v && v.dataset.view !== (st.view ?? "grid")) { st.view = v.dataset.view; persist(); render(); buzz(); }

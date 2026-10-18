@@ -616,3 +616,37 @@ body.home .wrap{padding-bottom:110px}
 .bk-msg{margin:0;padding:10px 12px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-weight:600}
 .bk-ask{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
 .bk-ask span{color:var(--muted);font-size:.9rem}
+
+/* Gasto al mes */
+.spend{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--line);border-radius:18px;background:var(--bg)}
+.sp-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.sp-lbl{display:block;font-size:.8rem;color:var(--muted);font-weight:600}
+.sp-big{font-family:var(--display);font-size:1.8rem;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.pill-btn{border:0;border-radius:999px;padding:7px 12px;background:var(--accent-soft);color:var(--accent);font:700 .82rem var(--body);cursor:pointer}
+.sp-meter{height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.sp-meter span{display:block;height:100%;border-radius:inherit;background:var(--accent)}
+.sp-meter.over span{background:var(--warn)}
+.sp-note{margin:0;font-size:.85rem;color:var(--muted)} .sp-note.over{color:var(--warn);font-weight:700}
+.sp-bars{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;height:120px;align-items:end}
+.sp-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;min-width:0}
+.sp-bar{width:100%;max-width:34px;border-radius:8px 8px 3px 3px;background:var(--accent-soft)}
+.sp-col.now .sp-bar{background:var(--accent)}
+.sp-v{font-size:.68rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sp-m{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:capitalize}
+.sp-col.now .sp-m{color:var(--accent)}
+.sp-stores{display:flex;flex-wrap:wrap;gap:6px}
+.sp-stores span{font-size:.8rem;padding:4px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.sp-form{display:flex;flex-wrap:wrap;gap:8px}
+.sp-form input{flex:1 1 140px;min-width:0;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;background:var(--surface);color:var(--fg)}
+.spend .note{margin:0}
+.sum-budget{margin:8px 0 0;font-size:.82rem;color:var(--muted)} .sum-budget.over{color:var(--warn);font-weight:700}
+/* Se te acaba */
+.fav.due{border-style:solid;border-color:var(--warn)}
+.due-ic{font-size:.9rem}
+/* Pasillos */
+.aisles{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.aisles li{display:flex;align-items:center;gap:10px;padding:6px 6px 6px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.a-n{width:22px;text-align:center;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.a-ic{font-size:1.3rem} .a-t{flex:1;font-weight:600;min-width:0}
+.a-mv{width:38px;height:38px;font-size:1.1rem;font-weight:800}
+.a-mv:disabled{opacity:.3}
