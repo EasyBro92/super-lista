@@ -422,8 +422,9 @@ function fillList() {
     return;
   }
   if (!useful.length) {
-    el.innerHTML = `<div class="empty"><b>Dime qué tienes en casa</b>
-      <span>Marca los ingredientes que tienes y te diré qué puedes cocinar. Lo que compres con «Terminar compra» se apunta solo.</span>
+    const n = Object.keys(pantry()).length;
+    el.innerHTML = `<div class="empty"><b>${n ? `Con ${n === 1 ? "1 ingrediente" : `${n} ingredientes`} aún no sale ninguna receta` : "Dime qué tienes en casa"}</b>
+      <span>${n ? "Marca algunas cosas más que tengas (verduras, carne, pasta, huevos…) y te diré qué puedes cocinar." : "Marca los ingredientes que tienes y te diré qué puedes cocinar. Lo que compres con «Terminar compra» se apunta solo."}</span>
       <button class="btn" type="button" data-gopantry>Marcar lo que tengo</button>
       <button class="btn ghost" type="button" data-all>Ver todas las recetas</button></div>`;
     return;

@@ -352,8 +352,17 @@ async function renderHome() {
     $("hdots").innerHTML = HOME_CARDS.map((_, k) => `<span${k === 0 ? ' class="on"' : ""}></span>`).join("");
   }
 }
+// La barra de secciones también se ve dentro de las secciones que se abren como hoja (Recetas, Menú, En casa, Compras).
+$("sheetTabs").innerHTML = $("tabbar").innerHTML;
+function markSheetTab(k) {
+  sheet.dataset.sec = k;
+  const cur = k === "tengo" ? "pantry" : k;
+  for (const b of $("sheetTabs").children) { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); }
+}
+$("sheetTabs").addEventListener("click", (e) => { const t = e.target.closest("[data-tab]")?.dataset.tab; if (t) goSection(t); });
 function goSection(k) {
   buzz();
+  if (k !== "home" && k !== "list") markSheetTab(k);
   if (k === "home") { closeSheet(); return showHome(true); }
   if (k === "list") { closeSheet(); return showHome(false); }
   if (k === "recipes") openRecipes();
@@ -475,7 +484,7 @@ $("sheetClose").addEventListener("click", sheetBack);
 sheet.addEventListener("cancel", (e) => { if (sheet.classList.contains("cooking") && cookBack()) e.preventDefault(); });
 sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSheet(); });
 // Si la hoja se ha vuelto a abrir con otro contenido (p. ej. del menú a «Editar»), no se borra.
-sheet.addEventListener("close", () => { if (sheet.open) return; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
+sheet.addEventListener("close", () => { if (sheet.open) return; delete sheet.dataset.sec; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
 
 async function openPicker(id, query) {
   const l = list();
