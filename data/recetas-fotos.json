@@ -1150,5 +1150,29 @@
   "autor": "Breville USA",
   "licencia": "CC BY 2.0",
   "fuente": "https://commons.wikimedia.org/wiki/File:Baba_Ganoush_05of05_(8735238183).jpg"
+ },
+ "Inicio Lista": {
+  "img": "img/recetas/inicio-lista.jpg",
+  "autor": "Laoficina24",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Carro_de_la_compra_en_Mercadona.png"
+ },
+ "Inicio Recetas": {
+  "img": "img/recetas/inicio-recetas.jpg",
+  "autor": "Shixart1985",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Colorful_vegetables_simmering_in_a_pot_on_a_stove_at_home.jpg"
+ },
+ "Inicio Menú": {
+  "img": "img/recetas/inicio-menu.jpg",
+  "autor": "Afifa Afrin",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Dinner_table_arrangement_with_food_of_a_middle_class_Bangladeshi_family_04.jpg"
+ },
+ "Inicio Compras": {
+  "img": "img/recetas/inicio-compras.jpg",
+  "autor": "Triplec85",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Supermarket_checkout_Tegut_Tauberbischofsheim_2.jpg"
  }
 }
