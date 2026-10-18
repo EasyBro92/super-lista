@@ -39,7 +39,7 @@
       </div>
     </div>
     <div class="stores" id="stores" role="group" aria-label="Supermercado"></div>
-    <div class="summary" id="summary"></div>
+    <div class="summary" id="summary" hidden></div>
   </header>
   <main id="list"></main>
   <div class="finish" id="finishWrap" hidden>
@@ -67,6 +67,13 @@
       </button>
     </form>
   </div>
+  <nav class="tabbar" id="tabbar" aria-label="Secciones">
+    <button type="button" data-tab="list" aria-current="page"><span aria-hidden="true">🛒</span>Lista</button>
+    <button type="button" data-tab="recipes"><span aria-hidden="true">🍳</span>Recetas</button>
+    <button type="button" data-tab="plan"><span aria-hidden="true">📅</span>Menú</button>
+    <button type="button" data-tab="pantry"><span aria-hidden="true">🏠</span>En casa</button>
+    <button type="button" data-tab="history"><span aria-hidden="true">🧾</span>Compras</button>
+  </nav>
 </div>
 
 <dialog id="sheet" class="sheet">

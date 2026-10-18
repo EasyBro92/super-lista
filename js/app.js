@@ -27,6 +27,12 @@ const CATS = [
   "Frutas y verduras", "Carne", "Pescado", "Charcutería y quesos", "Lácteos y huevos", "Panadería",
   "Despensa", "Dulces y desayuno", "Bebidas", "Congelados", "Limpieza", "Higiene", "Bebé y mascotas", "Otros",
 ];
+// Icono y color de cada pasillo: las fichas se tiñen con el color de su sección.
+const CAT_LOOK = {
+  "Frutas y verduras": ["🥦", 110], "Carne": ["🥩", 0], "Pescado": ["🐟", 200], "Charcutería y quesos": ["🧀", 40],
+  "Lácteos y huevos": ["🥛", 210], "Panadería": ["🥖", 30], "Despensa": ["🥫", 18], "Dulces y desayuno": ["🍪", 330],
+  "Bebidas": ["🧃", 270], "Congelados": ["🧊", 190], "Limpieza": ["🧽", 170], "Higiene": ["🧴", 290], "Bebé y mascotas": ["🍼", 50], "Otros": ["🛍️", 90],
+};
 const KEY = "superlista.v2";
 const $ = (id) => document.getElementById(id);
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -262,19 +268,28 @@ const itemPrice = (i) => (i.prod?.p != null ? i.prod.p * (i.count || 1) : null);
 
 function renderStores() {
   const cur = list().store;
-  $("stores").innerHTML = STORES.map(([s, n]) => `<button class="chip" type="button" data-s="${s}" aria-pressed="${cur === s}">${esc(n)}</button>`).join("");
+  $("stores").innerHTML = STORES.map(([s, n]) => `<button class="chip store" type="button" data-s="${s}" aria-pressed="${cur === s}">${s === "any"
+    ? `<span class="clogo any" aria-hidden="true">🛒</span>` : `<span class="clogo" style="background-image:url('img/logos/${s}.png')" aria-hidden="true"></span>`}${esc(n)}</button>`).join("");
 }
+// Tarjeta de resumen: cuánto llevas en el carro, el total aproximado y cómo ver la lista.
 function renderSummary() {
-  const l = list();
-  const left = l.items.filter((i) => !i.done);
-  if (!l.items.length) { $("summary").textContent = ""; return; }
+  const l = list(), el = $("summary");
+  const left = l.items.filter((i) => !i.done), inCart = l.items.length - left.length;
+  el.hidden = !l.items.length;
+  if (!l.items.length) { el.innerHTML = ""; return; }
   const priced = left.filter((i) => itemPrice(i) != null);
   const total = priced.reduce((s, i) => s + itemPrice(i), 0);
-  let t = `<b>${left.length}</b> por comprar`;
-  if (priced.length) t += ` · total aprox. <b>${eur(total)}</b>`;
-  if (left.length - priced.length > 0 && priced.length) t += ` (${left.length - priced.length} sin precio)`;
-  if (left.length && pricedStores().length > 1) t += ` <button type="button" class="lnk cmp-btn" data-compare>Comparar súpers</button>`;
-  $("summary").innerHTML = t;
+  const pct = Math.round((inCart / l.items.length) * 100);
+  const view = st.view ?? "grid";
+  el.innerHTML = `<div class="sum-top">
+      <div class="sum-ring" style="--p:${pct}" role="img" aria-label="${inCart} de ${l.items.length} en el carro"><span>${inCart}/${l.items.length}</span></div>
+      <div class="sum-txt"><b>${left.length ? `${left.length} por comprar` : "¡Todo en el carro!"}</b>
+        <span>${priced.length ? `Total aprox. <b class="sum-eur">${eur(total)}</b>${left.length > priced.length ? ` · ${left.length - priced.length} sin precio` : ""}` : inCart ? `${inCart} en el carro` : "Sin precios en este súper"}</span></div>
+      <div class="seg mini" role="group" aria-label="Cómo ver la lista">
+        <button type="button" data-view="grid" aria-pressed="${view === "grid"}" title="Cuadrícula con fotos"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></button>
+        <button type="button" data-view="list" aria-pressed="${view === "list"}" title="Lista"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+    </div>
+    ${left.length && pricedStores().length > 1 ? `<button type="button" class="sum-cmp" data-compare><span aria-hidden="true">⚖️</span> ¿Dónde sale más barata? <b>Comparar súpers ›</b></button>` : ""}`;
 }
 function render() {
   const l = list();
@@ -289,35 +304,60 @@ function render() {
   $("finishWrap").hidden = !l.items.some((i) => i.done);
   const el = $("list");
   if (!l.items.length) {
-    el.innerHTML = `<div class="empty"><b>La lista está vacía</b><span>Escribe o dicta lo que necesitas, por ejemplo:</span>
+    el.classList.remove("grid");
+    el.innerHTML = `<div class="empty"><span class="empty-art" aria-hidden="true">🧺</span><b>La lista está vacía</b><span>Escribe o dicta lo que necesitas, por ejemplo:</span>
       <button class="btn ghost" type="button" data-try="apunta leche, huevos y oreos">«apunta leche, huevos y oreos»</button>
       <span>o elige de la lista de productos:</span>
       <button class="btn" type="button" data-browse>Ver productos</button></div>`;
     return;
   }
+  const grid = (st.view ?? "grid") === "grid";
+  el.classList.toggle("grid", grid);
   const by = {};
-  for (const it of l.items) (by[CATS.includes(it.cat) ? it.cat : "Otros"] ??= []).push(it);
-  el.innerHTML = CATS.filter((c) => by[c]).map((c) => {
-    const rows = by[c].sort((a, b) => a.done - b.done || a.added - b.added).map((it) => {
-      const p = it.prod;
-      const sub = p ? [p.n, p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "Toca la foto para elegir producto";
-      const price = itemPrice(it);
-      return `<li class="item${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}${incoming.has(it.id) ? " incoming" : ""}" data-id="${it.id}">
-        <div class="swipe-bg" aria-hidden="true"><span class="bg-done">${CHECK_SVG}${it.done ? "Pendiente" : "Comprado"}</span><span class="bg-del">Borrar${TRASH_SVG}</span></div>
-        <div class="row-in">
-        <button class="thumb" type="button" data-pick="${it.id}" aria-label="Cambiar producto de ${esc(it.label)}">${thumbHTML(p, it.emoji)}</button>
-        <span class="info"><span class="name">${esc(it.label)}</span><span class="sub">${esc(sub)}</span></span>
-        <span class="right">
-          <button class="qty" type="button" data-qty="${it.id}">${esc(it.qty || "1")}</button>
-          ${price != null ? `<span class="price">${eur(price)}</span>` : ""}
-        </span>
-        <span class="check" role="checkbox" aria-checked="${it.done}" aria-label="Comprado">${CHECK_SVG}</span>
-        </div>
-      </li>`;
-    }).join("");
-    return `<section class="cat"><h2>${esc(c)}</h2><ul class="items">${rows}</ul></section>`;
-  }).join("") + (st.gestured ? "" : `<p class="hint">Consejo: desliza un producto a la izquierda para borrarlo, a la derecha para marcarlo como comprado, o mantenlo pulsado para ver más opciones.</p>`);
+  const left = l.items.filter((i) => !i.done), cart = l.items.filter((i) => i.done);
+  for (const it of left) (by[CATS.includes(it.cat) ? it.cat : "Otros"] ??= []).push(it);
+  const one = (it) => grid ? tileHTML(it, l) : rowHTML(it, l);
+  const head = (c, n) => { const [e, h] = CAT_LOOK[c] ?? CAT_LOOK.Otros; return `<h2 style="--h:${h}"><span class="cat-ic" aria-hidden="true">${e}</span>${esc(c)}<span class="cat-n">${n}</span></h2>`; };
+  // En cuadrícula todo va seguido por pasillos (el color de la ficha dice cuál); en lista, con un título por pasillo.
+  const order = CATS.filter((c) => by[c]);
+  el.innerHTML = (grid ? `<section class="cat"><ul class="items">${order.map((c) => by[c].sort((a, b) => a.added - b.added)
+      .map((it) => one(it).replace('class="item gt', `style="--h:${(CAT_LOOK[c] ?? CAT_LOOK.Otros)[1]}" class="item gt`)).join("")).join("")}</ul></section>`
+    : order.map((c) => `<section class="cat" style="--h:${(CAT_LOOK[c] ?? CAT_LOOK.Otros)[1]}">${head(c, by[c].length)}
+      <ul class="items">${by[c].sort((a, b) => a.added - b.added).map(one).join("")}</ul></section>`).join(""))
+    + (cart.length ? `<section class="cat cart"><h2><span class="cat-ic" aria-hidden="true">✅</span>En el carro<span class="cat-n">${cart.length}</span></h2>
+      <ul class="items">${cart.sort((a, b) => a.added - b.added).map(one).join("")}</ul></section>` : "")
+    + (st.gestured ? "" : `<p class="hint">${grid ? "Consejo: toca un producto para meterlo en el carro y mantenlo pulsado para cambiarlo, editarlo o borrarlo."
+      : "Consejo: desliza un producto a la izquierda para borrarlo, a la derecha para marcarlo como comprado, o mantenlo pulsado para ver más opciones."}</p>`);
   fresh.clear();
+}
+function rowHTML(it, l) {
+  const p = it.prod;
+  const sub = p ? [it.note, p.n, p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : it.note || "Toca la foto para elegir producto";
+  const price = itemPrice(it);
+  return `<li class="item${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}${incoming.has(it.id) ? " incoming" : ""}" data-id="${it.id}">
+    <div class="swipe-bg" aria-hidden="true"><span class="bg-done">${CHECK_SVG}${it.done ? "Pendiente" : "Comprado"}</span><span class="bg-del">Borrar${TRASH_SVG}</span></div>
+    <div class="row-in">
+    <button class="thumb" type="button" data-pick="${it.id}" aria-label="Cambiar producto de ${esc(it.label)}">${thumbHTML(p, it.emoji)}</button>
+    <span class="info"><span class="name">${esc(it.label)}</span><span class="sub">${esc(sub)}</span></span>
+    <span class="right">
+      <button class="qty" type="button" data-qty="${it.id}">${esc(it.qty || "1")}</button>
+      ${price != null ? `<span class="price">${eur(price)}</span>` : ""}
+    </span>
+    <span class="check" role="checkbox" aria-checked="${it.done}" aria-label="Comprado">${CHECK_SVG}</span>
+    </div>
+  </li>`;
+}
+// Ficha grande tipo Bring!: foto, nombre, cantidad y precio. Tocar = al carro; mantener = opciones.
+function tileHTML(it, l) {
+  const p = it.prod, price = itemPrice(it);
+  const q = it.qty && it.qty !== "1" ? it.qty : it.count > 1 ? `×${it.count}` : "";
+  return `<li class="item gt${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}${incoming.has(it.id) ? " incoming" : ""}" data-id="${it.id}"
+      role="checkbox" aria-checked="${it.done}" aria-label="${esc(it.label)}${q ? `, ${esc(q)}` : ""}" tabindex="0">
+    <span class="gt-ph">${thumbHTML(p, it.emoji)}${q ? `<span class="gt-q">${esc(q)}</span>` : ""}<span class="gt-cat" aria-hidden="true">${(CAT_LOOK[CATS.includes(it.cat) ? it.cat : "Otros"] ?? CAT_LOOK.Otros)[0]}</span><span class="gt-ck" aria-hidden="true">${CHECK_SVG}</span></span>
+    <span class="gt-n">${esc(it.label)}</span>
+    <span class="gt-s">${esc(it.note || (p ? [p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : ""))}</span>
+    ${price != null ? `<span class="gt-p">${eur(price)}</span>` : ""}
+  </li>`;
 }
 function renderFavs() {
   const inList = new Set(list().items.filter((i) => !i.done).map((i) => norm(i.label)));
@@ -394,6 +434,7 @@ function openEdit(id, focusName = true) {
       <strong id="qCount" style="font-size:1.6rem;min-width:2ch;text-align:center">${it.count || 1}</strong>
       <button class="round" type="button" id="qPlus" aria-label="Más">+</button></div>
     <label class="field">O escribe la cantidad (por ejemplo «2 kg» o «pack de 6»)<input id="qText" value="${esc(it.qty)}" autocomplete="off"></label>
+    <label class="field">Nota (marca, tamaño, «sin lactosa», «la de oferta»…)<input id="eNote" value="${esc(it.note ?? "")}" autocomplete="off" placeholder="Opcional"></label>
     <div class="row"><button class="btn" type="button" id="qSave">Guardar</button>
     <button class="btn danger" type="button" id="qDel">Quitar de la lista</button></div>`);
   // El foco en el mismo toque hace que el móvil abra el teclado.
@@ -405,6 +446,7 @@ function openEdit(id, focusName = true) {
   const doSave = async () => {
     const t = $("qText").value.trim();
     it.qty = t; it.count = /^\d+$/.test(t) ? +t : c;
+    const note = $("eNote").value.trim(); if (note) it.note = note; else delete it.note;
     const name = capital($("eName").value.trim());
     closeSheet();
     if (name && name !== it.label) {
@@ -760,6 +802,14 @@ $("scanBtn").addEventListener("click", openScan);
 $("listBtn").addEventListener("click", openLists);
 $("histBtn").addEventListener("click", openHistory);
 $("cookBtn").addEventListener("click", () => openRecipes());
+$("tabbar").addEventListener("click", (e) => {
+  const t = e.target.closest("[data-tab]")?.dataset.tab; if (!t) return;
+  buzz();
+  if (t === "list") { closeSheet(); scrollTo({ top: 0, behavior: "smooth" }); }
+  else if (t === "recipes") openRecipes();
+  else if (t === "plan" || t === "pantry") openRecipes(null, null, t);
+  else if (t === "history") openHistory();
+});
 $("ideas").addEventListener("click", (e) => {
   const r = e.target.closest("[data-recipe]"); if (r) return openRecipes(+r.dataset.recipe);
   const m = e.target.closest("[data-cook-moment]"); if (m) return openRecipes(null, m.dataset.cookMoment);
@@ -794,7 +844,15 @@ $("list").addEventListener("click", (e) => {
   toggleItem(li.dataset.id);
 });
 $("toastUndo").addEventListener("click", undo);
-$("summary").addEventListener("click", (e) => { if (e.target.closest("[data-compare]")) openCompare(); });
+$("summary").addEventListener("click", (e) => {
+  if (e.target.closest("[data-compare]")) return openCompare();
+  const v = e.target.closest("[data-view]");
+  if (v && v.dataset.view !== (st.view ?? "grid")) { st.view = v.dataset.view; persist(); render(); buzz(); }
+});
+$("list").addEventListener("keydown", (e) => {
+  const li = e.target.closest?.("li.gt"); if (!li || (e.key !== "Enter" && e.key !== " ")) return;
+  e.preventDefault(); toggleItem(li.dataset.id);
+});
 
 // ---------- Gestos ----------
 // Deslizar a la izquierda: borrar. A la derecha: marcar como comprado. Mantener pulsado: opciones.
@@ -802,9 +860,9 @@ let suppressClickUntil = 0;
 let g = null;
 const SWIPE = 90;
 $("list").addEventListener("pointerdown", (e) => {
-  const row = e.target.closest(".row-in"); if (!row || e.button > 0) return;
-  const li = row.parentElement;
-  g = { row, li, id: li.dataset.id, x: e.clientX, y: e.clientY, dx: 0, mode: null, passed: false, pid: e.pointerId };
+  const row = e.target.closest(".row-in, li.gt"); if (!row || e.button > 0) return;
+  const tile = row.classList.contains("gt"), li = tile ? row : row.parentElement;
+  g = { row, li, tile, id: li.dataset.id, x: e.clientX, y: e.clientY, dx: 0, mode: null, passed: false, pid: e.pointerId };
   g.timer = setTimeout(() => {
     if (!g || g.mode) return;
     g.mode = "long"; buzz(25); st.gestured = true; suppressClickUntil = Date.now() + 600;
@@ -814,6 +872,8 @@ $("list").addEventListener("pointerdown", (e) => {
 $("list").addEventListener("pointermove", (e) => {
   if (!g || e.pointerId !== g.pid) return;
   const dx = e.clientX - g.x, dy = e.clientY - g.y;
+  // En la cuadrícula no se desliza: moverse cancela el «mantener pulsado».
+  if (g.tile) { if (Math.hypot(dx, dy) > 10) { clearTimeout(g.timer); g = null; } return; }
   if (!g.mode) {
     if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { clearTimeout(g.timer); g = null; return; }
     if (Math.abs(dx) > 10) { g.mode = "swipe"; clearTimeout(g.timer); g.row.setPointerCapture?.(e.pointerId); g.li.classList.add("swiping"); }

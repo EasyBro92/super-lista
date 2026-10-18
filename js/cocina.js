@@ -21,7 +21,7 @@ const sectionOf = (n) => SECTION_OF.get(key(n)) ?? (ORDER.includes(guess(n).cat)
 
 // Lo que casi todo el mundo tiene; se puede quitar en «En casa».
 const STAPLES = ["Sal", "Aceite de oliva", "Pimienta negra", "Azúcar", "Harina"];
-const FILTERS = ["Todas", "Del mundo", "Rápidas", "Española", "Vegetariana", "Pasta y arroz", "Legumbres", "Carne", "Pescado", "Ensaladas",
+const FILTERS = ["Todas", "Favoritas", "Del mundo", "Rápidas", "Española", "Vegetariana", "Pasta y arroz", "Legumbres", "Carne", "Pescado", "Ensaladas",
   "Sopas y cremas", "Cenas ligeras", "Desayunos", "Postres", "Internacional", "Para niños", "Freidora de aire", "Con productos del súper"];
 // Momentos del día y, dentro de cada uno, sus tipos (campo «m» de cada receta). Una receta puede estar en varios.
 const MOMENTS = [
@@ -40,7 +40,7 @@ const FLAGS = { "Argentina": "🇦🇷", "Brasil": "🇧🇷", "China": "🇨�
 const origin = (r) => r.z ? `${FLAGS[r.z] ?? "🌍"} ${r.z}` : "";
 const MOMENT = new Map(MOMENTS.map((m) => [m[0], m]));
 // Filtros de siempre que siguen a mano dentro de cada momento.
-const EXTRA = ["Del mundo", "Rápidas", "Vegetariana", "Para niños", "Española", "Internacional", "Freidora de aire", "Con productos del súper"];
+const EXTRA = ["Favoritas", "Del mundo", "Rápidas", "Vegetariana", "Para niños", "Española", "Internacional", "Freidora de aire", "Con productos del súper"];
 // El momento según la hora: lo primero que ves es lo que toca ahora.
 function nowMoment(d = new Date()) {
   const h = d.getHours() + d.getMinutes() / 60, finde = d.getDay() === 0 || d.getDay() === 6;
@@ -55,6 +55,7 @@ function matches(r) {
   if (ui.moment !== ALL && !r.m?.[ui.moment]) return false;
   if (ui.tag === "Todas") return true;
   if (ui.moment !== ALL && MOMENT.get(ui.moment)[3].includes(ui.tag)) return r.m[ui.moment].includes(ui.tag);
+  if (ui.tag === "Favoritas") return isFav(r);
   return r.filters.includes(ui.tag);
 }
 
@@ -127,6 +128,7 @@ export async function openRecipes(id, moment, view) {
   ui.from = null; ui.pickDay = null;
   if (moment && (MOMENT.has(moment) || moment === ALL) && moment !== ui.moment) { ui.moment = moment; ui.tag = "Todas"; ui.scroll = 0; }
   if (view === "plan") return showPlan();
+  if (view === "pantry") return showPantry();
   if (id != null && recipes[id]) { ui.view = "list"; return showRecipe(id); }
   showList(true);
 }
@@ -221,6 +223,8 @@ function showList(restore = false) {
   if (ui.pickDay) $$("cpickx").onclick = showPlan;
   else { $$("cpantry").onclick = showPantry; $$("cplan").onclick = showPlan; }
   $$("clist").onclick = (e) => {
+    const h = e.target.closest("[data-fav-r]");
+    if (h) { const on = toggleFav(recipes[+h.dataset.favR]); h.setAttribute("aria-pressed", String(on)); h.textContent = on ? "❤️" : "🤍"; if (ui.tag === "Favoritas") fillList(); return; }
     const b = e.target.closest("[data-r]");
     if (b && ui.pickDay) { addToPlan(+b.dataset.r, ui.pickDay); return showPlan(); }
     if (b) { ui.from = null; return showRecipe(+b.dataset.r); }
@@ -247,12 +251,23 @@ function lazyBg(root) {
   els.forEach((el) => seen.observe(el));
 }
 
+// Recetas favoritas (corazón en la foto y en la receta).
+const favs = () => (A.st.favR ??= []);
+const isFav = (r) => favs().includes(r.n);
+function toggleFav(r) {
+  const f = favs(), k = f.indexOf(r.n);
+  if (k >= 0) f.splice(k, 1); else f.push(r.n);
+  A.buzz(); A.save();
+  A.setStatus(k >= 0 ? `Quitada de favoritas: ${r.n}.` : `❤️ Guardada en favoritas: ${r.n}.`);
+  return k < 0;
+}
+const heart = (r) => `<button type="button" class="rfav" data-fav-r="${r.id}" aria-pressed="${isFav(r)}" aria-label="${isFav(r) ? "Quitar de" : "Guardar en"} favoritas">${isFav(r) ? "❤️" : "🤍"}</button>`;
 function card(r, c) {
   const miss = c.missing.map((i) => i.n);
   const line = !miss.length ? `<span class="rh ok">✓ Tienes todo lo necesario</span>`
     : `<span class="rh">${miss.length === 1 ? "Te falta" : `Te faltan ${miss.length}`}: ${A.esc(miss.slice(0, 4).join(", "))}${miss.length > 4 ? "…" : ""}</span>`;
-  return `<button type="button" class="rc" data-r="${r.id}">${pic(r)}
-    <span class="ri"><span class="rn">${A.esc(r.n)}</span><span class="rm">${A.esc(meta(r))}</span>${line}</span></button>`;
+  return `<div class="rcw"><button type="button" class="rc" data-r="${r.id}">${pic(r)}
+    <span class="ri"><span class="rn">${A.esc(r.n)}</span><span class="rm">${A.esc(meta(r))}</span>${line}</span></button>${heart(r)}</div>`;
 }
 
 function fillList() {
@@ -272,6 +287,11 @@ function fillList() {
     el.innerHTML = [...by].map(([z, g]) => `<h3 class="cgroup">${FLAGS[z] ?? "🌍"} ${A.esc(z)}</h3>${g.map(({ r, c }) => card(r, c)).join("")}`).join("")
       || `<p class="note">No hay recetas de fuera para este momento.</p>`;
     lazyBg(el);
+    return;
+  }
+  if (ui.tag === "Favoritas" && !rows.length && !qt.length) {
+    el.innerHTML = `<div class="empty"><span class="empty-art" aria-hidden="true">🤍</span><b>Aún no tienes favoritas</b>
+      <span>Toca el corazón de una receta para guardarla aquí.</span></div>`;
     return;
   }
   if (ui.mode === "todas") {
@@ -372,9 +392,9 @@ function showRecipe(id) {
   A.body().innerHTML = `
     <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : "Recetas"}</button>
     <div class="cdetail">
-      ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>
+      ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>${heart(r)}
         <figcaption>Foto: <a href="${A.esc(r.foto.fuente)}" target="_blank" rel="noopener">${A.esc(r.foto.autor)}</a> · ${A.esc(r.foto.licencia)}</figcaption></figure>` : ""}
-      <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>`}
+      <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>${heart(r)}`}
         <div><p class="rm">${A.esc(meta(r, sv))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p>
           ${r.m ? `<p class="rmo">${Object.keys(r.m).filter((m) => MOMENT.has(m)).map((m) => `<button type="button" class="mo-tag" data-go-moment="${m}">${MOMENT.get(m)[1]} ${m}</button>`).join("")}</p>` : ""}</div></div>
       <div class="rtools">
@@ -419,6 +439,10 @@ function showRecipe(id) {
     $$("cplanadd").textContent = `📅 ${plan().some((x) => x.n === r.n) ? "En tu menú" : "Al menú"}`;
   };
   $$("ccook").onclick = () => showCook(id, 0);
+  A.body().querySelector(".cdetail").addEventListener("click", (e) => {
+    const h = e.target.closest("[data-fav-r]"); if (!h) return;
+    const on = toggleFav(r); h.setAttribute("aria-pressed", String(on)); h.textContent = on ? "❤️" : "🤍";
+  });
   const add = $$("cadd");
   if (add) add.onclick = async () => {
     add.disabled = true;
