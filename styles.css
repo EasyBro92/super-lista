@@ -468,3 +468,35 @@ body.shop .gt-n{font-size:1.05rem}
 .hero .rfav{top:10px;right:10px;width:42px;height:42px;font-size:20px}
 .rhead .rfav{position:static;flex:none;margin-left:auto}
 @media (max-width:340px){.clist{grid-template-columns:1fr}}
+
+/* Dieta, alergias y mis recetas */
+.cbtns{grid-template-columns:repeat(3,1fr)}
+.cbtns .pantry-btn{min-width:0}
+.cbtns .pantry-btn b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.srow{display:flex;gap:8px;align-items:center}
+.srow .bsearch{flex:1;min-width:0}
+.srow .round{width:42px;height:42px}
+.srow .round svg{width:20px;height:20px}
+.dnote{grid-column:1/-1;border:1px dashed var(--line);background:none;border-radius:12px;padding:8px 12px;font:600 .82rem var(--body);color:var(--muted);cursor:pointer;text-align:left}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.dbtn{display:flex;flex-direction:column;align-items:center;gap:4px;border:2px solid var(--line);background:var(--surface);border-radius:16px;padding:12px 6px;font:700 .85rem var(--body);cursor:pointer;color:var(--fg)}
+.dbtn span{font-size:1.8rem;line-height:1}
+.dbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+#devita .dbtn[aria-pressed="true"]{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,var(--surface))}
+.rlleva{margin:4px 0 0;font-size:.78rem;color:var(--muted)}
+.rlleva.warn{color:var(--warn);font-weight:700}
+.editr{gap:12px}
+.editr textarea,.paste textarea{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:500 .95rem/1.4 var(--body);background:var(--bg);color:var(--fg);resize:vertical;width:100%}
+.paste{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--accent-soft)}
+.paste summary{font-weight:700;cursor:pointer}
+.paste textarea{margin-top:8px}
+.photo-pick{display:block;cursor:pointer}
+.pp-img{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;aspect-ratio:16/9;border-radius:16px;border:2px dashed var(--line);
+  background:var(--bg) center/cover no-repeat;color:var(--muted);font-weight:700}
+.pp-img span{font-size:2.2rem}
+.pp-img[style]{border-style:solid}
+.emojis{display:flex;flex-wrap:wrap;gap:6px}
+.emojis button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 7px;font-size:1.3rem;cursor:pointer;line-height:1}
+.emojis.moms button{font:600 .85rem var(--body);padding:7px 10px;border-radius:999px;color:var(--fg)}
+.emojis button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent)}
+.erow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
