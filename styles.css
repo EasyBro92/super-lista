@@ -483,6 +483,9 @@ body.shop .gt-n{font-size:1.05rem}
 .dbtn span{font-size:1.8rem;line-height:1}
 .dbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 #devita .dbtn[aria-pressed="true"]{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,var(--surface))}
+.rnut{margin:4px 0 0;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.rnut b{color:var(--fg,inherit)}
+.rnut small{display:block;font-size:.72rem;opacity:.85}
 .rlleva{margin:4px 0 0;font-size:.78rem;color:var(--muted)}
 .rlleva.warn{color:var(--warn);font-weight:700}
 .editr{gap:12px}

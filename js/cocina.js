@@ -1,5 +1,6 @@
 // Recetas: qué cocinar con lo que tienes en casa y apuntar en la lista lo que falta.
 import { tokens, guess, norm } from "./parser.js";
+import { nutrition, NUT } from "./nutricion.js";
 
 // Sección de cada ingrediente, para ordenar «Lo que tengo en casa» como en el súper.
 const SECTIONS = {
@@ -17,6 +18,10 @@ const ORDER = [...Object.keys(SECTIONS), "Otros"];
 const key = (n) => tokens(n).join(" ");
 const SECTION_OF = new Map();
 for (const [s, names] of Object.entries(SECTIONS)) for (const n of names.split(", ")) SECTION_OF.set(key(n), s);
+// Calorías: por nombre exacto o, en mis recetas, por las mismas palabras («2 huevos» → Huevos).
+const NUT_K = new Map(Object.entries(NUT).map(([n, v]) => [key(n), v]));
+const nutFind = (n) => NUT[n] ?? NUT_K.get(key(n));
+const kcal = (n) => `${n.toLocaleString("es-ES")} kcal`;
 const sectionOf = (n) => SECTION_OF.get(key(n)) ?? (ORDER.includes(guess(n).cat) ? guess(n).cat : "Otros");
 
 // Lo que casi todo el mundo tiene; se puede quitar en «En casa».
@@ -90,6 +95,8 @@ function prep(r, idx) {
   r.toks = new Set(tokens(`${r.n} ${r.z ?? ""} ${r.i.map((x) => x[0]).join(" ")}`));
   r.filters = [...r.tags, ...(r.t <= 20 ? ["Rápidas"] : []), ...(r.tags.includes("Vegana") ? ["Vegetariana"] : []), ...(r.z ? ["Del mundo"] : [])];
   r.lleva = allergens(r);
+  const nu = nutrition(r, nutFind);
+  r.nut = nu.kcal ? nu : null;
   return r;
 }
 let baseCount = 0, homeFotos = {};
@@ -367,7 +374,7 @@ function card(r, c) {
   const line = !miss.length ? `<span class="rh ok">✓ Tienes todo lo necesario</span>`
     : `<span class="rh">${miss.length === 1 ? "Te falta" : `Te faltan ${miss.length}`}: ${A.esc(miss.slice(0, 4).join(", "))}${miss.length > 4 ? "…" : ""}</span>`;
   return `<div class="rcw"><button type="button" class="rc" data-r="${r.id}">${pic(r)}
-    <span class="ri"><span class="rn">${A.esc(r.n)}</span><span class="rm">${A.esc(meta(r))}</span>${line}</span></button>${heart(r)}</div>`;
+    <span class="ri"><span class="rn">${A.esc(r.n)}</span><span class="rm">${A.esc(meta(r))}${r.nut ? ` · ${kcal(r.nut.kcal)}` : ""}</span>${line}</span></button>${heart(r)}</div>`;
 }
 
 function fillList() {
@@ -507,6 +514,8 @@ function showRecipe(id) {
         ${r.mine ? "" : `<figcaption>Foto: <a href="${A.esc(r.foto.fuente)}" target="_blank" rel="noopener">${A.esc(r.foto.autor)}</a> · ${A.esc(r.foto.licencia)}</figcaption>`}</figure>` : ""}
       <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>${heart(r)}`}
         <div><p class="rm">${A.esc(meta(r, sv))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p>
+          ${r.nut ? `<p class="rnut"><b>${kcal(r.nut.kcal)}</b> por ración · ${r.nut.p} g proteína · ${r.nut.h} g hidratos · ${r.nut.g} g grasa
+            <small>Aproximado${r.nut.all ? "" : ", sin contar algún ingrediente"}</small></p>` : ""}
           ${r.lleva.length ? `<p class="rlleva${r.lleva.some((a) => diet().evita.includes(a)) ? " warn" : ""}">Lleva: ${r.lleva.map((a) => `${ALLER.get(a)[1]} ${ALLER.get(a)[2].toLowerCase()}`).join(" · ")}</p>` : ""}
           ${r.m ? `<p class="rmo">${Object.keys(r.m).filter((m) => MOMENT.has(m)).map((m) => `<button type="button" class="mo-tag" data-go-moment="${m}">${MOMENT.get(m)[1]} ${m}</button>`).join("")}</p>` : ""}</div></div>
       <div class="rtools">
@@ -830,7 +839,8 @@ function showPlan() {
     <button type="button" class="back" id="cback">‹ Recetas</button>
     <div class="plan" id="cplanl">
       <p class="note">Elige qué vas a cocinar cada día y apunta de una vez todo lo que te falta.</p>
-      ${nextDays().map((d) => `<section class="pday"><h3 class="cgroup">${A.esc(cap(dayName(d)))}</h3>
+      ${nextDays().map((d) => { const dk = p.filter((e) => e.d === d).reduce((t, e) => t + (by.get(e.n)?.nut?.kcal ?? 0), 0);
+        return `<section class="pday"><h3 class="cgroup">${A.esc(cap(dayName(d)))}${dk ? ` <span>${kcal(dk)} por persona, aprox.</span>` : ""}</h3>
         ${p.map((e, k) => [e, k]).filter(([e]) => e.d === d).map(([e, k]) => {
           const r = by.get(e.n); if (!r) return "";
           const m = check(r).missing.length;
@@ -839,7 +849,7 @@ function showPlan() {
             <span class="rh${m ? "" : " ok"}">${m ? `Te ${m === 1 ? "falta 1 ingrediente" : `faltan ${m} ingredientes`}` : "✓ Tienes todo"}</span></span></button>
             <button type="button" class="pdel" data-del="${k}" aria-label="Quitar ${A.esc(r.n)} del menú">×</button></div>`;
         }).join("")}
-        <button type="button" class="padd" data-addday="${d}">+ Añadir receta</button></section>`).join("")}
+        <button type="button" class="padd" data-addday="${d}">+ Añadir receta</button></section>`; }).join("")}
     </div>
     <div class="bfoot"><span>${p.length ? plural(p.length, "receta", "recetas") : "Menú vacío"}</span>
       ${miss.length ? `<button class="btn" type="button" id="pmiss">Apuntar lo que falta (${miss.length})</button>`
