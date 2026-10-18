@@ -670,20 +670,74 @@ async function openCompare() {
 
 function openHistory() {
   const nc = (st.cards ?? []).length;
-  const top = `<button type="button" class="pantry-btn" id="hCards"><span>💳 Tarjetas de cliente</span><span class="lnk">${nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir"}</span></button>`;
-  if (!st.history.length) { openSheet("Compras", `${top}<p class="note">Aquí verás cada compra cuando pulses «Terminar compra».</p>`); $("hCards").onclick = () => openCards(); return; }
+  const top = `<button type="button" class="pantry-btn" id="hCards"><span>💳 Tarjetas de cliente</span><span class="lnk">${nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir"}</span></button>
+    <button type="button" class="pantry-btn" id="hBackup"><span>💾 Copia de seguridad</span><span class="lnk">${st.lastBackup ? `Última: ${new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}` : "Hacer ahora"}</span></button>`;
+  const wire = () => { $("hCards").onclick = () => openCards(); $("hBackup").onclick = () => openBackup(); };
+  if (!st.history.length) { openSheet("Compras", `${top}<p class="note">Aquí verás cada compra cuando pulses «Terminar compra».</p>`); wire(); return; }
   openSheet("Compras", `${top}<div class="hist">${st.history.slice().reverse().map((h, k) => {
     const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
     return `<article><div class="h"><span>${esc(d)} · ${esc(STORE_NAME[h.store] ?? "")}</span><span>${h.total ? eur(h.total) : ""}</span></div>
       <p>${esc(h.items.map((i) => i.label).join(", "))}</p>
       <div class="row"><button class="btn ghost" type="button" data-repeat="${st.history.length - 1 - k}">Volver a apuntar</button></div></article>`;
   }).join("")}</div>`);
-  $("hCards").onclick = () => openCards();
+  wire();
   $("sheetBody").onclick = async (e) => {
     const b = e.target.closest("[data-repeat]"); if (!b) return;
     const h = st.history[+b.dataset.repeat];
     for (const i of h.items) await addItem({ query: i.label, qty: i.qty, count: i.count || 1 }, i.prod);
     save(); render(); closeSheet(); setStatus(`Apuntados ${h.items.length} productos de esa compra.`);
+  };
+}
+
+// ---------- Copia de seguridad ----------
+// Todo vive en este móvil: la copia guarda listas, recetas propias, menú, despensa, compras y tarjetas en un archivo.
+const PHOTOS_KEY = "superlista.misfotos";
+function openBackup(note = "") {
+  const myR = (st.myR ?? []).length, nl = st.lists.length;
+  openSheet("Copia de seguridad", `<p class="note">Guarda en un archivo todo lo que tienes en la app: ${nl} lista${nl === 1 ? "" : "s"}, ${st.history.length} compra${st.history.length === 1 ? "" : "s"}, ${myR} receta${myR === 1 ? "" : "s"} tuya${myR === 1 ? "" : "s"}, el menú, lo que tienes en casa y tus tarjetas. Guárdalo en Drive o mándatelo por WhatsApp; si cambias de móvil o se borran los datos, lo recuperas aquí.</p>
+    ${st.lastBackup ? `<p class="note">Última copia: ${esc(new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }))}.</p>` : ""}
+    ${note ? `<p class="bk-msg" role="status">${esc(note)}</p>` : ""}
+    <div class="bk-row"><button class="btn" type="button" id="bkSave">Guardar copia</button>
+    <label class="btn ghost" for="bkFile">Recuperar una copia</label><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
+    <div id="bkAsk"></div>`);
+  $("bkSave").onclick = saveBackup;
+  $("bkFile").onchange = (e) => readBackup(e.target.files?.[0]);
+}
+async function saveBackup() {
+  let fotos = {}; try { fotos = JSON.parse(localStorage.getItem(PHOTOS_KEY) || "{}"); } catch {}
+  const now = new Date();
+  const name = `super-lista-${now.toISOString().slice(0, 10)}.json`;
+  const blob = new Blob([JSON.stringify({ app: "superlista", v: 1, date: now.toISOString(), state: st, fotos })], { type: "application/json" });
+  const file = new File([blob], name, { type: "application/json" });
+  let done = false;
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: "Copia de Super Lista" }); done = true; }
+    catch (e) { if (e?.name === "AbortError") return; }
+  }
+  if (!done) {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  st.lastBackup = now.getTime(); persist(); buzz(20);
+  openBackup(`Copia guardada: ${name}`);
+}
+async function readBackup(f) {
+  if (!f) return;
+  let data;
+  try { data = JSON.parse(await f.text()); } catch { return openBackup("Ese archivo no es una copia de Super Lista."); }
+  const s2 = data?.state;
+  if (data?.app !== "superlista" || !Array.isArray(s2?.lists) || !s2.lists.length) return openBackup("Ese archivo no es una copia de Super Lista.");
+  const d = new Date(data.date).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+  $("bkAsk").innerHTML = `<div class="bk-ask"><b>¿Recuperar la copia del ${esc(d)}?</b>
+    <span>Tiene ${s2.lists.length} lista${s2.lists.length === 1 ? "" : "s"} y ${(s2.history ?? []).length} compra${(s2.history ?? []).length === 1 ? "" : "s"}. Sustituye lo que hay ahora en la app.</span>
+    <div class="bk-row"><button class="btn" type="button" id="bkYes">Sí, recuperar</button><button class="btn ghost" type="button" id="bkNo">Cancelar</button></div></div>`;
+  $("bkNo").onclick = () => openBackup();
+  $("bkYes").onclick = () => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(s2));
+      localStorage.setItem(PHOTOS_KEY, JSON.stringify(data.fotos ?? {}));
+    } catch { return openBackup("No he podido guardar la copia: el móvil no tiene espacio para la app."); }
+    location.reload();
   };
 }
 

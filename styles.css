@@ -609,3 +609,10 @@ body.home .wrap{padding-bottom:110px}
 .sheet-tabs{display:none}
 .sheet[data-sec] .sheet-tabs{display:grid;flex:none;position:sticky;bottom:0;margin:0 -16px calc(-20px - env(safe-area-inset-bottom,0px));border-radius:0;box-shadow:0 -4px 16px rgb(0 0 0 / .05);z-index:2}
 .sheet[data-sec]{max-height:94vh}
+
+/* Copia de seguridad */
+.bk-row{display:flex;flex-wrap:wrap;gap:10px}
+.bk-row .btn{flex:1 1 150px;text-align:center;cursor:pointer}
+.bk-msg{margin:0;padding:10px 12px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.bk-ask{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.bk-ask span{color:var(--muted);font-size:.9rem}
