@@ -2,6 +2,7 @@ import { parseCommand, search, indexCatalog, guess, norm, capital, tokens } from
 import { BASICS } from "./basics.js";
 import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas, homeInfo } from "./cocina.js";
 import { barcodeSVG, bestFormat } from "./barcode.js";
+import { readTicket, parseTicket } from "./ticket.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
 
 const STORES = [
@@ -683,10 +684,11 @@ async function openCompare() {
 
 function openHistory() {
   const nc = (st.cards ?? []).length;
-  const top = `<button type="button" class="pantry-btn" id="hCards"><span>💳 Tarjetas de cliente</span><span class="lnk">${nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir"}</span></button>
+  const top = `<button type="button" class="pantry-btn" id="hTicket"><span>🧾 Escanear un ticket</span><span class="lnk">Con una foto</span></button>
+    <button type="button" class="pantry-btn" id="hCards"><span>💳 Tarjetas de cliente</span><span class="lnk">${nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir"}</span></button>
     <button type="button" class="pantry-btn" id="hBackup"><span>💾 Copia de seguridad</span><span class="lnk">${st.lastBackup ? `Última: ${new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}` : "Hacer ahora"}</span></button>`;
-  const wire = () => { $("hCards").onclick = () => openCards(); $("hBackup").onclick = () => openBackup(); if ($("spBudget")) wireSpend(); };
-  if (!st.history.length) { openSheet("Compras", `${top}<p class="note">Aquí verás cada compra cuando pulses «Terminar compra».</p>`); wire(); return; }
+  const wire = () => { $("hTicket").onclick = () => openTicket(); $("hCards").onclick = () => openCards(); $("hBackup").onclick = () => openBackup(); if ($("spBudget")) wireSpend(); };
+  if (!st.history.length) { openSheet("Compras", `${top}<p class="note">Aquí verás cada compra cuando pulses «Terminar compra» o escanees un ticket.</p>`); wire(); return; }
   openSheet("Compras", `${spendHTML()}${top}<div class="hist">${st.history.slice().reverse().map((h, k) => {
     const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
     return `<article><div class="h"><span>${esc(d)} · ${esc(STORE_NAME[h.store] ?? "")}</span><span>${h.total ? eur(h.total) : ""}</span></div>
@@ -699,6 +701,69 @@ function openHistory() {
     const h = st.history[+b.dataset.repeat];
     for (const i of h.items) await addItem({ query: i.label, qty: i.qty, count: i.count || 1 }, i.prod);
     save(); render(); closeSheet(); setStatus(`Apuntados ${h.items.length} productos de esa compra.`);
+  };
+}
+
+// ---------- Escanear el ticket ----------
+// Se lee en el propio móvil; luego se revisa y se guarda como una compra más (gasto del mes, «se te acaba», En casa).
+function openTicket(note = "") {
+  openSheet("Escanear ticket", `<p class="note">Haz una foto al ticket entero, estirado y con buena luz. Se lee en tu móvil: la foto no se envía a ningún sitio.</p>
+    ${note ? `<p class="bk-msg warn" role="alert">${esc(note)}</p>` : ""}
+    <div class="row tk-pick"><label class="btn"><input type="file" accept="image/*" capture="environment" id="tkCam" hidden>📷 Hacer foto</label>
+      <label class="btn ghost"><input type="file" accept="image/*" id="tkGal" hidden>Elegir de la galería</label></div>
+    <div class="tk-prog" id="tkProg" hidden><p id="tkMsg" aria-live="polite">Preparando el lector…</p><progress id="tkBar" max="1"></progress></div>`, "ticketing");
+  const go = async (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    $("tkProg").hidden = false; document.querySelector(".tk-pick").hidden = true;
+    try {
+      const text = await readTicket(f, (fase, v) => { if (!$("tkBar")) return; $("tkBar").value = v;
+        $("tkMsg").textContent = fase === "lectura" ? `Leyendo el ticket… ${Math.round(v * 100)} %` : "Preparando el lector (la primera vez tarda un poco)…"; });
+      if (!(sheet.open && sheet.classList.contains("ticketing"))) return;
+      ticketReview(parseTicket(text), text);
+    } catch {
+      if (sheet.open && sheet.classList.contains("ticketing")) openTicket("No se ha podido cargar el lector. Necesita internet la primera vez; prueba otra vez con conexión.");
+    }
+  };
+  $("tkCam").onchange = go; $("tkGal").onchange = go;
+}
+function ticketReview(t, text) {
+  const day = (ms) => new Date(ms - new Date(ms).getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  const row = (i = { label: "", count: 1, price: "" }) => `<li class="tk-it"><input class="tk-n" aria-label="Producto" value="${esc(i.count > 1 ? `${i.count} ${i.label}` : i.label)}" placeholder="Producto">
+    <input class="tk-p" aria-label="Precio" inputmode="decimal" value="${i.price === "" ? "" : i.price.toFixed(2).replace(".", ",")}" placeholder="0,00"><button type="button" class="tk-x" aria-label="Quitar">×</button></li>`;
+  const ok = t.items.length || t.total;
+  openSheet("Revisa el ticket", `<p class="note">${ok ? `He leído ${t.items.length} producto${t.items.length === 1 ? "" : "s"}. Corrige lo que no esté bien antes de guardar.` : "No he podido leer bien el ticket. Puedes repetir la foto o apuntar a mano el total."}</p>
+    <form id="tkForm" class="tk-form">
+      <div class="tk-top"><label class="field">Súper<select id="tkStore">${STORES.map(([s, n]) => `<option value="${s}"${s === t.store ? " selected" : ""}>${esc(s === "any" ? "Otro" : n)}</option>`).join("")}</select></label>
+        <label class="field">Día<input type="date" id="tkDate" value="${day(t.date ?? Date.now())}" max="${day(Date.now())}"></label>
+        <label class="field">Total (€)<input id="tkTotal" inputmode="decimal" value="${t.total ? t.total.toFixed(2).replace(".", ",") : ""}" placeholder="0,00"></label></div>
+      ${t.total && t.items.length && Math.abs(t.sum - t.total) > 0.05 ? `<p class="tk-diff">Los productos suman ${eur(t.sum)}; puede faltar alguno o haber descuentos.</p>` : ""}
+      <ul class="tk-list" id="tkList">${t.items.map(row).join("")}</ul>
+      <button type="button" class="padd" id="tkAdd">+ Añadir producto</button>
+      <label class="tk-chk"><input type="checkbox" id="tkHome" checked> Pasar lo comprado a «En casa»</label>
+      <div class="row"><button class="btn" type="submit">Guardar compra</button><button class="btn ghost" type="button" id="tkAgain">Repetir foto</button></div>
+      <details class="tk-raw"><summary>Ver el texto leído</summary><pre>${esc(text)}</pre></details>
+    </form>`, "ticketing");
+  $("tkList").onclick = (e) => { const x = e.target.closest(".tk-x"); if (x) x.closest("li").remove(); };
+  $("tkAdd").onclick = () => { $("tkList").insertAdjacentHTML("beforeend", row()); $("tkList").lastElementChild.querySelector("input").focus(); };
+  $("tkAgain").onclick = () => openTicket();
+  $("tkForm").onsubmit = (e) => {
+    e.preventDefault();
+    const money = (v) => { const n = parseFloat(String(v).replace(/[^\d,.-]/g, "").replace(",", ".")); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; };
+    const items = [...$("tkList").children].map((li) => {
+      const raw = li.querySelector(".tk-n").value.trim(), m = raw.match(/^(\d{1,2})\s+(.+)/);
+      return { label: capital(m ? m[2] : raw), qty: "", count: m ? +m[1] : 1, price: money(li.querySelector(".tk-p").value) };
+    }).filter((i) => i.label);
+    const total = money($("tkTotal").value) || Math.round(items.reduce((s, i) => s + i.price, 0) * 100) / 100;
+    if (!items.length && !total) { $("tkTotal").focus(); return; }
+    const d = $("tkDate").value ? new Date(`${$("tkDate").value}T12:00`).getTime() : Date.now();
+    const date = Math.min(d, Date.now());
+    const h = { date, list: "Ticket", store: $("tkStore").value, total, items, ticket: true };
+    const at = st.history.findIndex((x) => x.date > date);
+    if (at < 0) st.history.push(h); else st.history.splice(at, 0, h);
+    if (st.history.length > 100) st.history.shift();
+    if ($("tkHome").checked) learnPurchase(items);
+    save(); render(); openHistory();
+    setStatus(`Ticket guardado: ${items.length} producto${items.length === 1 ? "" : "s"}${total ? `, ${eur(total)}` : ""}.`);
   };
 }
 
