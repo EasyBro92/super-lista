@@ -579,3 +579,28 @@ body.home .wrap{padding-bottom:110px}
 .home-cred{margin:auto 0 0;padding:0 16px;text-align:center;font-size:.68rem;line-height:1.4;color:var(--muted)}
 .home-cred a{color:inherit}
 @media (prefers-reduced-motion:reduce){.hcard,.hdots span{transition:none}}
+
+/* Animación del logo al abrir: el logo tal cual, entra alguien empujando el carro, tropieza y el carro vuelca */
+.intro{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:var(--bg);transition:opacity .3s}
+.intro.out{opacity:0;pointer-events:none}
+.intro svg{width:min(42vw,190px);height:auto}
+.intro *{animation-duration:3.6s;animation-fill-mode:both;animation-iteration-count:1}
+.intro .i-cz{animation-name:i-cz}
+@keyframes i-cz{0%,8%{transform:translate(-193.5px,-299.3px) scale(1.818);animation-timing-function:ease-in-out}20%,100%{transform:none}}
+.intro .i-px{animation-name:i-px;animation-timing-function:linear}
+@keyframes i-px{0%,12%{transform:translateX(-250px)}30%{transform:translateX(0)}38%,100%{transform:translateX(30px)}}
+.intro .i-cx{animation-name:i-cx}
+@keyframes i-cx{0%,30%{transform:none}38%,100%{transform:translateX(30px)}}
+.intro .i-pf{animation-name:i-pf}
+@keyframes i-pf{0%,38%{transform:none;animation-timing-function:ease-in}43%{transform:rotate(30deg)}50%{transform:rotate(76deg)}53%{transform:rotate(68deg)}56%,100%{transform:rotate(72deg)}}
+.intro .i-l1{animation-name:i-l1} .intro .i-l2{animation-name:i-l2}
+@keyframes i-l1{0%,12%{transform:rotate(18deg)}16%{transform:rotate(-18deg)}20%{transform:rotate(18deg)}24%{transform:rotate(-18deg)}28%{transform:rotate(18deg)}32%{transform:rotate(-18deg)}36%{transform:rotate(18deg)}40%{transform:rotate(-30deg)}50%,100%{transform:rotate(-10deg)}}
+@keyframes i-l2{0%,12%{transform:rotate(-18deg)}16%{transform:rotate(18deg)}20%{transform:rotate(-18deg)}24%{transform:rotate(18deg)}28%{transform:rotate(-18deg)}32%{transform:rotate(18deg)}36%{transform:rotate(-18deg)}40%{transform:rotate(20deg)}50%,100%{transform:rotate(6deg)}}
+.intro .i-ar{animation-name:i-ar}
+@keyframes i-ar{0%,38%{transform:none}46%{transform:rotate(-70deg)}54%,100%{transform:rotate(-40deg)}}
+.intro .i-ct{animation-name:i-ct}
+@keyframes i-ct{0%,39%{transform:none;animation-timing-function:ease-in}47%{transform:translate(0,-24px) rotate(60deg)}52%{transform:translate(0,-52px) rotate(90deg)}54.5%{transform:translate(0,-60px) rotate(86deg)}57%,100%{transform:translate(0,-52px) rotate(90deg)}}
+.intro .i-ck{animation-name:i-ck}
+@keyframes i-ck{0%,44%{opacity:1}44.5%,100%{opacity:0}}
+.intro .i-kf{transform-box:fill-box;transform-origin:center;animation-name:i-kf}
+@keyframes i-kf{0%,44%{opacity:0;transform:none;animation-timing-function:ease-out}44.5%{opacity:1;transform:none;animation-timing-function:ease-out}56%{transform:translate(-50px,-230px) rotate(-200deg) scale(1.2);animation-timing-function:ease-in-out}66%{transform:translate(-38px,-150px) rotate(-360deg) scale(1.7)}70%{transform:translate(-38px,-164px) rotate(-360deg) scale(1.6)}74%,100%{transform:translate(-38px,-158px) rotate(-360deg) scale(1.6);opacity:1}}
