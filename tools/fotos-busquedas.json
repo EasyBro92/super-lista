@@ -190,5 +190,10 @@
   "Musaka griega": ["Moussaka", "Greek moussaka"],
   "Menemen": ["Menemen", "Turkish menemen eggs"],
   "Kofta de cordero": ["Kofta kebab", "lamb kofta"],
-  "Baba ganoush": ["Baba ghanoush", "baba ganoush eggplant dip"]
+  "Baba ganoush": ["Baba ghanoush", "baba ganoush eggplant dip"],
+  "Inicio Lista": ["Carro de la compra", "shopping cart groceries supermarket", "grocery bag vegetables", "supermarket aisle"],
+  "Inicio Recetas": ["Cocina doméstica", "cooking at home kitchen vegetables", "chopping vegetables cutting board", "home cooking pan"],
+  "Inicio Menú": ["Comida casera", "family dinner table food", "meal prep containers", "set table dinner dishes"],
+  "Inicio En casa": ["Despensa", "pantry shelves food jars", "open refrigerator food", "kitchen pantry"],
+  "Inicio Compras": ["Supermercado caja", "supermarket checkout", "grocery shopping bags", "supermarket receipt"]
 }
