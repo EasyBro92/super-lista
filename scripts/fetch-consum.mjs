@@ -15,7 +15,9 @@ export async function fetchConsum() {
       seen.add(p.id);
       const pd = p.productData ?? {};
       const prices = (p.priceData?.prices ?? []).map((x) => x.value).filter(Boolean);
-      const best = prices.sort((a, b) => a.centAmount - b.centAmount)[0];
+      const best = [...prices].sort((a, b) => a.centAmount - b.centAmount)[0];
+      const normal = (p.priceData?.prices ?? []).find((x) => x.id === "PRICE")?.value;
+      const of = (p.offers ?? [])[0];
       const per = (p.priceData?.unitPriceUnitType ?? "").replace(/^1\s*/, "");
       const brand = titleCase(pd.brand?.name ?? "");
       // Consum no pone la marca en el nombre: se añade al final, como en Mercadona («Leche semidesnatada Pascual»).
@@ -32,6 +34,11 @@ export async function fetchConsum() {
         cat,
         ean: p.ean ?? "",
         rank: 0, // el orden de Consum no es de popularidad
+        id: p.code ?? "",
+        was: normal?.centAmount,
+        offer: of ? (of.shortDescription || of.longDescription || "Oferta") : "",
+        offerTo: of?.to ? new Date(Date.parse(of.to) + 2 * 36e5).toISOString().slice(0, 10) : "",
+        isNew: !!pd.novelty,
       }));
     }
     if (!d.hasMore || !d.products?.length) break;

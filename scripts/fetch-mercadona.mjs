@@ -33,6 +33,10 @@ export async function fetchMercadona() {
             img: p.thumbnail,
             cat: catFor(group.name, sub.name, sec.name),
             rank: out.length,
+            id: p.id,
+            was: pi.price_decreased ? pi.previous_unit_price : null,
+            offer: pi.price_decreased && pi.previous_unit_price ? "Ha bajado" : "",
+            isNew: pi.is_new || p.is_new_arrival,
           }));
         }
       }
