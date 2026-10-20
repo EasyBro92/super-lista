@@ -1,0 +1,4 @@
+404 application/json; charset=utf-8 cors=*
+https://world.openfoodfacts.org/api/v2/product/8402001027482.json?fields=product_name,ingredients_text_es,allergens_tags,traces_tags,nutriments,nutriscore_grade,nova_group,labels_tags,image_front_url,origins
+
+{"code":"8402001027482","status":0,"status_verbose":"product not found"}

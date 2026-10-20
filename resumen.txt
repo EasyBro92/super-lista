@@ -1,0 +1,14 @@
+img m1.jpg: 200
+img m2.jpg: 200
+img d1.jpg: 200
+img d2.jpg: 200
+img d3.jpg: 200
+off-aceite: 404 72b cors=*
+buscar mercadona: 200 
+buscar dia: 307 /error
+buscar consum: 200 
+buscar carrefour: 403 
+buscar eroski: 403 
+buscar eci: 302 /supermercado/
+buscar lidl: 200 
+buscar aldi: 200 
