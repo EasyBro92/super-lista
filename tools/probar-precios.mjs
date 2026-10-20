@@ -17,18 +17,26 @@ async function get(k, u, cut = 400000) {
 }
 const j = (t) => { try { return JSON.parse(t); } catch { return null; } };
 
-// Ofertas de Consum y enlaces cortos a la ficha de cada tienda.
-const co = j(await get("consum", "https://tienda.consum.es/api/rest/V1.0/catalog/product?limit=100&offset=2000", 10));
-const ofs = (co?.products ?? []).filter((p) => p.offers?.length || p.productData?.novelty);
-await fs.writeFile("out/probe/consum-offers.json", JSON.stringify(ofs.slice(0, 4), null, 1));
-const food = (co?.products ?? []).find((p) => p.productData?.containAllergensIntolernacies);
-if (food) await get("consum-food", `https://tienda.consum.es/api/rest/V1.0/catalog/product/${food.id}`);
-sum.push(`consum ofertas ${ofs.length}/${co?.products?.length}`);
-for (const [k, u] of Object.entries({
-  mercShort: "https://tienda.mercadona.es/product/4241", consumShort: "https://tienda.consum.es/es/p/x/1669",
-  diaShort: "https://www.dia.es/x/p/504P6", diaShort2: "https://www.dia.es/p/504P6", alcampoShort: "https://www.compraonline.alcampo.es/products/91400",
-})) {
-  try { const r = await fetch(u, { headers: BROWSER, redirect: "manual" }); sum.push(`${k}: ${r.status} ${r.headers.get("location") ?? ""}`); } catch (e) { sum.push(`${k}: ERROR`); }
+// Fotos y datos para probar la ficha del producto, y los buscadores de cada súper.
+await fs.mkdir("out/probe/img", { recursive: true });
+const IMGS = {
+  "m1.jpg": "https://prod-mercadona.imgix.net/images/3b8cde7b3cb069ee0316029012cf8562.jpg?fit=crop&h=800&w=800",
+  "m2.jpg": "https://prod-mercadona.imgix.net/images/3eb95d1e4b1daee2df5e5c85dafbfe38.jpg?fit=crop&h=800&w=800",
+  "d1.jpg": "https://www.dia.es/product_images/504P6/504P6_ISO_0_ES.jpg", "d2.jpg": "https://www.dia.es/product_images/504P6/504P6_FRO_0_ES.jpg",
+  "d3.jpg": "https://www.dia.es/product_images/504P6/504P6_TRA_0_ES.jpg",
+};
+for (const [k, u] of Object.entries(IMGS)) {
+  try { const r = await fetch(u, { headers: BROWSER }); if (r.ok) await fs.writeFile(`out/probe/img/${k}`, Buffer.from(await r.arrayBuffer())); sum.push(`img ${k}: ${r.status}`); } catch { sum.push(`img ${k}: ERROR`); }
+}
+await get("off-aceite", "https://world.openfoodfacts.org/api/v2/product/8402001027482.json?fields=product_name,ingredients_text_es,allergens_tags,traces_tags,nutriments,nutriscore_grade,nova_group,labels_tags,image_front_url,origins");
+const SEARCH = {
+  mercadona: "https://tienda.mercadona.es/search-results?query=leche", dia: "https://www.dia.es/search?q=leche",
+  consum: "https://tienda.consum.es/es/s/leche", carrefour: "https://www.carrefour.es/?q=leche",
+  eroski: "https://supermercado.eroski.es/es/search/results/?q=leche", eci: "https://www.elcorteingles.es/supermercado/buscar/?term=leche",
+  lidl: "https://www.lidl.es/q/search?q=leche", aldi: "https://www.aldi.es/busqueda.html?query=leche",
+};
+for (const [k, u] of Object.entries(SEARCH)) {
+  try { const r = await fetch(u, { headers: { ...BROWSER, Accept: "text/html" }, redirect: "manual" }); sum.push(`buscar ${k}: ${r.status} ${r.headers.get("location") ?? ""}`); } catch (e) { sum.push(`buscar ${k}: ERROR`); }
 }
 await fs.writeFile("out/probe/resumen.txt", sum.join("\n"));
 console.log(sum.join("\n"));
