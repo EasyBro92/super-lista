@@ -1,7 +1,7 @@
 // Ficha de cada producto, como en la tienda online de cada súper: fotos, oferta, ingredientes, alérgenos,
 // información nutricional, Nutri-Score, gráfico del precio y enlace a la web del súper.
 // Los datos salen de la ficha de Mercadona (descargada cada noche), de la web de Dia y de Open Food Facts.
-import { norm } from "./parser.js";
+import { norm, tokens } from "./parser.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const eur = (n) => n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
@@ -269,4 +269,39 @@ export function offerLineHTML(p) {
   if (p.pt != null) parts.push(`antes <s>${esc(eur(p.pt))}</s>`);
   if (p.nw) parts.push("Novedad");
   return `<p class="foffer">${offerHTML(p)} ${parts.join(" · ")}</p>`;
+}
+
+// ---------- «Hay uno más barato» ----------
+// Busca el mismo tipo de producto (sin la marca) en los catálogos con precio y se queda con los que salen
+// más baratos por kilo o litro (o por unidad si no hay precio por kilo). Si el producto no tiene precio
+// (p. ej. escaneado), enseña dónde se encuentra más barato.
+export function cheaperAlts(p, catalog, searchFn, n = 3) {
+  if (!p?.n) return [];
+  // Sin marca conocida (Mercadona), la marca son las palabras en mayúscula del final: «Leche semidesnatada Asturiana».
+  let bname = p.b ?? "";
+  if (!bname) { const w = String(p.n).split(/\s+/); const tail = []; while (w.length > 2 && /^\p{Lu}/u.test(w[w.length - 1])) tail.unshift(w.pop()); bname = tail.join(" "); }
+  const brand = new Set(tokens(bname));
+  const PACK = /^(brik|brick|botella|lata|pack|paquete|bolsa|garrafa|tarro|bote|caja|bandeja|malla|unidad|ud|uds|formato|envase|tetrabrik)$/;
+  const qt = tokens(p.n).filter((t) => !brand.has(t) && !/^\d/.test(t) && !PACK.test(t)).slice(0, 3);
+  if (!qt.length) return [];
+  const same = (x) => x.s === p.s && x.n === p.n && (x.f ?? "") === (p.f ?? "");
+  // Tiene que llevar todas las palabras (para no cambiar semidesnatada por desnatada).
+  const all = (x) => qt.every((q) => (x._t ?? tokens(x.n)).some((t) => t === q || (q.length >= 4 && t.startsWith(q))));
+  const cands = searchFn(catalog, qt.join(" "), 80).filter((x) => x.p != null && !same(x) && all(x) && (!p.c || p.c === "Otros" || x.c === p.c)).slice(0, 30);
+  const mine = unitPrice(p);
+  const out = [];
+  for (const x of cands) {
+    const ux = unitPrice(x);
+    let save = null, per = "";
+    if (mine && ux && ux.u === mine.u) { save = 1 - ux.v / mine.v; per = ux.u === "kg" ? "kg" : ux.u === "l" ? "litro" : "unidad"; }
+    else if (p.p != null && x.f && p.f && norm(x.f) === norm(p.f)) { save = 1 - x.p / p.p; per = "envase"; }
+    else if (p.p == null) { save = 0; per = ""; }
+    if (save == null || (p.p != null && save < 0.05)) continue;
+    out.push({ x, save, per, uv: ux?.v ?? x.p });
+  }
+  if (p.p == null) out.sort((a, b) => a.uv - b.uv); else out.sort((a, b) => b.save - a.save);
+  // Uno por súper como mucho dos, para que no salgan tres casi iguales del mismo sitio.
+  const per = {}, res = [];
+  for (const o of out) { per[o.x.s] = (per[o.x.s] ?? 0) + 1; if (per[o.x.s] <= 2) res.push(o); if (res.length >= n) break; }
+  return res;
 }
