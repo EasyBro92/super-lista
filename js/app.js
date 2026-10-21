@@ -1349,8 +1349,6 @@ function webBtnHTML(p) {
   const u = webUrl(p);
   return u ? `<a class="btn ghost fweb" href="${esc(u)}" target="_blank" rel="noopener">${SELLS_ONLINE.has(p.s) ? "Comprar en" : "Ver en"} la web de ${esc(STORE_NAME[p.s])} ↗</a>` : "";
 }
-// Diseño de la ficha: «scroll» = todo seguido; «tabs» = por pestañas.
-let FICHA_LAYOUT = "scroll";
 function openFicha(p, { it = null, title = p?.n ?? "" } = {}) {
   const only = onlyAt(p);
   const info = p ? [p.f, p.p != null ? eur(p.p) : "", p.u, only ? `Solo en ${STORE_NAME[only]}` : (it ? list().store === "any" : true) && p.s ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "";
@@ -1403,15 +1401,7 @@ function openFicha(p, { it = null, title = p?.n ?? "" } = {}) {
     const el = $("ficha");
     if (!secs.length) { el.innerHTML = `<p class="note">${esc(STORE_NAME[p.s] ?? "Este súper")} no publica los ingredientes de este producto.</p>`; return; }
     const src = d.src?.length ? `<p class="note fsrc">Datos de ${esc(d.src.join(" y "))}. Revisa siempre el envase si tienes alergias.</p>` : "";
-    if (FICHA_LAYOUT === "tabs") {
-      el.innerHTML = `<div class="ftabs" role="tablist">${secs.map(([n], k) => `<button type="button" class="chip sm" role="tab" data-ft="${k}" aria-selected="${!k}">${esc(n)}</button>`).join("")}</div>
-        ${secs.map(([n, h], k) => `<section class="fsec" data-fs="${k}"${k ? " hidden" : ""}>${h}</section>`).join("")}${src}`;
-      el.querySelector(".ftabs").onclick = (e) => { const b = e.target.closest("[data-ft]"); if (!b) return;
-        el.querySelectorAll("[data-ft]").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
-        el.querySelectorAll("[data-fs]").forEach((x) => { x.hidden = x.dataset.fs !== b.dataset.ft; }); };
-    } else {
-      el.innerHTML = secs.map(([n, h]) => `<section class="fsec">${n === "Resumen" ? "" : `<h3>${esc(n)}</h3>`}${h}</section>`).join("") + src;
-    }
+    el.innerHTML = secs.map(([n, h]) => `<section class="fsec">${n === "Resumen" ? "" : `<h3>${esc(n)}</h3>`}${h}</section>`).join("") + src;
   });
 }
 

@@ -728,7 +728,5 @@ body.home .wrap{padding-bottom:110px}
 .fdl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:.88rem}
 .fdl dt{color:var(--muted);font-weight:600}
 .fdl dd{margin:0}
-.ftabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
-.ftabs [aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .fsrc{font-size:.78rem}
 @media (prefers-color-scheme:dark){.achip{background:#4a2018;color:#ffcfc3}}
