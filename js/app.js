@@ -3,6 +3,7 @@ import { BASICS } from "./basics.js";
 import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas, homeInfo } from "./cocina.js";
 import { barcodeSVG, bestFormat } from "./barcode.js";
 import { readTicket, parseTicket } from "./ticket.js";
+import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, filterBarHTML, filterBarClick, applyFilters, fichaData, priceHistory, fichaSections } from "./ficha.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
 
 const STORES = [
@@ -111,7 +112,7 @@ function bestProd(cat, query) {
 function pick(prod) {
   if (!prod) return null;
   const o = { n: prod.n, s: prod.s };
-  for (const k of ["img", "p", "u", "f", "e", "b", "c", "pb", "pd"]) if (prod[k] != null) o[k] = prod[k];
+  for (const k of ["img", "p", "u", "f", "e", "b", "c", "pb", "pd", "id", "w", "o", "ot", "pt", "nw"]) if (prod[k] != null) o[k] = prod[k];
   return o;
 }
 
@@ -269,6 +270,8 @@ function thumbHTML(prod, emoji) { return photoHTML(prod?.img, emoji, prod?.n, on
 // Ha bajado de precio en el último catálogo (precio de antes en «pb»).
 const dropPct = (p) => p?.pb != null && p.p != null && p.p < p.pb ? Math.round((1 - p.p / p.pb) * 100) : 0;
 const dropHTML = (p) => { const d = dropPct(p); return d >= 3 ? `<span class="drop" title="Antes ${eur(p.pb)}">⬇ ${d}%</span>` : ""; };
+// Esquina de la foto: la oferta del súper («2ª -50%», «Nuevo») y, si no hay, la bajada de precio.
+const badgeHTML = (p) => (offerTag(p) || p?.nw ? offerHTML(p) : dropHTML(p));
 const itemPrice = (i) => (i.prod?.p != null ? i.prod.p * (i.count || 1) : null);
 
 function renderStores() {
@@ -455,7 +458,7 @@ function tileHTML(it, l) {
   const q = it.qty && it.qty !== "1" ? it.qty : it.count > 1 ? `×${it.count}` : "";
   return `<li class="item gt${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}${incoming.has(it.id) ? " incoming" : ""}" data-id="${it.id}"
       role="checkbox" aria-checked="${it.done}" aria-label="${esc(it.label)}${q ? `, ${esc(q)}` : ""}" tabindex="0">
-    <span class="gt-ph">${thumbHTML(p, it.emoji)}${q ? `<span class="gt-q">${esc(q)}</span>` : ""}${dropHTML(p)}<span class="gt-cat" aria-hidden="true">${(CAT_LOOK[CATS.includes(it.cat) ? it.cat : "Otros"] ?? CAT_LOOK.Otros)[0]}</span><span class="gt-ck" aria-hidden="true">${CHECK_SVG}</span></span>
+    <span class="gt-ph">${thumbHTML(p, it.emoji)}${q ? `<span class="gt-q">${esc(q)}</span>` : ""}${badgeHTML(p)}<span class="gt-cat" aria-hidden="true">${(CAT_LOOK[CATS.includes(it.cat) ? it.cat : "Otros"] ?? CAT_LOOK.Otros)[0]}</span><span class="gt-ck" aria-hidden="true">${CHECK_SVG}</span></span>
     <span class="gt-n">${esc(it.label)}</span>
     <span class="gt-s">${esc(it.note || (p ? [p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : ""))}</span>
     ${price != null ? `<span class="gt-p">${eur(price)}</span>` : ""}
@@ -506,17 +509,26 @@ async function openPicker(id, query) {
   if (!it) return;
   query ??= it.label;
   openSheet(it.label, `<label class="field">Buscar en ${esc(STORE_NAME[l.store])}<input id="pickQ" type="search" value="${esc(query)}" enterkeyhint="search"></label>
-    <p class="note" id="pickNote">Cargando productos…</p><div class="opts" id="pickOpts"></div>`);
+    <div id="pickBar"></div><p class="note" id="pickNote">Cargando productos…</p><div class="opts" id="pickOpts"></div>`);
   const cat = await catalogFor(l.store);
   if (!sheet.open) return;
-  const res = search(cat, query, 30);
-  const opts = [{ none: true }, ...res];
-  $("pickNote").textContent = res.length ? "Elige el producto que quieres:" : (cat.length ? "No encuentro ese producto. Prueba con otras palabras." : "Aún no hay catálogo de este supermercado.");
+  const fs = { sort: "rel", diets: new Set() };
+  const all = search(cat, query, 150);
+  let opts;
+  const draw = () => {
+  const filtered = fs.sort !== "rel" || fs.diets.size;
+  const res = applyFilters(all, fs).slice(0, filtered ? 40 : 30);
+  opts = [{ none: true }, ...res];
+  if (all.length > 1) $("pickBar").innerHTML = filterBarHTML(fs);
+  $("pickNote").textContent = res.length ? "Elige el producto que quieres:" : filtered ? "No hay productos así. Quita algún filtro." : (cat.length ? "No encuentro ese producto. Prueba con otras palabras." : "Aún no hay catálogo de este supermercado.");
   $("pickOpts").innerHTML = opts.map((p, k) => p.none
     ? `<button class="opt" type="button" data-choose="none" aria-pressed="${!it.prod}"><span class="ph"><span class="emo">${esc(it.emoji)}</span></span><span class="on">Sin producto concreto</span></button>`
     : `<button class="opt" type="button" data-choose="${k}" aria-pressed="${it.prod?.n === p.n && it.prod?.s === p.s}">
         <span class="ph">${thumbHTML(p, it.emoji)}</span><span class="on">${esc(p.n)}</span>
-        <span class="op">${esc([p.f, p.p != null ? eur(p.p) : "", l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · "))}</span></button>`).join("");
+        <span class="op">${offerHTML(p)}${esc([p.f, p.p != null ? eur(p.p) : "", p.u, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · "))}</span></button>`).join("");
+  };
+  draw();
+  $("pickBar").onclick = (e) => { if (filterBarClick(e, fs)) draw(); };
   $("pickOpts").onclick = (e) => {
     const b = e.target.closest("[data-choose]");
     if (!b) return;
@@ -960,6 +972,12 @@ function finishShopping() {
 // ---------- Catálogo para marcar productos (como Softlist) ----------
 let browse = null;
 const DEALS_TAB = "⬇ Bajadas";
+const OFFERS_TAB = "🏷 Ofertas";
+// Ofertas del súper (2ª unidad, 3x2, precio rebajado) y novedades; primero las más rebajadas.
+const offPct = (p) => (p.pt != null && p.p != null ? 1 - p.p / p.pt : 0);
+function offers(cat, n) {
+  return cat.filter((p) => offerTag(p) || p.nw).sort((a, b) => NON_FOOD.has(a.c) - NON_FOOD.has(b.c) || !!b.o - !!a.o || offPct(b) - offPct(a)).slice(0, n);
+}
 // Lo que más ha bajado; primero comida y bebida, que es lo que más se compra.
 const NON_FOOD = new Set(["Limpieza", "Higiene", "Bebé y mascotas"]);
 function deals(cat, n) {
@@ -989,12 +1007,13 @@ async function renderDeals() {
 async function openBrowse(tab) {
   const l = list();
   const freq = Object.values(st.freq).sort((a, b) => b.count - a.count || b.last - a.last).slice(0, 24).map((f) => f.label);
-  const tabs = [...(freq.length ? ["Frecuentes"] : []), DEALS_TAB, ...Object.keys(BASICS)];
-  browse = { tab: tab && tabs.includes(tab) ? tab : tabs[0], q: "", cat: [], tiles: new Map(), added: 0 };
+  const tabs = [...(freq.length ? ["Frecuentes"] : []), OFFERS_TAB, DEALS_TAB, ...Object.keys(BASICS)];
+  browse = { tab: tab && tabs.includes(tab) ? tab : tabs[0], q: "", cat: [], tiles: new Map(), added: 0, f: { sort: "rel", diets: new Set() } };
   openSheet("Añadir productos", `
     <label class="vh" for="bq">Buscar producto</label>
     <input id="bq" class="bsearch" type="search" placeholder="Buscar en ${esc(STORE_NAME[l.store])}…" enterkeyhint="search" autocomplete="off">
     <div class="btabs" id="btabs">${tabs.map((t) => `<button type="button" class="chip" data-tab="${esc(t)}" aria-pressed="${t === browse.tab}">${esc(t)}</button>`).join("")}</div>
+    <div id="bfbar" hidden></div>
     <div class="bgrid" id="bgrid"><p class="note">Cargando productos…</p></div>
     <div class="bfoot"><span id="bcount"></span><button class="btn" type="button" id="bdone">Listo</button></div>`, "browsing");
   browse.cat = await catalogFor(l.store);
@@ -1010,28 +1029,43 @@ async function openBrowse(tab) {
   let tmo;
   $("bq").oninput = (e) => { clearTimeout(tmo); tmo = setTimeout(() => { browse.q = e.target.value.trim(); renderBrowse(); }, 180); };
   $("bgrid").onclick = (e) => { const b = e.target.closest("[data-tile]"); if (b) toggleTile(b.dataset.tile); };
+  $("bfbar").onclick = (e) => { if (filterBarClick(e, browse.f)) { renderBrowse(); $("bgrid").scrollTop = 0; } };
   $("bdone").onclick = closeSheet;
 }
 function inListByLabel(label) {
   const k = norm(label);
   return list().items.find((i) => !i.done && norm(i.label) === k);
 }
+// Texto bajo la foto de un producto: formato, precio y oferta.
+const prodSub = (p) => [p.f, p.p != null ? eur(p.p) : "", p.o && p.o !== "Ha bajado" ? p.o : ""].filter(Boolean).join(" · ");
 function renderBrowse() {
   const tiles = browse.tiles; tiles.clear();
   let names;
+  // Ordenar y filtrar por dieta: cuando se ven productos concretos (búsqueda, ofertas y bajadas).
+  const prodView = !!browse.q || browse.tab === DEALS_TAB || browse.tab === OFFERS_TAB;
+  const fb = $("bfbar");
+  fb.hidden = !prodView;
+  if (prodView) fb.innerHTML = filterBarHTML(browse.f);
+  const filtered = browse.f.sort !== "rel" || browse.f.diets.size;
   if (browse.q) {
     // Básicos que encajan con la búsqueda y después productos concretos del súper.
     const qt = tokens(browse.q);
     const basics = Object.values(BASICS).flat().filter((n) => { const t = tokens(n); return qt.every((w) => t.some((x) => x.startsWith(w))); });
     for (const n of basics) tiles.set(`b:${n}`, { label: n, prod: bestProd(browse.cat, n) });
-    for (const p of search(browse.cat, browse.q, 40)) tiles.set(`p:${p.s}:${p.n}:${p.f ?? ""}`, { label: p.n, prod: pick(p), sub: [p.f, p.p != null ? eur(p.p) : ""].filter(Boolean).join(" · ") });
+    if (filtered) tiles.clear(); // con filtros, solo productos concretos
+    for (const p of applyFilters(search(browse.cat, browse.q, filtered ? 150 : 40), browse.f).slice(0, 40)) tiles.set(`p:${p.s}:${p.n}:${p.f ?? ""}`, { label: p.n, prod: pick(p), sub: prodSub(p) });
+    if (!tiles.size && filtered) { $("bgrid").innerHTML = `<p class="note">No hay productos así. Quita algún filtro.</p>`; updateBrowseCount(); return; }
     if (!tiles.size) tiles.set(`b:${capital(browse.q)}`, { label: capital(browse.q), prod: null });
   } else {
     if (browse.tab === DEALS_TAB) {
-      for (const p of deals(browse.cat, 60)) tiles.set(`p:${p.s}:${p.n}:${p.f ?? ""}`, { label: p.n, prod: pick(p), sub: `${eur(p.p)} · antes ${eur(p.pb)}` });
-      if (!tiles.size) { $("bgrid").innerHTML = `<p class="note">Ahora mismo no hay bajadas de precio en este súper.</p>`; updateBrowseCount(); return; }
+      for (const p of applyFilters(deals(browse.cat, filtered ? 400 : 60), browse.f).slice(0, 60)) tiles.set(`p:${p.s}:${p.n}:${p.f ?? ""}`, { label: p.n, prod: pick(p), sub: `${eur(p.p)} · antes ${eur(p.pb)}` });
+      if (!tiles.size) { $("bgrid").innerHTML = `<p class="note">${filtered ? "No hay bajadas así. Quita algún filtro." : "Ahora mismo no hay bajadas de precio en este súper."}</p>`; updateBrowseCount(); return; }
     }
-    names = browse.tab === DEALS_TAB ? [] : browse.tab === "Frecuentes" ? browse.freq : BASICS[browse.tab] ?? [];
+    if (browse.tab === OFFERS_TAB) {
+      for (const p of applyFilters(offers(browse.cat, filtered ? 600 : 80), browse.f).slice(0, 80)) tiles.set(`p:${p.s}:${p.n}:${p.f ?? ""}`, { label: p.n, prod: pick(p), sub: [p.p != null ? eur(p.p) : "", p.o && p.o !== "Ha bajado" ? p.o : p.pt != null ? `antes ${eur(p.pt)}` : "Novedad"].filter(Boolean).join(" · ") });
+      if (!tiles.size) { $("bgrid").innerHTML = `<p class="note">${filtered ? "No hay ofertas así. Quita algún filtro." : "Ahora mismo no hay ofertas en este súper. Las de Alcampo, Consum, Dia y Mercadona se miran cada noche."}</p>`; updateBrowseCount(); return; }
+    }
+    names = browse.tab === DEALS_TAB || browse.tab === OFFERS_TAB ? [] : browse.tab === "Frecuentes" ? browse.freq : BASICS[browse.tab] ?? [];
     for (const n of names) {
       const f = st.freq[norm(n)];
       tiles.set(`b:${n}`, { label: n, prod: f?.prod ?? st.memory[memKey(n, list().store)] ?? bestProd(browse.cat, n) });
@@ -1040,7 +1074,7 @@ function renderBrowse() {
   $("bgrid").innerHTML = [...tiles].map(([k, t]) => {
     const on = !!inListByLabel(t.label);
     return `<button type="button" class="tile" data-tile="${esc(k)}" aria-pressed="${on}">
-      <span class="tph">${photoHTML(t.prod?.img, guess(t.label).emoji, t.label, onlyAt(t.prod))}${dropHTML(t.prod)}<span class="tck" aria-hidden="true">${CHECK_SVG}</span></span>
+      <span class="tph">${photoHTML(t.prod?.img, guess(t.label).emoji, t.label, onlyAt(t.prod))}${badgeHTML(t.prod)}<span class="tck" aria-hidden="true">${CHECK_SVG}</span></span>
       <span class="tn">${esc(t.label)}</span>${t.sub ? `<span class="ts">${esc(t.sub)}</span>` : ""}</button>`;
   }).join("");
   updateBrowseCount();
@@ -1305,32 +1339,70 @@ $("list").addEventListener("pointercancel", endGesture);
 document.addEventListener("contextmenu", (e) => { if (!e.target.closest("input, textarea")) e.preventDefault(); });
 document.addEventListener("dragstart", (e) => { if (e.target.tagName === "IMG") e.preventDefault(); });
 
+// Ficha del producto (al mantenerlo pulsado), como en la tienda online del súper: fotos, oferta,
+// ingredientes, alérgenos, nutrición, gráfico del precio y enlace a su web. Debajo, las opciones de la lista.
 function openOptions(id) {
   const it = list().items.find((i) => i.id === id); if (!it) return;
-  const p = it.prod;
+  openFicha(it.prod, { it, title: it.label });
+}
+function webBtnHTML(p) {
+  const u = webUrl(p);
+  return u ? `<a class="btn ghost fweb" href="${esc(u)}" target="_blank" rel="noopener">${SELLS_ONLINE.has(p.s) ? "Comprar en" : "Ver en"} la web de ${esc(STORE_NAME[p.s])} ↗</a>` : "";
+}
+function openFicha(p, { it = null, title = p?.n ?? "" } = {}) {
   const only = onlyAt(p);
-  const info = p ? [p.f, p.p != null ? eur(p.p) : "", p.u, only ? `Solo en ${STORE_NAME[only]}` : list().store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "";
-  openSheet(it.label, `<figure class="peek">
-      <div class="peek-ph">${photoHTML(p?.img && bigImg(p.img), it.emoji, p?.n, only)}</div>
-      <figcaption>${p ? `<b>${esc(p.n)}</b>${info ? `<span>${esc(info)}</span>` : ""}` : "<span>Sin producto concreto. Elige uno con «Cambiar producto».</span>"}</figcaption>
-    </figure>
-    <div class="menu">
+  const info = p ? [p.f, p.p != null ? eur(p.p) : "", p.u, only ? `Solo en ${STORE_NAME[only]}` : (it ? list().store === "any" : true) && p.s ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "";
+  const web = webBtnHTML(p);
+  const menu = it ? `<div class="menu">
     <button type="button" data-o="done">${it.done ? "Marcar como pendiente" : "Marcar como comprado"}</button>
     <button type="button" data-o="edit">Editar texto</button>
     <button type="button" data-o="pick">Cambiar producto</button>
     <button type="button" data-o="qty">Cambiar cantidad</button>
     <button type="button" data-o="dup">Duplicar</button>
-    <button type="button" data-o="del" class="danger">Borrar</button></div>`, "peeking");
-  $("sheetBody").querySelector(".menu").onclick = (e) => {
+    <button type="button" data-o="del" class="danger">Borrar</button></div>` : "";
+  openSheet(title, `<figure class="peek">
+      <div class="peek-ph" id="fPhotos">${photoHTML(p?.img && bigImg(p.img), it?.emoji ?? guess(title).emoji, p?.n, only)}</div>
+      <figcaption>${p ? `<b>${esc(p.n)}</b>${info ? `<span>${esc(info)}</span>` : ""}` : "<span>Sin producto concreto. Elige uno con «Cambiar producto».</span>"}</figcaption>
+    </figure>
+    <div id="fOffer">${p ? offerLineHTML(p) : ""}${web}</div>
+    <div id="ficha" class="ficha">${p ? `<p class="note">Buscando ingredientes y nutrición…</p>` : ""}</div>
+    ${menu}`, "peeking");
+  const body = $("sheetBody");
+  if (it) body.querySelector(".menu").onclick = (e) => {
     const o = e.target.closest("[data-o]")?.dataset.o; if (!o) return;
     closeSheet();
-    if (o === "done") toggleItem(id);
-    else if (o === "pick") openPicker(id);
-    else if (o === "edit") openEdit(id);
-    else if (o === "qty") openEdit(id, false);
-    else if (o === "del") removeItem(id);
+    if (o === "done") toggleItem(it.id);
+    else if (o === "pick") openPicker(it.id);
+    else if (o === "edit") openEdit(it.id);
+    else if (o === "qty") openEdit(it.id, false);
+    else if (o === "del") removeItem(it.id);
     else if (o === "dup") { const c = { ...structuredClone(it), id: uid(), done: false, added: Date.now() }; list().items.push(c); fresh.add(c.id); save(); render(); }
   };
+  if (!p) return;
+  const mine = body.firstElementChild;
+  // Los productos apuntados hace tiempo no traen el número de la tienda: se busca en el catálogo de hoy.
+  const now = p.s ? loadStore(p.s).then((cat) => cat.find((x) => x.n === p.n && (x.f ?? "") === (p.f ?? ""))).catch(() => null) : Promise.resolve(null);
+  now.then((cur) => {
+    if (cur) {
+      p = { ...p, ...pick(cur) };
+      if (sheet.open && body.firstElementChild === mine) $("fOffer").innerHTML = offerLineHTML(p) + webBtnHTML(p);
+    }
+    return Promise.all([fichaData(p), priceHistory(p)]); }).then(([d, ph]) => {
+    if (!sheet.open || body.firstElementChild !== mine) return;
+    // Varias fotos: se pasan deslizando.
+    const photos = [...new Set([p.img && bigImg(p.img), ...(d.photos ?? [])].filter(Boolean))];
+    if (photos.length > 1) {
+      $("fPhotos").outerHTML = `<div class="fgal" id="fPhotos" aria-label="Fotos del producto">${photos.slice(0, 6).map((u) => `<span class="fgal-i">${photoHTML(u, "🛒", p.n)}</span>`).join("")}</div>
+        <div class="fdots" aria-hidden="true">${photos.slice(0, 6).map((_, k) => `<i class="${k ? "" : "on"}"></i>`).join("")}</div>`;
+      const g = $("fPhotos"), dots = g.nextElementSibling;
+      g.addEventListener("scroll", () => { const k = Math.round(g.scrollLeft / g.clientWidth); [...dots.children].forEach((x, j) => x.classList.toggle("on", j === k)); }, { passive: true });
+    }
+    const secs = fichaSections(p, d, ph);
+    const el = $("ficha");
+    if (!secs.length) { el.innerHTML = `<p class="note">${esc(STORE_NAME[p.s] ?? "Este súper")} no publica los ingredientes de este producto.</p>`; return; }
+    const src = d.src?.length ? `<p class="note fsrc">Datos de ${esc(d.src.join(" y "))}. Revisa siempre el envase si tienes alergias.</p>` : "";
+    el.innerHTML = secs.map(([n, h]) => `<section class="fsec">${n === "Resumen" ? "" : `<h3>${esc(n)}</h3>`}${h}</section>`).join("") + src;
+  });
 }
 
 // Deslizar hacia abajo una hoja la cierra.

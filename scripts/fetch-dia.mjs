@@ -33,6 +33,10 @@ export async function fetchDia() {
           img: p.image ? `https://www.dia.es${p.image}` : "",
           cat,
           rank: out.length,
+          id: p.object_id,
+          web: p.url ?? "",
+          was: pr.is_promo_price ? pr.strikethrough_price : null,
+          offer: pr.is_promo_price ? `${pr.is_club_price ? "Precio Club Dia" : "Oferta"}${pr.discount_percentage ? ` -${pr.discount_percentage}%` : ""}` : "",
         }));
       }
       if (page >= (d.pagination?.total_pages ?? 1)) break;

@@ -7,6 +7,8 @@ import { fetchConsum } from "./fetch-consum.mjs";
 import { fetchDia } from "./fetch-dia.mjs";
 import { fetchAlcampo } from "./fetch-alcampo.mjs";
 import { writeJSON } from "./lib.mjs";
+import { addHistory } from "./historial.mjs";
+import { fetchFichas } from "./fetch-fichas.mjs";
 
 const STORES = {
   mercadona: { name: "Mercadona", source: "Tienda online de Mercadona", prices: true, fetch: fetchMercadona },
@@ -47,6 +49,11 @@ async function markDrops(slug, items) {
   let prevItems = [];
   try { prevItems = JSON.parse(await readFile(`data/stores/${slug}.json`, "utf8")); } catch {}
   console.log(`  ${applyDrops(items, prevItems)} bajadas de precio`);
+  // Historial para el gráfico de precio de cada ficha.
+  let hist = {};
+  try { hist = JSON.parse(await readFile(`data/precios/${slug}.json`, "utf8")); } catch {}
+  console.log(`  ${addHistory(hist, prevItems, items, new Date().toISOString().slice(0, 10))} cambios de precio`);
+  await writeJSON(`data/precios/${slug}.json`, hist);
 }
 
 const only = process.argv.slice(2);
@@ -76,6 +83,10 @@ for (const [slug, s] of Object.entries(STORES)) {
     continue;
   }
   delete meta.stores[slug].error;
+}
+// Fichas de Mercadona (ingredientes, alérgenos…), poco a poco cada noche.
+if (!only.length || only.includes("mercadona") || only.includes("fichas")) {
+  try { await fetchFichas(); } catch (e) { console.error(`✗ Fichas de Mercadona: ${e.message}`); }
 }
 meta.generated = new Date().toISOString();
 await writeJSON("data/meta.json", meta);

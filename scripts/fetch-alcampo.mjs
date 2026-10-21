@@ -20,6 +20,14 @@ function fixName(n) {
   return name;
 }
 
+// «2ª unidad -50% (08/10/26_21/10/26)» → oferta «2ª unidad -50%» hasta el 2026-10-21.
+export function offerOf(p) {
+  const d = (p.offers ?? [])[0]?.description ?? "";
+  if (!d) return {};
+  const m = d.match(/_(\d{2})\/(\d{2})\/(\d{2})\)/);
+  return { offer: d.replace(/\s*\([^)]*\)\s*$/, ""), offerTo: m ? `20${m[3]}-${m[2]}-${m[1]}` : "" };
+}
+
 async function page(q) {
   for (let i = 0; i < 2; i++) {
     try {
@@ -67,6 +75,9 @@ export async function fetchAlcampo() {
         img: p.image?.src ?? "",
         cat,
         rank: out.length,
+        id: p.retailerProductId,
+        ...offerOf(p),
+        isNew: !!p.isNew,
       }));
     }
     await sleep(2500);

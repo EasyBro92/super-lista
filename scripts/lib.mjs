@@ -66,8 +66,10 @@ export async function writeJSON(path, data) {
 }
 
 // Formato compacto de cada producto en data/stores/<tienda>.json
-// { n: nombre, b: marca, f: formato, p: precio €, u: precio por unidad, img: foto, c: sección, e: código de barras, r: posición }
-export function product({ name, brand = "", format = "", price = null, unit = "", img = "", cat = "Otros", ean = "", rank = 0 }) {
+// { n: nombre, b: marca, f: formato, p: precio €, u: precio por unidad, img: foto, c: sección, e: código de barras, r: posición,
+//   id: número del producto en la tienda, w: dirección de su ficha en la web (solo si no se puede sacar del id),
+//   o: oferta («2ª unidad -50%»), ot: último día de la oferta, pt: precio tachado (sin la oferta), nw: 1 si es novedad }
+export function product({ name, brand = "", format = "", price = null, unit = "", img = "", cat = "Otros", ean = "", rank = 0, id = "", web = "", offer = "", offerTo = "", was = null, isNew = false }) {
   const o = { n: name.trim(), c: cat, r: rank };
   if (brand) o.b = brand.trim();
   if (format) o.f = String(format).trim();
@@ -75,5 +77,11 @@ export function product({ name, brand = "", format = "", price = null, unit = ""
   if (unit) o.u = unit;
   if (img) o.img = img;
   if (ean) o.e = String(ean);
+  if (id) o.id = String(id);
+  if (web) o.w = web;
+  if (offer) o.o = offer.trim();
+  if (offer && offerTo) o.ot = offerTo;
+  if (was != null && o.p != null && +was > o.p + 0.005) o.pt = Math.round(+was * 100) / 100;
+  if (isNew) o.nw = 1;
   return o;
 }
