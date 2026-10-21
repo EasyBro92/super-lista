@@ -360,9 +360,6 @@ async function renderHome() {
   }).join("");
   if (html !== homeHTML) {
     $("hcards").innerHTML = html; homeHTML = html;
-    // Crédito de las fotos (licencias CC de Wikimedia Commons)
-    const cred = Object.values(info?.fotos ?? {}).filter((f) => f?.autor);
-    $("homeCred").innerHTML = cred.length ? `Fotos: ${cred.map((f) => `<a href="${esc(f.fuente)}" target="_blank" rel="noopener">${esc(f.autor)}</a> (${esc(f.licencia)})`).join(" · ")}` : "";
     $("hdots").innerHTML = HOME_CARDS.map((_, k) => `<span${k === 0 ? ' class="on"' : ""}></span>`).join("");
   }
 }
@@ -696,17 +693,21 @@ async function openCompare() {
 
 function openHistory() {
   const nc = (st.cards ?? []).length;
-  const top = `<button type="button" class="pantry-btn" id="hTicket"><span>🧾 Escanear un ticket</span><span class="lnk">Con una foto</span></button>
-    <button type="button" class="pantry-btn" id="hCards"><span>💳 Tarjetas de cliente</span><span class="lnk">${nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir"}</span></button>
-    <button type="button" class="pantry-btn" id="hBackup"><span>💾 Copia de seguridad</span><span class="lnk">${st.lastBackup ? `Última: ${new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}` : "Hacer ahora"}</span></button>
-    <button type="button" class="pantry-btn" id="hSettings"><span>⚙️ Ajustes</span><span class="lnk">Avisos de precio: ${st.alerts?.on ? "sí" : "no"}</span></button>`;
+  const tile = (id, e, t, d) => `<button type="button" class="qa" id="${id}"><span class="qa-e" aria-hidden="true">${e}</span><b>${t}</b><small>${esc(d)}</small></button>`;
+  const top = `<div class="qa-grid">
+    ${tile("hTicket", "🧾", "Escanear ticket", "Con una foto")}
+    ${tile("hCards", "💳", "Tarjetas", nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir")}
+    ${tile("hBackup", "💾", "Copia", st.lastBackup ? `Última: ${new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}` : "Hacer ahora")}
+    ${tile("hSettings", "⚙️", "Ajustes", `Avisos: ${st.alerts?.on ? "sí" : "no"}`)}</div>`;
   const wire = () => { $("hTicket").onclick = () => openTicket(); $("hCards").onclick = () => openCards(); $("hBackup").onclick = () => openBackup(); $("hSettings").onclick = () => openSettings(); if ($("spBudget")) wireSpend(); };
   if (!st.history.length) { openSheet("Compras", `${top}<p class="note">Aquí verás cada compra cuando pulses «Terminar compra» o escanees un ticket.</p>`); wire(); return; }
-  openSheet("Compras", `${spendHTML()}${top}<div class="hist">${st.history.slice().reverse().map((h, k) => {
-    const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
-    return `<article><div class="h"><span>${esc(d)} · ${esc(STORE_NAME[h.store] ?? "")}</span><span>${h.total ? eur(h.total) : ""}</span></div>
-      <p>${esc(h.items.map((i) => i.label).join(", "))}</p>
-      <div class="row"><button class="btn ghost" type="button" data-repeat="${st.history.length - 1 - k}">Volver a apuntar</button></div></article>`;
+  openSheet("Compras", `${spendHTML()}${top}<h3 class="cgroup hist-t">Tus compras</h3><div class="hist">${st.history.slice().reverse().map((h, k) => {
+    const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+    const n = h.items.length, logo = logoOf(h.store);
+    return `<article><div class="h-top">${logo ? `<span class="h-logo" style="background-image:url('${logo}')" aria-hidden="true"></span>` : `<span class="h-logo any" aria-hidden="true">🛒</span>`}
+        <span class="h-who"><b>${esc(STORE_NAME[h.store] ?? "Compra")}</b><small>${esc(d)}</small></span>${h.total ? `<b class="h-tot">${eur(h.total)}</b>` : ""}</div>
+      <p class="h-items"><span>${n} producto${n === 1 ? "" : "s"}:</span> ${esc(h.items.map((i) => i.label).join(", "))}</p>
+      <button class="btn ghost small" type="button" data-repeat="${st.history.length - 1 - k}">↺ Volver a apuntar</button></article>`;
   }).join("")}</div>`);
   wire();
   $("sheetBody").onclick = async (e) => {
@@ -855,20 +856,28 @@ function spendHTML() {
   const now = new Date(), months = [];
   for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 15); months.push({ d, t: monthSpent(d) }); }
   const cur = months[5].t, b = st.budget, max = Math.max(...months.map((m) => m.t), b || 0, 1);
+  const past = months.slice(0, 5).filter((m) => m.t), avg = past.length ? past.reduce((x, m) => x + m.t, 0) / past.length : 0;
   const byStore = {};
   for (const h of st.history) if (monthKey(h.date) === monthKey(now) && h.total) byStore[h.store] = (byStore[h.store] ?? 0) + h.total;
+  const stores = Object.entries(byStore).sort((x, y) => y[1] - x[1]), topS = stores[0]?.[1] || 1;
   const mName = (d) => d.toLocaleDateString("es-ES", { month: "short" }).replace(".", "");
+  const pct = b ? Math.round((cur / b) * 100) : 0, over = b && cur > b;
   return `<section class="spend" aria-label="Gasto al mes">
-    <div class="sp-head"><div><span class="sp-lbl">Gastado en ${esc(now.toLocaleDateString("es-ES", { month: "long" }))}</span><b class="sp-big">${eur(cur)}</b></div>
-      <button type="button" class="pill-btn" id="spBudget">${b ? `Tope ${eur(b)}` : "Poner un tope"}</button></div>
+    <div class="sp-head"><span class="sp-lbl">Gastado en ${esc(now.toLocaleDateString("es-ES", { month: "long" }))}</span>
+      <button type="button" class="pill-btn" id="spBudget">${b ? `✎ Tope ${eur(b)}` : "+ Poner un tope"}</button></div>
+    <b class="sp-big">${eur(cur)}</b>
     <div id="spEdit"></div>
-    ${b ? `<div class="sp-meter${cur > b ? " over" : ""}" role="img" aria-label="${Math.round((cur / b) * 100)} % del tope"><span style="width:${Math.min(100, (cur / b) * 100)}%"></span></div>
-      <p class="sp-note${cur > b ? " over" : ""}">${cur > b ? `Te has pasado ${eur(cur - b)} este mes.` : `Te quedan ${eur(b - cur)} hasta fin de mes.`}</p>` : ""}
-    <div class="sp-bars">${months.map((m, i) => `<div class="sp-col${i === 5 ? " now" : ""}"><span class="sp-v">${m.t ? Math.round(m.t) + " €" : ""}</span>
-      <span class="sp-bar" style="height:${Math.max(2, (m.t / max) * 100)}%"></span><span class="sp-m">${esc(mName(m.d))}</span></div>`).join("")}</div>
-    ${Object.keys(byStore).length ? `<div class="sp-stores">${Object.entries(byStore).sort((a, c) => c[1] - a[1]).map(([s2, t]) =>
-      `<span>${esc(STORE_NAME[s2] ?? "Otro")} <b>${eur(t)}</b></span>`).join("")}</div>` : ""}
-    <p class="note">Cuenta el precio aproximado de lo que marcas al pulsar «Terminar compra».</p></section>`;
+    ${b ? `<div class="sp-budget"><div class="sp-meter${over ? " over" : ""}" role="img" aria-label="${pct} % del tope"><span style="width:${Math.min(100, pct)}%"></span></div>
+      <p class="sp-note${over ? " over" : ""}"><span>${pct} % del tope</span><span>${over ? `Te has pasado ${eur(cur - b)}` : `Te quedan <b>${eur(b - cur)}</b>`}</span></p></div>` : ""}
+    <div class="sp-sec"><p class="sp-sub"><span>Últimos 6 meses</span>${avg ? `<span>Media: ${Math.round(avg)} €</span>` : ""}</p>
+    <div class="sp-bars">${months.map((m, i) => `<div class="sp-col${i === 5 ? " now" : ""}"><span class="sp-track"><span class="sp-v">${m.t ? Math.round(m.t) + " €" : "–"}</span>
+      <span class="sp-bar" style="height:${Math.max(3, (m.t / max) * 78)}%"></span></span><span class="sp-m">${esc(mName(m.d))}</span></div>`).join("")}</div></div>
+    ${stores.length ? `<div class="sp-sec"><p class="sp-sub"><span>Este mes por súper</span></p><ul class="sp-stores">${stores.map(([s2, t]) => {
+      const logo = logoOf(s2);
+      return `<li>${logo ? `<span class="h-logo" style="background-image:url('${logo}')" aria-hidden="true"></span>` : `<span class="h-logo any" aria-hidden="true">🛒</span>`}
+        <span class="sp-sn">${esc(STORE_NAME[s2] ?? "Otro")}<span class="sp-sbar"><span style="width:${Math.max(4, (t / topS) * 100)}%"></span></span></span><b>${eur(t)}</b></li>`;
+    }).join("")}</ul></div>` : ""}
+    <p class="sp-foot">Precio aproximado de lo que marcas al pulsar «Terminar compra» o de tus tickets.</p></section>`;
 }
 function wireSpend() {
   $("spBudget").onclick = () => {
@@ -1377,7 +1386,9 @@ function openSettings() {
       <input type="checkbox" role="switch" id="setAlerts"${a.on ? " checked" : ""}></label>
     ${canNotif ? `<label class="tset"${a.on ? "" : " hidden"} id="setNotifRow"><span><b>También como notificación del móvil</b><small>Sale aunque estés en otra app, solo si Super Lista está abierta o en segundo plano.</small></span>
       <input type="checkbox" role="switch" id="setNotif"${a.notif && Notification.permission === "granted" ? " checked" : ""}></label>` : ""}
-    <p class="note" id="setNote"></p>`);
+    <p class="note" id="setNote"></p>
+    <button type="button" class="pantry-btn set-link" id="setCred"><span><b>Fotos de las recetas</b><small>De dónde salen y su licencia</small></span><span class="lnk">Ver ›</span></button>`);
+  $("setCred").onclick = () => openCredits();
   $("setAlerts").onchange = (e) => {
     st.alerts = { ...(st.alerts ?? {}), on: e.target.checked };
     persist();
@@ -1391,6 +1402,14 @@ function openSettings() {
     if (e.target.checked && !ok) { e.target.checked = false; $("setNote").textContent = "El móvil no ha dado permiso para notificaciones. Puedes darlo en los ajustes del navegador."; }
     st.alerts = { ...(st.alerts ?? {}), notif: ok }; persist();
   };
+}
+// Autores y licencias de las fotos (Wikimedia Commons). Van aquí, en Ajustes, para que el resto de pantallas quede limpio.
+async function openCredits() {
+  openSheet("Fotos de las recetas", `<p class="note">Cargando…</p>`);
+  const fotos = await fetch("data/recetas-fotos.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+  const rows = Object.entries(fotos).filter(([, f]) => f?.autor).sort(([a], [b]) => a.localeCompare(b, "es"));
+  $("sheetBody").innerHTML = `<p class="note">Las fotos son de Wikimedia Commons y se usan con licencias libres. Gracias a sus autores.</p>
+    <ul class="creds">${rows.map(([n, f]) => `<li><span>${esc(n)}</span><a href="${esc(f.fuente)}" target="_blank" rel="noopener">${esc(f.autor)}</a><small>${esc(f.licencia)}</small></li>`).join("")}</ul>`;
 }
 // Bajadas y ofertas de lo que compras a menudo (2 veces o más), una vez por cada bajada u oferta.
 async function priceAlerts(force = false) {

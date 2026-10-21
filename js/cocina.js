@@ -232,6 +232,8 @@ export async function openRecipes(id, moment, view) {
 // Botón de cerrar, gesto de atrás o deslizar hacia abajo: un paso atrás (paso a paso → receta → recetas o menú).
 export function cookBack() {
   if (ui.view === "cook") { showRecipe(ui.id); return true; }
+  if (ui.view === "recipe" && ui.from === "gen") { showGen(); return true; }
+  if (ui.view === "gen") { showPlan(); return true; }
   if ((ui.view === "recipe" && ui.from === "plan") || (ui.view === "list" && ui.pickDay)) { showPlan(); return true; }
   if (ui.view === "edit" && ui.editId != null) { showRecipe(ui.editId); return true; }
   if (["recipe", "pantry", "plan", "diet", "edit"].includes(ui.view)) { showList(true); return true; }
@@ -508,14 +510,12 @@ function showRecipe(id) {
     : `<p class="ready">Ya tienes en la lista todo lo que falta.</p>`;
   const days = nextDays(), inPlan = new Set(plan().filter((e) => e.n === r.n).map((e) => e.d));
   A.body().innerHTML = `
-    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : "Recetas"}</button>
+    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : ui.from === "gen" ? "Menú propuesto" : "Recetas"}</button>
     <div class="cdetail">
-      ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>${heart(r)}
-        ${r.mine ? "" : `<figcaption>Foto: <a href="${A.esc(r.foto.fuente)}" target="_blank" rel="noopener">${A.esc(r.foto.autor)}</a> · ${A.esc(r.foto.licencia)}</figcaption>`}</figure>` : ""}
+      ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>${heart(r)}</figure>` : ""}
       <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>${heart(r)}`}
         <div><p class="rm">${A.esc(meta(r, sv))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p>
-          ${r.nut ? `<p class="rnut"><b>${kcal(r.nut.kcal)}</b> por ración · ${r.nut.p} g proteína · ${r.nut.h} g hidratos · ${r.nut.g} g grasa
-            <small>Aproximado${r.nut.all ? "" : ", sin contar algún ingrediente"}</small></p>` : ""}
+          ${r.nut ? `<p class="rnut"><b>≈ ${kcal(r.nut.kcal)}</b> por ración · ${r.nut.p} g proteína · ${r.nut.h} g hidratos · ${r.nut.g} g grasa</p>` : ""}
           ${r.lleva.length ? `<p class="rlleva${r.lleva.some((a) => diet().evita.includes(a)) ? " warn" : ""}">Lleva: ${r.lleva.map((a) => `${ALLER.get(a)[1]} ${ALLER.get(a)[2].toLowerCase()}`).join(" · ")}</p>` : ""}
           ${r.m ? `<p class="rmo">${Object.keys(r.m).filter((m) => MOMENT.has(m)).map((m) => `<button type="button" class="mo-tag" data-go-moment="${m}">${MOMENT.get(m)[1]} ${m}</button>`).join("")}</p>` : ""}</div></div>
       <div class="rtools">
@@ -838,13 +838,16 @@ function showPlan() {
   A.body().innerHTML = `
     <button type="button" class="back" id="cback">‹ Recetas</button>
     <div class="plan" id="cplanl">
-      <p class="note">Elige qué vas a cocinar cada día y apunta de una vez todo lo que te falta.</p>
+      <h3 class="cgroup">Menús ya hechos <span>te propongo las recetas</span></h3>
+      <div class="mtypes" id="cmtypes">${MENU_TYPES.map((t) => `<button type="button" class="mtype" data-mtype="${t.id}" style="--h:${t.h}">
+        <span class="mt-e" aria-hidden="true">${t.e}</span><b>${A.esc(t.n)}</b><small>${A.esc(t.d)}</small></button>`).join("")}</div>
+      <h3 class="cgroup">Tu menú <span>o elige tú cada receta</span></h3>
       ${nextDays().map((d) => { const dk = p.filter((e) => e.d === d).reduce((t, e) => t + (by.get(e.n)?.nut?.kcal ?? 0), 0);
-        return `<section class="pday"><h3 class="cgroup">${A.esc(cap(dayName(d)))}${dk ? ` <span>${kcal(dk)} por persona, aprox.</span>` : ""}</h3>
-        ${p.map((e, k) => [e, k]).filter(([e]) => e.d === d).map(([e, k]) => {
+        return `<section class="pday"><h4 class="pday-h">${A.esc(cap(dayName(d)))}${dk ? ` <span>${kcal(dk)} por persona, aprox.</span>` : ""}</h4>
+        ${p.map((e, k) => [e, k]).filter(([e]) => e.d === d).sort(([a], [b]) => slotIdx(a.m) - slotIdx(b.m)).map(([e, k]) => {
           const r = by.get(e.n); if (!r) return "";
           const m = check(r).missing.length;
-          return `<div class="pent"><button type="button" class="rc" data-open="${k}">${pic(r)}<span class="ri"><span class="rn">${A.esc(r.n)}</span>
+          return `<div class="pent"><button type="button" class="rc" data-open="${k}">${pic(r)}<span class="ri">${e.m ? `<span class="pslot">${A.esc(e.m)}</span>` : ""}<span class="rn">${A.esc(r.n)}</span>
             <span class="rm">${A.esc(`${mins(r.t)} · ${plural(e.s, "ración", "raciones")}`)}</span>
             <span class="rh${m ? "" : " ok"}">${m ? `Te ${m === 1 ? "falta 1 ingrediente" : `faltan ${m} ingredientes`}` : "✓ Tienes todo"}</span></span></button>
             <button type="button" class="pdel" data-del="${k}" aria-label="Quitar ${A.esc(r.n)} del menú">×</button></div>`;
@@ -863,6 +866,8 @@ function showPlan() {
     if (del) { p.splice(+del.dataset.del, 1); A.buzz(); A.save(); return showPlan(); }
     const add = e.target.closest("[data-addday]");
     if (add) { ui.pickDay = add.dataset.addday; ui.mode = "todas"; ui.q = ""; return showList(); }
+    const mt = e.target.closest("[data-mtype]");
+    if (mt) { ui.gen = { type: mt.dataset.mtype, days: ui.gen?.days ?? 7, slots: ui.gen?.slots ?? [...SLOTS], seed: 1 }; makeGen(); return showGen(); }
   };
   const pm = $$("pmiss");
   if (pm) pm.onclick = async () => {
@@ -870,6 +875,125 @@ function showPlan() {
     for (const n of miss) await A.addItem({ query: n });
     A.save(); A.render(); A.buzz(20);
     A.setStatus(`Apuntado para el menú: ${miss.join(", ")}.`);
+    showPlan();
+  };
+}
+
+// ---------- Menús ya hechos (saludable, para bajar o subir de peso…) ----------
+// Cada tipo elige recetas para desayuno, comida y cena según sus calorías y proteínas aproximadas (js/nutricion.js)
+// y respeta la dieta y alergias de «Dieta». Es una orientación, no un consejo médico.
+const SLOTS = ["Desayuno", "Comida", "Cena"];
+const slotIdx = (m) => (m ? SLOTS.indexOf(m) : 3);
+const kc = (r) => r.nut?.kcal ?? 0;
+const pr = (r) => r.nut?.p ?? 0;
+const tag = (r, t) => r.filters.includes(t);
+const sub = (r, slot, t) => !!r.m?.[slot]?.includes(t);
+const isSweet = (r) => tag(r, "Postres");
+const fried = (r) => r.i.some(([n, q]) => /^aceite/i.test(n) && /para fre[ií]r|\b[2-9]\d\d\s*ml|\b\d\s*l\b|litro/i.test(q ?? ""));
+const ingTxt = (r) => norm(r.i.map((x) => x[0]).join(" | "));
+const CARO = /\b(salmon|ternera|solomillo|gambas|langostinos|lubina|dorada|atun fresco|cordero|bacalao|pinones|mascarpone|jamon serrano|mozzarella|queso parmesano|anacardos|almejas|pulpo|aguacates?)\b/;
+const greens = (r, slot) => sub(r, slot, "Verduras y ensaladas") || sub(r, slot, "Ligera") || tag(r, "Ensaladas") || tag(r, "Sopas y cremas");
+const healthy = (r, slot) => (tag(r, "Legumbres") ? 3 : 0) + (tag(r, "Pescado") ? 3 : 0) + (greens(r, slot) ? 3 : 0) + (sub(r, slot, "Saludable") ? 3 : 0)
+  - (tag(r, "Carne") ? 1 : 0) - (tag(r, "Con productos del súper") ? 2 : 0) - (sub(r, slot, "Pizza y hamburguesas") ? 3 : 0);
+// Calorías orientativas por comida para no pasarse (bajar) o llegar (subir).
+const near = (v, goal) => -Math.abs(v - goal) / 100;
+const MENU_TYPES = [
+  { id: "sano", e: "🥗", n: "Saludable", h: 140, d: "Equilibrado: verdura, legumbre y pescado, poca fritura.",
+    ok: (r, s) => !isSweet(r) && !fried(r) && (!kc(r) || kc(r) <= 800), score: (r, s) => healthy(r, s) + near(kc(r), s === "Desayuno" ? 350 : 550) },
+  { id: "bajar", e: "⚖️", n: "Para bajar de peso", h: 190, d: "Ligero y saciante: unas 1.000–1.300 kcal en las tres comidas.",
+    ok: (r, s) => !isSweet(r) && !fried(r) && kc(r) > 0 && kc(r) <= { Desayuno: 380, Comida: 560, Cena: 460 }[s],
+    score: (r, s) => (pr(r) * 4) / Math.max(kc(r), 100) * 10 + healthy(r, s) / 2 },
+  { id: "subir", e: "💪", n: "Para subir de peso", h: 25, d: "Platos completos y energéticos: más de 2.000 kcal al día.",
+    ok: (r, s) => kc(r) >= { Desayuno: 380, Comida: 650, Cena: 550 }[s] && !(s !== "Desayuno" && isSweet(r)), score: (r) => kc(r) / 100 + pr(r) / 10 },
+  { id: "prote", e: "🍗", n: "Alto en proteína", h: 10, d: "Para hacer deporte o ganar músculo.",
+    ok: (r, s) => pr(r) >= (s === "Desayuno" ? 14 : 30) && !isSweet(r), score: (r) => pr(r) / 5 + (pr(r) * 4) / Math.max(kc(r), 100) * 5 },
+  { id: "medi", e: "🫒", n: "Mediterráneo", h: 80, d: "Cocina de aquí: aceite de oliva, pescado, legumbre y verdura.",
+    ok: (r, s) => !tag(r, "Con productos del súper") && !sub(r, s, "Pizza y hamburguesas") && (s === "Desayuno" ? !isSweet(r) || tag(r, "Española") : !isSweet(r)),
+    score: (r, s) => (tag(r, "Española") ? 3 : 0) + (/\b(italia|grecia|libano|marruecos|turquia|tunez)\b/.test(norm(r.z ?? "")) ? 2 : 0) + healthy(r, s) + (/aceite de oliva/.test(ingTxt(r)) ? 1 : 0) },
+  { id: "veggie", e: "🥕", n: "Vegetariano", h: 100, d: "Sin carne ni pescado.",
+    ok: (r, s) => tag(r, "Vegetariana") && (s === "Desayuno" || !isSweet(r)), score: (r, s) => healthy(r, s) + near(kc(r), 500) },
+  { id: "vegan", e: "🌱", n: "Vegano", h: 120, d: "Solo vegetal: sin carne, pescado, huevo ni lácteos.",
+    ok: (r, s) => tag(r, "Vegana"), score: (r, s) => healthy(r, s) },
+  { id: "barato", e: "💶", n: "Económico", h: 50, d: "Ingredientes baratos y lo que ya tienes en casa.",
+    ok: (r, s) => !CARO.test(ingTxt(r)), score: (r, s) => -check(r).missing.length * 1.5 - r.ings.length / 3 + (tag(r, "Legumbres") || tag(r, "Pasta y arroz") || sub(r, s, "Huevos") ? 3 : 0) },
+  { id: "rapido", e: "⏱️", n: "Rápido", h: 210, d: "Recetas de 25 minutos o menos.",
+    ok: (r) => r.t <= 25, score: (r, s) => -r.t / 10 + healthy(r, s) / 3 },
+  { id: "ninos", e: "🧒", n: "Para niños", h: 330, d: "Lo que suele gustar a los peques.",
+    ok: (r, s) => tag(r, "Para niños") || (s !== "Desayuno" && healthy(r, s) >= 3 && r.t <= 40), score: (r, s) => (tag(r, "Para niños") ? 3 : 0) + healthy(r, s) / 2 - (fried(r) ? 1 : 0) },
+  { id: "casa", e: "🏠", n: "Con lo que tengo", h: 260, d: "Lo que menos te obliga a comprar.",
+    ok: () => true, score: (r, s) => -check(r).missing.length * 3 + healthy(r, s) / 3 },
+];
+const MTYPE = new Map(MENU_TYPES.map((t) => [t.id, t]));
+// Números al azar repetibles: «Otra propuesta» cambia la semilla.
+const rng = (seed) => () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+function genDays() { const d = nextDays(); return ui.gen.days === 7 ? d : [d[ui.gen.days === 2 ? 1 : 0]]; }
+function candidates(t, slot) {
+  return recipes.filter((r) => !r.mine && r.m?.[slot] && allowed(r) && t.ok(r, slot)).map((r) => ({ r, sc: t.score(r, slot) })).sort((a, b) => b.sc - a.sc);
+}
+// Elige entre las mejores (no siempre la primera) y sin repetir en todo el menú mientras se pueda.
+function pickFor(t, slot, used, rand) {
+  const c = candidates(t, slot);
+  if (!c.length) return null;
+  const fresh = c.filter((x) => !used.has(x.r.n)), pool = (fresh.length ? fresh : c).slice(0, Math.max(4, Math.ceil(c.length * 0.4)));
+  const x = pool[Math.floor(rand() * pool.length)].r;
+  used.add(x.n); return x;
+}
+function makeGen() {
+  const g = ui.gen, t = MTYPE.get(g.type), rand = rng(g.seed * 7919 + g.type.length * 31), used = new Set();
+  g.menu = genDays().map((d) => ({ d, meals: SLOTS.filter((s) => g.slots.includes(s)).map((s) => ({ s, r: pickFor(t, s, used, rand) })) }));
+}
+function swapMeal(di, mi) {
+  const g = ui.gen, t = MTYPE.get(g.type), m = g.menu[di].meals[mi];
+  const used = new Set(g.menu.flatMap((d) => d.meals.map((x) => x.r?.n)).filter(Boolean));
+  g.swaps = (g.swaps ?? 0) + 1;
+  m.r = pickFor(t, m.s, used, rng(g.seed * 104729 + g.swaps * 7 + di * 13 + mi)) ?? m.r;
+}
+function showGen() {
+  keepScroll();
+  setView("gen"); ui.from = null; ui.pickDay = null;
+  const g = ui.gen, t = MTYPE.get(g.type);
+  A.setTitle(t.n, true);
+  const total = g.menu.reduce((n, d) => n + d.meals.filter((m) => m.r).length, 0);
+  const seg = [[1, "Hoy"], [2, "Mañana"], [7, "7 días"]].map(([v, l]) => `<button type="button" data-gdays="${v}" aria-pressed="${g.days === v}">${l}</button>`).join("");
+  A.body().innerHTML = `
+    <button type="button" class="back" id="cback">‹ Menú de la semana</button>
+    <div class="plan gen" id="cgen">
+      <div class="ghero" style="--h:${t.h}"><span class="mt-e" aria-hidden="true">${t.e}</span><div><b>${A.esc(t.n)}</b><small>${A.esc(t.d)}</small></div></div>
+      <div class="gopts"><div class="seg" role="group" aria-label="Para cuándo">${seg}</div>
+        <div class="gslots" role="group" aria-label="Qué comidas">${SLOTS.map((s) => `<button type="button" class="chip" data-gslot="${s}" aria-pressed="${g.slots.includes(s)}">${s}</button>`).join("")}</div></div>
+      ${diet().tipo || diet().evita.length ? `<p class="note">Respeta tu dieta: ${A.esc(dietLabel().toLowerCase())}.</p>` : ""}
+      ${g.menu.map((d, di) => {
+        const dk = d.meals.reduce((n, m) => n + kc(m.r ?? {}), 0), dp = d.meals.reduce((n, m) => n + pr(m.r ?? {}), 0);
+        return `<section class="pday"><h4 class="pday-h">${A.esc(cap(dayName(d.d)))}${dk ? ` <span>${kcal(dk)} · ${dp} g proteína</span>` : ""}</h4>
+        ${d.meals.map((m, mi) => m.r ? `<div class="pent"><button type="button" class="rc" data-gopen="${m.r.id}">${pic(m.r)}<span class="ri"><span class="pslot">${A.esc(m.s)}</span><span class="rn">${A.esc(m.r.n)}</span>
+            <span class="rm">${A.esc(`${mins(m.r.t)}${m.r.nut ? ` · ${kcal(m.r.nut.kcal)} · ${m.r.nut.p} g proteína` : ""}`)}</span></span></button>
+            <button type="button" class="pdel pswap" data-gswap="${di}.${mi}" aria-label="Cambiar ${A.esc(m.r.n)} por otra receta" title="Cambiar por otra">↻</button></div>`
+          : `<p class="note">No hay recetas de ${A.esc(m.s.toLowerCase())} de este tipo${diet().evita.length || diet().tipo ? " con tu dieta" : ""}.</p>`).join("")}</section>`; }).join("")}
+      <p class="note gfoot">Calorías por persona, aproximadas. Es una orientación, no sustituye el consejo de un profesional.</p>
+    </div>
+    <div class="bfoot"><button class="btn ghost" type="button" id="gagain">↻ Otra propuesta</button>
+      <button class="btn" type="button" id="gsave"${total ? "" : " disabled"}>Guardar en mi menú</button></div>`;
+  lazyBg($$("cgen"));
+  $$("cback").onclick = () => cookBack();
+  $$("cgen").onclick = (e) => {
+    const dd = e.target.closest("[data-gdays]");
+    if (dd) { g.days = +dd.dataset.gdays; makeGen(); A.buzz(); return showGen(); }
+    const sl = e.target.closest("[data-gslot]");
+    if (sl) { const s = sl.dataset.gslot, on = g.slots.includes(s); if (on && g.slots.length === 1) return; g.slots = on ? g.slots.filter((x) => x !== s) : [...g.slots, s]; makeGen(); A.buzz(); return showGen(); }
+    const sw = e.target.closest("[data-gswap]");
+    if (sw) { const [di, mi] = sw.dataset.gswap.split(".").map(Number); swapMeal(di, mi); A.buzz(); return showGen(); }
+    const o = e.target.closest("[data-gopen]");
+    if (o) { ui.from = "gen"; return showRecipe(+o.dataset.gopen); }
+  };
+  $$("gagain").onclick = () => { g.seed++; makeGen(); A.buzz(); showGen(); };
+  $$("gsave").onclick = () => {
+    // Sustituye lo que hubiera esos días en las comidas elegidas; lo demás se queda.
+    const days = new Set(g.menu.map((d) => d.d)), p = plan();
+    A.st.plan = p.filter((e) => !(days.has(e.d) && (!e.m || g.slots.includes(e.m))));
+    for (const d of g.menu) for (const m of d.meals) if (m.r) A.st.plan.push({ d: d.d, n: m.r.n, s: servOf(m.r), m: m.s });
+    A.st.plan.sort((a, b) => a.d.localeCompare(b.d));
+    A.save(); A.buzz(20);
+    A.setStatus(`📅 Menú ${t.n.toLowerCase()} guardado: ${plural(total, "receta", "recetas")}.`);
     showPlan();
   };
 }
