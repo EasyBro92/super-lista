@@ -808,3 +808,54 @@ body.home .wrap{padding-bottom:110px}
 .gopts .seg{grid-template-columns:repeat(3,1fr)}
 .gslots{display:flex;gap:6px;flex-wrap:wrap}
 .gfoot{margin-top:12px;font-size:.75rem}
+
+/* ---------- Estilo iPhone: deslizar para borrar, hojas con muelle, materiales translúcidos ---------- */
+.sw{position:relative;border-radius:18px;overflow:hidden;transition:height .25s cubic-bezier(.32,.72,0,1),opacity .2s}
+.sw.gone{opacity:0}
+.sw-act{position:absolute;inset:1px;display:flex;justify-content:flex-end;background:#ff3b30;border-radius:inherit}
+.sw-act .sw-del{width:92px;border:0;background:none;color:#fff;font:700 .85rem var(--body);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:width .25s cubic-bezier(.32,.72,0,1)}
+.sw-act .sw-del svg{width:22px;height:22px}
+.sw.armed .sw-act .sw-del{width:100%}
+.sw-in{position:relative;transition:transform .32s cubic-bezier(.32,.72,0,1);touch-action:pan-y}
+.hist .sw-in{margin:0}
+.pent.sw-in{background:var(--surface)}
+.sw+.sw{margin-top:0}
+.hist{gap:12px}
+.h-btns{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.h-btns .sw-del{border:0;background:none;color:var(--danger);font:700 .85rem var(--body);cursor:pointer;padding:6px 4px}
+/* En pantallas táctiles se borra deslizando; con ratón queda el botón. */
+@media (hover:none),(pointer:coarse){.only-mouse{display:none!important}}
+.toast.in-sheet{position:absolute;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:6;animation:toastIn .35s cubic-bezier(.32,.72,0,1)}
+.sheet-in{position:relative}
+@keyframes toastIn{from{transform:translateY(16px);opacity:0}}
+
+/* Hojas: entran con el muelle de iOS y el fondo se oscurece poco a poco */
+.sheet{transition:transform .32s cubic-bezier(.32,.72,0,1)}
+.sheet[open]{animation:sheetUp .42s cubic-bezier(.32,.72,0,1)}
+.sheet[open]::backdrop{animation:dimIn .3s ease}
+@keyframes sheetUp{from{transform:translateY(100%)}}
+@keyframes dimIn{from{background:transparent}}
+.grab{width:36px;height:5px;background:color-mix(in srgb,var(--muted) 45%,transparent)}
+
+/* Materiales translúcidos como en iOS */
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .tabbar{background:color-mix(in srgb,var(--surface) 72%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+  form.bar{background:color-mix(in srgb,var(--surface) 80%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+  .toast{background:color-mix(in srgb,var(--toast) 88%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+}
+
+/* Al tocar, todo se hunde un poco (como los botones de iOS) */
+.btn,.round,.pill-btn,.qa,.rc,.mtype,.hcard,.pantry-btn,.chip,.tile,.opt,.fav,.padd,.pdel,.lists button.l,.menu button{transition:transform .25s cubic-bezier(.32,.72,0,1),background-color .2s,opacity .2s}
+.btn:active,.round:active,.pill-btn:active,.qa:active,.rc:active,.mtype:active,.pantry-btn:active,.chip:active,.opt:active,.fav:active,.padd:active,.pdel:active,.lists button.l:active,.menu button:active{transform:scale(.96);transition-duration:.08s}
+.hcard:active{transform:scale(.98)}
+.sw-in .rc:active{transform:none}
+
+/* Tirar para actualizar */
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:20;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  background:var(--surface);color:var(--muted);box-shadow:0 4px 16px rgb(0 0 0 / .14);opacity:0;transform:translate(-50%,-50px);transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .2s;pointer-events:none}
+.ptr svg{width:20px;height:20px}
+.ptr.armed{color:var(--accent)}
+.ptr.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+html{overscroll-behavior-y:contain}
+@media (prefers-reduced-motion:reduce){.sheet[open],.sheet[open]::backdrop,.toast.in-sheet{animation:none}.sw-in,.sw{transition:none}}

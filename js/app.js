@@ -4,6 +4,7 @@ import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas, homeInfo
 import { barcodeSVG, bestFormat } from "./barcode.js";
 import { readTicket, parseTicket } from "./ticket.js";
 import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, cheaperAlts, unitPrice, filterBarHTML, filterBarClick, applyFilters, fichaData, priceHistory, fichaSections } from "./ficha.js";
+import { haptic, swipeRows, sheetGestures, pullToRefresh } from "./gestos.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
 
 const STORES = [
@@ -234,6 +235,8 @@ function withUndo(msg, fn) {
   undoSnap = snap;
   const t = $("toast");
   $("toastMsg").textContent = msg;
+  // Con una hoja abierta, el aviso va dentro de ella (lo de fuera queda tapado).
+  if (sheet.open) { t.classList.add("in-sheet"); sheet.querySelector(".sheet-in").append(t); }
   t.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.hidden = true; undoSnap = null; }, 5000);
@@ -244,8 +247,10 @@ function undo() {
   if (!st.lists.some((l) => l.id === st.current)) st.current = st.lists[0].id;
   undoSnap = null; $("toast").hidden = true;
   save(); render(); buzz();
+  if (sheet.open && sheet.dataset.sec === "history") openHistory();
 }
-const buzz = (ms = 12) => { try { navigator.vibrate?.(ms); } catch {} };
+const buzz = haptic;
+const SWIPE_DEL = {};
 function removeItem(id) {
   const it = list().items.find((i) => i.id === id); if (!it) return;
   withUndo(`Borrado: ${it.label}`, () => { list().items = list().items.filter((i) => i.id !== id); });
@@ -498,7 +503,8 @@ $("sheetClose").addEventListener("click", sheetBack);
 sheet.addEventListener("cancel", (e) => { if (sheet.classList.contains("cooking") && cookBack()) e.preventDefault(); });
 sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSheet(); });
 // Si la hoja se ha vuelto a abrir con otro contenido (p. ej. del menú a «Editar»), no se borra.
-sheet.addEventListener("close", () => { if (sheet.open) return; delete sheet.dataset.sec; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
+sheet.addEventListener("close", () => { if (sheet.open) return; delete sheet.dataset.sec;
+  const t = $("toast"); if (t.classList.contains("in-sheet")) { t.classList.remove("in-sheet"); $("favs").before(t); } stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
 
 async function openPicker(id, query) {
   const l = list();
@@ -701,13 +707,14 @@ function openHistory() {
     ${tile("hSettings", "⚙️", "Ajustes", `Avisos: ${st.alerts?.on ? "sí" : "no"}`)}</div>`;
   const wire = () => { $("hTicket").onclick = () => openTicket(); $("hCards").onclick = () => openCards(); $("hBackup").onclick = () => openBackup(); $("hSettings").onclick = () => openSettings(); if ($("spBudget")) wireSpend(); };
   if (!st.history.length) { openSheet("Compras", `${top}<p class="note">Aquí verás cada compra cuando pulses «Terminar compra» o escanees un ticket.</p>`); wire(); return; }
-  openSheet("Compras", `${spendHTML()}${top}<h3 class="cgroup hist-t">Tus compras</h3><div class="hist">${st.history.slice().reverse().map((h, k) => {
+  openSheet("Compras", `${spendHTML()}${top}<h3 class="cgroup hist-t">Tus compras <span>desliza a la izquierda para borrar</span></h3><div class="hist">${st.history.slice().reverse().map((h, k) => {
     const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
     const n = h.items.length, logo = logoOf(h.store);
-    return `<article><div class="h-top">${logo ? `<span class="h-logo" style="background-image:url('${logo}')" aria-hidden="true"></span>` : `<span class="h-logo any" aria-hidden="true">🛒</span>`}
+    return `<div class="sw" data-sw="h:${st.history.length - 1 - k}"><div class="sw-act"><button type="button" class="sw-del">${TRASH_SVG}Borrar</button></div><article class="sw-in"><div class="h-top">${logo ? `<span class="h-logo" style="background-image:url('${logo}')" aria-hidden="true"></span>` : `<span class="h-logo any" aria-hidden="true">🛒</span>`}
         <span class="h-who"><b>${esc(STORE_NAME[h.store] ?? "Compra")}</b><small>${esc(d)}</small></span>${h.total ? `<b class="h-tot">${eur(h.total)}</b>` : ""}</div>
       <p class="h-items"><span>${n} producto${n === 1 ? "" : "s"}:</span> ${esc(h.items.map((i) => i.label).join(", "))}</p>
-      <button class="btn ghost small" type="button" data-repeat="${st.history.length - 1 - k}">↺ Volver a apuntar</button></article>`;
+      <div class="h-btns"><button class="btn ghost small" type="button" data-repeat="${st.history.length - 1 - k}">↺ Volver a apuntar</button>
+        <button type="button" class="sw-del only-mouse">Borrar</button></div></article></div>`;
   }).join("")}</div>`);
   wire();
   $("sheetBody").onclick = async (e) => {
@@ -1246,7 +1253,7 @@ $("ideas").addEventListener("click", (e) => {
   const u = e.target.closest("[data-cook-use]"); if (u) return openRecipes(null, null, `use:${u.dataset.cookUse}`);
   if (e.target.closest("[data-cook-all]")) openRecipes(null, "Todo");
 });
-initCocina({ st, list, addItem, markGeneric, save, render, setStatus, buzz, esc, openSheet, sheet, CHECK_SVG,
+initCocina({ st, list, addItem, markGeneric, save, render, setStatus, buzz, esc, openSheet, sheet, CHECK_SVG, swipeDel: SWIPE_DEL, TRASH_SVG,
   body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
 $("finishBtn").addEventListener("click", finishShopping);
 $("shopBtn").addEventListener("click", () => {
@@ -1517,24 +1524,22 @@ function openFicha(p, { it = null, title = p?.n ?? "", swap = false, onAdd = nul
   });
 }
 
-// Deslizar hacia abajo una hoja la cierra.
-(() => {
-  let y0 = null, dy = 0;
-  const box = () => sheet;
-  sheet.addEventListener("pointerdown", (e) => { if (e.target.closest(".sheet-head")) { y0 = e.clientY; dy = 0; } });
-  sheet.addEventListener("pointermove", (e) => {
-    if (y0 == null) return;
-    dy = Math.max(0, e.clientY - y0);
-    box().style.transform = `translateY(${dy}px)`;
-  });
-  const end = () => {
-    if (y0 == null) return;
-    y0 = null; box().style.transform = "";
-    if (dy > 80) sheetBack();
-  };
-  sheet.addEventListener("pointerup", end);
-  sheet.addEventListener("pointercancel", end);
-})();
+// Gestos de la hoja (arrastrar abajo para cerrar, desde el borde izquierdo para volver) y deslizar para borrar.
+sheetGestures(sheet, { close: closeSheet, back: sheetBack });
+// Qué hacer al borrar deslizando, según el tipo de fila (h = compra; p = receta del menú, en cocina.js).
+SWIPE_DEL.h = (i) => {
+    const h = st.history[+i]; if (!h) return;
+    withUndo(`Compra borrada${h.total ? ` (${eur(h.total)})` : ""}`, () => { st.history.splice(+i, 1); });
+    const y = sheet.scrollTop; openHistory(); sheet.scrollTop = y;
+};
+swipeRows($("sheetBody"), (key) => { const k = key.indexOf(":"); SWIPE_DEL[key.slice(0, k)]?.(key.slice(k + 1)); });
+// Tirar hacia abajo en Inicio o en la lista: vuelve a mirar los precios.
+pullToRefresh(async () => {
+  const m = await fetch("data/meta.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  if (m) { if (m.generated !== meta?.generated) { catalogs.clear(); loading.clear(); } meta = m; }
+  render(); renderSummary(); await renderDeals().catch(() => {});
+  setStatus(m ? "Precios al día." : "Sin conexión: sigues con los precios guardados.", !m);
+});
 $("favs").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-fav]"); if (!b) return;
   const f = st.freq[b.dataset.fav]; if (!f) return;
