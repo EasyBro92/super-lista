@@ -3,7 +3,7 @@ import { BASICS } from "./basics.js";
 import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas, homeInfo } from "./cocina.js";
 import { barcodeSVG, bestFormat } from "./barcode.js";
 import { readTicket, parseTicket } from "./ticket.js";
-import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, filterBarHTML, filterBarClick, applyFilters, fichaData, priceHistory, fichaSections } from "./ficha.js";
+import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, cheaperAlts, unitPrice, filterBarHTML, filterBarClick, applyFilters, fichaData, priceHistory, fichaSections } from "./ficha.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
 
 const STORES = [
@@ -63,7 +63,7 @@ const list = () => st.lists.find((l) => l.id === st.current) ?? st.lists[0];
 const catalogs = new Map(); // slug -> productos indexados
 const loading = new Map();
 let meta = null;
-fetch("data/meta.json").then((r) => (r.ok ? r.json() : null)).then((m) => { meta = m; renderSummary(); renderDeals().catch(() => {}); }).catch(() => {});
+fetch("data/meta.json").then((r) => (r.ok ? r.json() : null)).then((m) => { meta = m; renderSummary(); renderDeals().catch(() => {}); priceAlerts().catch(() => {}); }).catch(() => {});
 
 function loadStore(slug) {
   if (catalogs.has(slug)) return Promise.resolve(catalogs.get(slug));
@@ -698,8 +698,9 @@ function openHistory() {
   const nc = (st.cards ?? []).length;
   const top = `<button type="button" class="pantry-btn" id="hTicket"><span>🧾 Escanear un ticket</span><span class="lnk">Con una foto</span></button>
     <button type="button" class="pantry-btn" id="hCards"><span>💳 Tarjetas de cliente</span><span class="lnk">${nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir"}</span></button>
-    <button type="button" class="pantry-btn" id="hBackup"><span>💾 Copia de seguridad</span><span class="lnk">${st.lastBackup ? `Última: ${new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}` : "Hacer ahora"}</span></button>`;
-  const wire = () => { $("hTicket").onclick = () => openTicket(); $("hCards").onclick = () => openCards(); $("hBackup").onclick = () => openBackup(); if ($("spBudget")) wireSpend(); };
+    <button type="button" class="pantry-btn" id="hBackup"><span>💾 Copia de seguridad</span><span class="lnk">${st.lastBackup ? `Última: ${new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}` : "Hacer ahora"}</span></button>
+    <button type="button" class="pantry-btn" id="hSettings"><span>⚙️ Ajustes</span><span class="lnk">Avisos de precio: ${st.alerts?.on ? "sí" : "no"}</span></button>`;
+  const wire = () => { $("hTicket").onclick = () => openTicket(); $("hCards").onclick = () => openCards(); $("hBackup").onclick = () => openBackup(); $("hSettings").onclick = () => openSettings(); if ($("spBudget")) wireSpend(); };
   if (!st.history.length) { openSheet("Compras", `${top}<p class="note">Aquí verás cada compra cuando pulses «Terminar compra» o escanees un ticket.</p>`); wire(); return; }
   openSheet("Compras", `${spendHTML()}${top}<div class="hist">${st.history.slice().reverse().map((h, k) => {
     const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
@@ -1188,7 +1189,9 @@ async function onCode(code) {
   await stopScan();
   $("scanNote").textContent = `Código ${code}: buscando…`;
   let prod = null;
-  for (const cat of catalogs.values()) { const p = cat.find((x) => x.e === code); if (p) { prod = p; break; } }
+  // Primero en el súper de la lista y luego en todos (Consum y Open Food Facts traen el código de barras).
+  const order = [list().store, ...STORES.slice(1).map(([s]) => s)].filter((s, k, a) => s !== "any" && a.indexOf(s) === k);
+  for (const s of order) { const p = (await loadStore(s)).find((x) => x.e === code); if (p) { prod = p; break; } }
   if (!prod) {
     try {
       const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name_es,product_name,brands,image_front_small_url,quantity`);
@@ -1196,11 +1199,15 @@ async function onCode(code) {
       if (d.product) {
         const p = d.product; const b = (p.brands || "").split(",")[0].trim();
         const n = p.product_name_es || p.product_name;
-        if (n) prod = { n: b && !norm(n).includes(norm(b)) ? `${n} ${b}` : n, img: p.image_front_small_url, f: p.quantity, e: code, s: list().store };
+        if (n) prod = { n: b && !norm(n).includes(norm(b)) ? `${n} ${b}` : n, img: p.image_front_small_url, f: p.quantity, e: code };
       }
     } catch {}
   }
   if (!prod) { $("scanNote").textContent = `No conozco el código ${code}. Escribe el producto a mano.`; return; }
+  // Se enseña su ficha (ingredientes, Nutri-Score, dónde está más barato) con un botón para apuntarlo.
+  openFicha(prod, { title: prod.n, onAdd: addScanned });
+}
+async function addScanned(prod) {
   const it = await addItem({ query: prod.n }, pick(prod));
   save(); render(); closeSheet();
   setStatus(`Apuntado: ${it.label}`);
@@ -1345,15 +1352,92 @@ function openOptions(id) {
   const it = list().items.find((i) => i.id === id); if (!it) return;
   openFicha(it.prod, { it, title: it.label });
 }
+// «Hay uno más barato»: lo mismo (sin la marca) en los súpers con precio, más barato por kilo o litro.
+async function showAlts(p, it, mine) {
+  const cat = (await Promise.all(pricedStores().map(loadStore))).flat();
+  const alts = cheaperAlts(p, cat, search, 3);
+  const el = $("fAlt");
+  if (!alts.length || !el || !sheet.open || $("sheetBody").firstElementChild !== mine) return;
+  const noPrice = p.p == null;
+  el.innerHTML = `<h3>${noPrice ? "🛒 Dónde lo encuentras" : "💡 Hay uno más barato"}</h3>${alts.map(({ x, save, per }, k) => {
+    const u = unitPrice(x);
+    return `<button type="button" class="alt" data-alt="${k}"><span class="alt-ph">${thumbHTML(x, guess(x.n).emoji)}</span>
+      <span class="alt-t"><b>${esc(x.n)}</b><span>${esc([STORE_NAME[x.s], x.f, eur(x.p), x.u].filter(Boolean).join(" · "))}</span></span>
+      ${!noPrice && save >= 0.05 ? `<span class="alt-s">-${Math.round(save * 100)}%<small>por ${esc(per)}</small></span>` : ""}</button>`; }).join("")}`;
+  el.hidden = false;
+  el.onclick = (e) => { const b = e.target.closest("[data-alt]"); if (!b) return; const x = alts[+b.dataset.alt].x;
+    openFicha(x, it ? { it, title: x.n, swap: true } : { title: x.n, onAdd: addScanned }); };
+}
+// ---------- Ajustes ----------
+// st.alerts = { on: avisos de bajadas activados, notif: también como notificación del móvil, seen: { clave: «día de la bajada» ya avisado } }
+function openSettings() {
+  const a = st.alerts ?? {};
+  const canNotif = "Notification" in window;
+  openSheet("Ajustes", `<label class="tset"><span><b>Avisos de bajadas de precio</b><small>Al abrir la app te aviso si ha bajado o está de oferta algo que compras a menudo.</small></span>
+      <input type="checkbox" role="switch" id="setAlerts"${a.on ? " checked" : ""}></label>
+    ${canNotif ? `<label class="tset"${a.on ? "" : " hidden"} id="setNotifRow"><span><b>También como notificación del móvil</b><small>Sale aunque estés en otra app, solo si Super Lista está abierta o en segundo plano.</small></span>
+      <input type="checkbox" role="switch" id="setNotif"${a.notif && Notification.permission === "granted" ? " checked" : ""}></label>` : ""}
+    <p class="note" id="setNote"></p>`);
+  $("setAlerts").onchange = (e) => {
+    st.alerts = { ...(st.alerts ?? {}), on: e.target.checked };
+    persist();
+    if ($("setNotifRow")) $("setNotifRow").hidden = !e.target.checked;
+    $("setNote").textContent = e.target.checked ? "Hecho. Te avisaré de lo que compras a menudo." : "Avisos apagados.";
+    if (e.target.checked) priceAlerts(true).catch(() => {});
+  };
+  if ($("setNotif")) $("setNotif").onchange = async (e) => {
+    let ok = e.target.checked;
+    if (ok && Notification.permission !== "granted") ok = (await Notification.requestPermission().catch(() => "denied")) === "granted";
+    if (e.target.checked && !ok) { e.target.checked = false; $("setNote").textContent = "El móvil no ha dado permiso para notificaciones. Puedes darlo en los ajustes del navegador."; }
+    st.alerts = { ...(st.alerts ?? {}), notif: ok }; persist();
+  };
+}
+// Bajadas y ofertas de lo que compras a menudo (2 veces o más), una vez por cada bajada u oferta.
+async function priceAlerts(force = false) {
+  const a = st.alerts;
+  if (!a?.on) return;
+  const freq = Object.entries(st.freq).filter(([, f]) => f.count >= 2 && f.prod?.s && meta?.stores?.[f.prod.s]?.prices);
+  const seen = a.seen ?? {};
+  const hits = [];
+  for (const [k, f] of freq) {
+    const cat = await loadStore(f.prod.s);
+    const cur = cat.find((x) => x.n === f.prod.n && (x.f ?? "") === (f.prod.f ?? ""));
+    if (!cur) continue;
+    const tag = cur.pb != null && dropPct(cur) >= 3 ? `b${cur.pd}` : offerTag(cur) ? `o${cur.o ?? ""}${cur.ot ?? ""}${cur.p}` : "";
+    if (!tag || (seen[k] === tag && !force)) continue;
+    seen[k] = tag;
+    hits.push({ f, cur });
+  }
+  st.alerts = { ...a, seen }; persist();
+  if (!hits.length) { if (force) setStatus("Ahora mismo no ha bajado nada de lo que sueles comprar."); return; }
+  const txt = (h) => `${h.f.label}: ${eur(h.cur.p)}${h.cur.pb != null ? ` (antes ${eur(h.cur.pb)})` : h.cur.o && h.cur.o !== "Ha bajado" ? ` · ${h.cur.o}` : ""} en ${STORE_NAME[h.cur.s]}`;
+  const el = $("alerts");
+  el.innerHTML = `<div class="ideas-head"><h2>🔔 Ha bajado lo que sueles comprar</h2><button type="button" class="lnk" data-alerts-x>Vale</button></div>
+    <ul class="alert-l">${hits.slice(0, 5).map((h) => `<li>${esc(txt(h))}</li>`).join("")}</ul>`;
+  el.hidden = false;
+  el.querySelector("[data-alerts-x]").onclick = () => { el.hidden = true; };
+  if (a.notif && "Notification" in window && Notification.permission === "granted") {
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      const body = hits.slice(0, 3).map(txt).join("\n");
+      if (reg?.showNotification) reg.showNotification("Ha bajado lo que sueles comprar", { body, icon: "icons/icon-192.png", tag: "bajadas" });
+      else new Notification("Ha bajado lo que sueles comprar", { body, icon: "icons/icon-192.png" });
+    } catch {}
+  }
+}
 function webBtnHTML(p) {
   const u = webUrl(p);
   return u ? `<a class="btn ghost fweb" href="${esc(u)}" target="_blank" rel="noopener">${SELLS_ONLINE.has(p.s) ? "Comprar en" : "Ver en"} la web de ${esc(STORE_NAME[p.s])} ↗</a>` : "";
 }
-function openFicha(p, { it = null, title = p?.n ?? "" } = {}) {
+// swap: se ha abierto desde «Hay uno más barato» de un producto de la lista (it) → botón para cambiarlo.
+// onAdd: se ha abierto al escanear → botón para apuntarlo.
+function openFicha(p, { it = null, title = p?.n ?? "", swap = false, onAdd = null } = {}) {
   const only = onlyAt(p);
   const info = p ? [p.f, p.p != null ? eur(p.p) : "", p.u, only ? `Solo en ${STORE_NAME[only]}` : (it ? list().store === "any" : true) && p.s ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : "";
   const web = webBtnHTML(p);
-  const menu = it ? `<div class="menu">
+  const action = swap && it ? `<button class="btn fact" type="button" id="fSwap">Cambiar a este en la lista</button>`
+    : onAdd ? `<button class="btn fact" type="button" id="fAdd">Apuntar en la lista</button>` : "";
+  const menu = it && !swap ? `<div class="menu">
     <button type="button" data-o="done">${it.done ? "Marcar como pendiente" : "Marcar como comprado"}</button>
     <button type="button" data-o="edit">Editar texto</button>
     <button type="button" data-o="pick">Cambiar producto</button>
@@ -1364,11 +1448,19 @@ function openFicha(p, { it = null, title = p?.n ?? "" } = {}) {
       <div class="peek-ph" id="fPhotos">${photoHTML(p?.img && bigImg(p.img), it?.emoji ?? guess(title).emoji, p?.n, only)}</div>
       <figcaption>${p ? `<b>${esc(p.n)}</b>${info ? `<span>${esc(info)}</span>` : ""}` : "<span>Sin producto concreto. Elige uno con «Cambiar producto».</span>"}</figcaption>
     </figure>
-    <div id="fOffer">${p ? offerLineHTML(p) : ""}${web}</div>
+    ${action}<div id="fOffer">${p ? offerLineHTML(p) : ""}${web}</div>
+    <div id="fAlt" class="falt" hidden></div>
     <div id="ficha" class="ficha">${p ? `<p class="note">Buscando ingredientes y nutrición…</p>` : ""}</div>
     ${menu}`, "peeking");
   const body = $("sheetBody");
-  if (it) body.querySelector(".menu").onclick = (e) => {
+  if ($("fSwap")) $("fSwap").onclick = () => {
+    it.prod = pick(p); it.cat = p.c ?? it.cat; st.memory[memKey(it.label, list().store)] = it.prod;
+    const f = st.freq[norm(it.label)]; if (f) f.prod = it.prod;
+    save(); render(); closeSheet(); buzz(20);
+    setStatus(`Cambiado a ${p.n}${p.s ? ` (${STORE_NAME[p.s]})` : ""}.`);
+  };
+  if ($("fAdd")) $("fAdd").onclick = () => onAdd(p);
+  if (it && !swap) body.querySelector(".menu").onclick = (e) => {
     const o = e.target.closest("[data-o]")?.dataset.o; if (!o) return;
     closeSheet();
     if (o === "done") toggleItem(it.id);
@@ -1382,6 +1474,7 @@ function openFicha(p, { it = null, title = p?.n ?? "" } = {}) {
   const mine = body.firstElementChild;
   // Los productos apuntados hace tiempo no traen el número de la tienda: se busca en el catálogo de hoy.
   const now = p.s ? loadStore(p.s).then((cat) => cat.find((x) => x.n === p.n && (x.f ?? "") === (p.f ?? ""))).catch(() => null) : Promise.resolve(null);
+  showAlts(p, it, mine);
   now.then((cur) => {
     if (cur) {
       p = { ...p, ...pick(cur) };
