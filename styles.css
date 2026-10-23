@@ -829,6 +829,21 @@ body.home .wrap{padding-bottom:110px}
 .gslots{display:flex;gap:6px;flex-wrap:wrap}
 .gfoot{margin-top:12px;font-size:.75rem}
 
+/* Corregir una compra */
+.h-btns{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pc-back{align-self:flex-start}
+.pc-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.pc-list li{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:14px;padding:8px 8px 8px 10px;background:var(--bg)}
+.pc-ph{width:44px;height:44px;flex:none;display:grid;place-items:center;font-size:1.5rem}
+.pc-ph .photo{width:44px;height:44px;border-radius:10px}
+.pc-name{flex:1;min-width:0;display:flex;flex-direction:column}
+.pc-name b{font-weight:600;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-name small{color:var(--muted)}
+.pc-btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;font:600 .8rem var(--body);padding:8px 10px;cursor:pointer;flex:none}
+.pc-btn.del{color:var(--danger);border-color:transparent;background:none}
+.pc-foot{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between}
+.sheet .toast{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:3}
+.sheet[data-sec] .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 /* ---------- Alergias e intolerancias ---------- */
 .diet .dgrid{grid-template-columns:repeat(auto-fill,minmax(102px,1fr))}
 .dbtn small{font:500 .68rem/1.2 var(--body);color:var(--muted);text-align:center}

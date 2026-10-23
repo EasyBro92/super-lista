@@ -228,18 +228,24 @@ async function flyOne(id) {
 }
 
 // ---------- Deshacer ----------
-let undoSnap = null, toastTimer = null;
+let undoSnap = null, toastTimer = null, undoAfter = null;
 function snapshot() { return JSON.stringify({ lists: st.lists, history: st.history }); }
-function withUndo(msg, fn) {
+// Con una ventana abierta (p. ej. Compras) el aviso se pone dentro de ella; si no, quedaría tapado.
+function placeToast() {
+  const t = $("toast"), host = sheet.open ? sheet.querySelector(".sheet-in") : document.querySelector(".dock-in");
+  if (t.parentElement !== host) { if (sheet.open) host.insertBefore(t, $("sheetTabs")); else host.prepend(t); }
+}
+function withUndo(msg, fn, after = null) {
   const snap = snapshot();
   fn();
   save(); render();
-  undoSnap = snap;
+  undoSnap = snap; undoAfter = after;
   const t = $("toast");
   $("toastMsg").textContent = msg;
+  placeToast();
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; undoSnap = null; }, 5000);
+  toastTimer = setTimeout(() => { t.hidden = true; undoSnap = null; undoAfter = null; }, 6000);
 }
 function undo() {
   if (!undoSnap) return;
@@ -247,6 +253,8 @@ function undo() {
   if (!st.lists.some((l) => l.id === st.current)) st.current = st.lists[0].id;
   undoSnap = null; $("toast").hidden = true;
   save(); render(); buzz();
+  const after = undoAfter; undoAfter = null;
+  if (after && sheet.open) after();
 }
 const buzz = (ms = 12) => { try { navigator.vibrate?.(ms); } catch {} };
 function removeItem(id) {
@@ -526,7 +534,7 @@ $("sheetClose").addEventListener("click", sheetBack);
 sheet.addEventListener("cancel", (e) => { if (sheet.classList.contains("cooking") && cookBack()) e.preventDefault(); });
 sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSheet(); });
 // Si la hoja se ha vuelto a abrir con otro contenido (p. ej. del menú a «Editar»), no se borra.
-sheet.addEventListener("close", () => { if (sheet.open) return; delete sheet.dataset.sec; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
+sheet.addEventListener("close", () => { if (sheet.open) return; placeToast(); delete sheet.dataset.sec; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
 
 async function openPicker(id, query) {
   const l = list();
@@ -735,14 +743,62 @@ function openHistory() {
     return `<article><div class="h-top">${logo ? `<span class="h-logo" style="background-image:url('${logo}')" aria-hidden="true"></span>` : `<span class="h-logo any" aria-hidden="true">🛒</span>`}
         <span class="h-who"><b>${esc(STORE_NAME[h.store] ?? "Compra")}</b><small>${esc(d)}</small></span>${h.total ? `<b class="h-tot">${eur(h.total)}</b>` : ""}</div>
       <p class="h-items"><span>${n} producto${n === 1 ? "" : "s"}:</span> ${esc(h.items.map((i) => i.label).join(", "))}</p>
-      <button class="btn ghost small" type="button" data-repeat="${st.history.length - 1 - k}">↺ Volver a apuntar</button></article>`;
+      <div class="h-btns"><button class="btn ghost small" type="button" data-repeat="${st.history.length - 1 - k}">↺ Volver a apuntar</button>
+        <button class="btn ghost small" type="button" data-fix="${st.history.length - 1 - k}">✎ Corregir</button></div></article>`;
   }).join("")}</div>`);
   wire();
   $("sheetBody").onclick = async (e) => {
+    const f = e.target.closest("[data-fix]"); if (f) return openPurchase(+f.dataset.fix);
     const b = e.target.closest("[data-repeat]"); if (!b) return;
     const h = st.history[+b.dataset.repeat];
     for (const i of h.items) await addItem({ query: i.label, qty: i.qty, count: i.count || 1 }, i.prod);
     save(); render(); closeSheet(); setStatus(`Apuntados ${h.items.length} productos de esa compra.`);
+  };
+}
+
+// Corregir una compra: quitar lo que se marcó sin querer o devolverlo a la lista. Siempre con «Deshacer».
+function openPurchase(idx) {
+  const h = st.history[idx]; if (!h) return openHistory();
+  const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  const back = (i) => {
+    const l = list(); if (l.items.some((x) => !x.done && norm(x.label) === norm(i.label))) return;
+    const g = guess(i.label), it = { id: uid(), label: i.label, qty: i.qty ?? "", count: i.count || 1, done: false, prod: i.prod ?? null, cat: i.prod?.c ?? g.cat, emoji: g.emoji, added: Date.now() };
+    l.items.push(it); fresh.add(it.id);
+  };
+  const fixTotal = () => { if (h.total) h.total = Math.max(0, Math.round(h.items.reduce((s, i) => s + (itemPrice(i) ?? 0), 0) * 100) / 100); };
+  const reopen = () => { const y = sheet.scrollTop; openPurchase(idx); sheet.scrollTop = y; };
+  openSheet("Corregir compra", `<button class="btn ghost small pc-back" type="button" id="pcBack">‹ Volver a Compras</button>
+    <p class="note">${esc(STORE_NAME[h.store] ?? "Compra")} · ${esc(d)}. Si marcaste algo sin querer, quítalo de aquí. «A la lista» lo vuelve a apuntar como pendiente.</p>
+    <ul class="pc-list">${h.items.map((i, k) => {
+      const pr = itemPrice(i);
+      return `<li><span class="pc-ph">${photoHTML(i.prod?.img, guess(i.label).emoji, i.label)}</span>
+        <span class="pc-name"><b>${esc(i.label)}</b>${pr != null ? `<small>${eur(pr)}</small>` : ""}</span>
+        <button type="button" class="pc-btn" data-back="${k}">A la lista</button>
+        <button type="button" class="pc-btn del" data-del="${k}" aria-label="Quitar ${esc(i.label)}">Quitar</button></li>`;
+    }).join("")}</ul>
+    <div class="pc-foot"><button class="btn ghost" type="button" id="pcAllBack">↩ Devolver todo a la lista</button>
+      <button class="btn ghost danger" type="button" id="pcDel">Borrar esta compra</button></div>`);
+  $("pcBack").onclick = openHistory;
+  // Si se queda sin productos, la compra desaparece del historial.
+  const drop = (k, toList) => withUndo(toList ? `«${h.items[k].label}» vuelve a la lista` : `Quitado «${h.items[k].label}»`, () => {
+    const [i] = h.items.splice(k, 1);
+    if (toList) back(i);
+    fixTotal();
+    if (!h.items.length) st.history.splice(idx, 1);
+  }, reopen);
+  $("sheetBody").onclick = (e) => {
+    const b = e.target.closest("[data-back],[data-del]"); if (!b) return;
+    const k = +(b.dataset.back ?? b.dataset.del);
+    buzz(); drop(k, b.dataset.back != null);
+    if (st.history[idx] === h) reopen(); else openHistory();
+  };
+  $("pcAllBack").onclick = () => {
+    withUndo(`${h.items.length} producto${h.items.length === 1 ? "" : "s"} de vuelta en la lista`, () => { h.items.forEach(back); st.history.splice(idx, 1); }, openHistory);
+    openHistory();
+  };
+  $("pcDel").onclick = () => {
+    withUndo(`Compra borrada${h.total ? ` (${eur(h.total)})` : ""}`, () => { st.history.splice(idx, 1); }, openHistory);
+    openHistory();
   };
 }
 
