@@ -72,6 +72,8 @@ const ui = { view: "list", mode: "tengo", moment: null, tag: "Todas", q: "", id:
 
 export function initCocina(api) {
   A = api;
+  // Deslizar a la izquierda una receta del menú la quita.
+  A.swipeDel.p = (k) => { plan().splice(+k, 1); A.save(); showPlan(); };
   // En el modo cocinar la pantalla no se apaga; al salir se deja de pedir.
   A.sheet.addEventListener("close", () => setView("closed"));
   document.addEventListener("visibilitychange", () => { if (ui.view === "cook" && A.sheet.open) lockScreen(); });
@@ -959,10 +961,10 @@ function showPlan() {
         ${p.map((e, k) => [e, k]).filter(([e]) => e.d === d).sort(([a], [b]) => slotIdx(a.m) - slotIdx(b.m)).map(([e, k]) => {
           const r = by.get(e.n); if (!r) return "";
           const m = check(r).missing.length;
-          return `<div class="pent"><button type="button" class="rc" data-open="${k}">${pic(r)}<span class="ri">${e.m ? `<span class="pslot">${A.esc(e.m)}</span>` : ""}<span class="rn">${A.esc(r.n)}</span>
+          return `<div class="sw" data-sw="p:${k}"><div class="sw-act"><button type="button" class="sw-del">${A.TRASH_SVG}Quitar</button></div><div class="pent sw-in"><button type="button" class="rc" data-open="${k}">${pic(r)}<span class="ri">${e.m ? `<span class="pslot">${A.esc(e.m)}</span>` : ""}<span class="rn">${A.esc(r.n)}</span>
             <span class="rm">${A.esc(`${mins(r.t)} · ${plural(e.s, "ración", "raciones")}`)}</span>${adaptTag(r)}
             <span class="rh${m ? "" : " ok"}">${m ? `Te ${m === 1 ? "falta 1 ingrediente" : `faltan ${m} ingredientes`}` : "✓ Tienes todo"}</span></span></button>
-            <button type="button" class="pdel" data-del="${k}" aria-label="Quitar ${A.esc(r.n)} del menú">×</button></div>`;
+            <button type="button" class="pdel only-mouse" data-del="${k}" aria-label="Quitar ${A.esc(r.n)} del menú">×</button></div></div>`;
         }).join("")}
         <button type="button" class="padd" data-addday="${d}">+ Añadir receta</button></section>`; }).join("")}
     </div>
