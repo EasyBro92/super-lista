@@ -13,6 +13,8 @@ async function ctx(name, withCfg = true) {
   const c = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", locale: "es-ES" });
   await c.route(/cdn\.jsdelivr\.net\/npm\/@supabase/, (r) => r.fulfill({ body: SDK, contentType: "text/javascript", headers: { "access-control-allow-origin": "*" } }));
   await c.route(/fonts\.(googleapis|gstatic)/, (r) => r.abort());
+  // La app ya trae los datos del Supabase de verdad: en la prueba se usa el falso o ninguno.
+  await c.route(/\/js\/config\.js$/, (r) => r.fulfill({ body: 'export const SUPABASE = { url: "", key: "" };', contentType: "text/javascript" }));
   await c.addInitScript((cfg) => { sessionStorage.setItem("superlista.intro", "1"); if (cfg) localStorage.setItem("superlista.supabase", JSON.stringify(cfg)); },
     withCfg ? { url: "http://localhost:8790", key: "sb_publishable_prueba" } : null);
   const p = await c.newPage();
