@@ -4,6 +4,7 @@ import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas, homeInfo
 import { barcodeSVG, bestFormat } from "./barcode.js";
 import { readTicket, parseTicket } from "./ticket.js";
 import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, cheaperAlts, unitPrice, filterBarHTML, filterBarClick, applyFilters, fichaData, priceHistory, fichaSections } from "./ficha.js";
+import { avoidSet, conflicts, labelAllergens, ALLER } from "./alergias.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
 import { initComunidad, openComunidad, openCuenta, comReady, meNow } from "./comunidad.js";
 import { initInstalar, showBanner, canInstall, install, later as installLater } from "./instalar.js";
@@ -460,6 +461,13 @@ function render() {
       : "Consejo: desliza un producto a la izquierda para borrarlo, a la derecha para marcarlo como comprado, o mantenlo pulsado para ver más opciones."}</p>`);
   fresh.clear();
 }
+// Aviso en la lista si algo lleva lo que has marcado en 🛡️ Alergias (por el nombre del producto).
+function algWarn(it) {
+  const av = avoidSet(st.diet?.evita);
+  if (!av.size) return "";
+  const c = conflicts(`${it.label} ${it.prod?.n ?? ""}`, av).filter((k) => !(k === "lactosa" && av.has("leche")));
+  return c.length ? `<span class="alg-w" title="Revisa la etiqueta">⚠️ ${esc(c.map((k) => ALLER.get(k)[2].replace(" (alergia)", "").toLowerCase()).join(", "))}</span>` : "";
+}
 function rowHTML(it, l) {
   const p = it.prod;
   const sub = p ? [it.note, p.n, p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : it.note || "Toca la foto para elegir producto";
@@ -468,7 +476,7 @@ function rowHTML(it, l) {
     <div class="swipe-bg" aria-hidden="true"><span class="bg-done">${CHECK_SVG}${it.done ? "Pendiente" : "Comprado"}</span><span class="bg-del">Borrar${TRASH_SVG}</span></div>
     <div class="row-in">
     <button class="thumb" type="button" data-pick="${it.id}" aria-label="Cambiar producto de ${esc(it.label)}">${thumbHTML(p, it.emoji)}</button>
-    <span class="info"><span class="name">${esc(it.label)}</span><span class="sub">${esc(sub)}</span></span>
+    <span class="info"><span class="name">${esc(it.label)}${algWarn(it)}</span><span class="sub">${esc(sub)}</span></span>
     <span class="right">
       <button class="qty" type="button" data-qty="${it.id}">${esc(it.qty || "1")}</button>
       ${price != null ? `<span class="price">${dropHTML(p)}${eur(price)}</span>` : ""}
@@ -484,7 +492,7 @@ function tileHTML(it, l) {
   return `<li class="item gt${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}${incoming.has(it.id) ? " incoming" : ""}" data-id="${it.id}"
       role="checkbox" aria-checked="${it.done}" aria-label="${esc(it.label)}${q ? `, ${esc(q)}` : ""}" tabindex="0">
     <span class="gt-ph">${thumbHTML(p, it.emoji)}${q ? `<span class="gt-q">${esc(q)}</span>` : ""}${badgeHTML(p)}<span class="gt-cat" aria-hidden="true">${(CAT_LOOK[CATS.includes(it.cat) ? it.cat : "Otros"] ?? CAT_LOOK.Otros)[0]}</span><span class="gt-ck" aria-hidden="true">${CHECK_SVG}</span></span>
-    <span class="gt-n">${esc(it.label)}</span>
+    <span class="gt-n">${esc(it.label)}</span>${algWarn(it)}
     <span class="gt-s">${esc(it.note || (p ? [p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : ""))}</span>
     ${price != null ? `<span class="gt-p">${eur(price)}</span>` : ""}
   </li>`;
@@ -1465,8 +1473,10 @@ function openSettings() {
     <p class="note" id="setNote"></p>
     ${comReady() ? `<button type="button" class="pantry-btn set-link" id="setAcct"><span><b>Tu cuenta</b><small>${esc(meNow()?.nombre ? `Has entrado como ${meNow().nombre}` : "Entra para valorar, comentar y compartir recetas")}</small></span><span class="lnk">›</span></button>` : ""}
     ${canInstall() ? `<button type="button" class="pantry-btn set-link" id="setIns"><span><b>📲 Instalar la app</b><small>Tenla en tu pantalla de inicio y úsala sin cobertura</small></span><span class="lnk">›</span></button>` : ""}
+    <button type="button" class="pantry-btn set-link" id="setDiet"><span><b>🛡️ Alergias y dieta</b><small>${esc(st.diet?.evita?.length ? `Marcadas: ${st.diet.evita.map((k) => ALLER.get(k)?.[2]).filter(Boolean).join(", ")}` : "Marca lo que no puedes tomar y adapto las recetas")}</small></span><span class="lnk">Cambiar ›</span></button>
     <button type="button" class="pantry-btn set-link" id="setCred"><span><b>Fotos de las recetas</b><small>De dónde salen y su licencia</small></span><span class="lnk">Ver ›</span></button>`);
   $("setCred").onclick = () => openCredits();
+  $("setDiet").onclick = () => openRecipes(null, null, "diet");
   if ($("setAcct")) $("setAcct").onclick = () => openCuenta({ back: null });
   if ($("setIns")) $("setIns").onclick = () => install(openSheet);
   $("setAlerts").onchange = (e) => {
@@ -1591,11 +1601,25 @@ function openFicha(p, { it = null, title = p?.n ?? "", swap = false, onAdd = nul
     }
     const secs = fichaSections(p, d, ph);
     const el = $("ficha");
-    if (!secs.length) { el.innerHTML = `<p class="note">${esc(STORE_NAME[p.s] ?? "Este súper")} no publica los ingredientes de este producto.</p>`; return; }
+    if (!secs.length) { el.innerHTML = fichaAlgHTML(p, d) + `<p class="note">${esc(STORE_NAME[p.s] ?? "Este súper")} no publica los ingredientes de este producto.</p>`; return; }
     const src = d.src?.length ? `<p class="note fsrc">Datos de ${esc(d.src.join(" y "))}. Revisa siempre el envase si tienes alergias.</p>` : "";
-    el.innerHTML = secs.map(([n, h]) => `<section class="fsec">${n === "Resumen" ? "" : `<h3>${esc(n)}</h3>`}${h}</section>`).join("") + src;
+    el.innerHTML = fichaAlgHTML(p, d) + secs.map(([n, h]) => `<section class="fsec">${n === "Resumen" ? "" : `<h3>${esc(n)}</h3>`}${h}</section>`).join("") + src;
   });
 }
+
+// En la ficha: si el producto lleva (o puede llevar) algo que has marcado en 🛡️ Alergias.
+function fichaAlgHTML(p, d) {
+  const av = avoidSet(st.diet?.evita);
+  if (!av.size) return "";
+  const nm = (ks) => ks.filter((k) => !(k === "lactosa" && av.has("leche"))).map((k) => ALLER.get(k)[2].replace(" (alergia)", "").toLowerCase()).join(", ");
+  const has = [...new Set([...labelAllergens([...(d.alg ?? []), d.algText ?? ""], av), ...conflicts(p.n, av)])];
+  const tr = labelAllergens(d.traces, av).filter((k) => !has.includes(k));
+  if (has.length) return `<div class="adbox bad"><b>⚠️ Lleva ${esc(nm(has))}</b><span>Lo has marcado en Alergias. Mira si hay una versión «sin» en otro súper.</span></div>`;
+  if (tr.length) return `<div class="adbox warn"><b>⚠️ Puede contener trazas de ${esc(nm(tr))}</b><span>Según la etiqueta.</span></div>`;
+  if (d.alg?.length || d.algText) return `<div class="adbox ok"><b>✓ Según la etiqueta, no lleva lo que has marcado</b><span>${esc(dietSummary(av))}. Revisa el envase por si cambia.</span></div>`;
+  return "";
+}
+const dietSummary = (av) => `Sin ${[...av].filter((k) => !(k === "lactosa" && av.has("leche"))).map((k) => ALLER.get(k)[2].replace(" (alergia)", "").toLowerCase()).join(", sin ")}`;
 
 // Deslizar hacia abajo una hoja la cierra.
 (() => {
