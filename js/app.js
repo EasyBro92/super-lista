@@ -6,6 +6,7 @@ import { readTicket, parseTicket } from "./ticket.js";
 import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, cheaperAlts, unitPrice, filterBarHTML, filterBarClick, applyFilters, fichaData, priceHistory, fichaSections } from "./ficha.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
 import { initComunidad, openComunidad, openCuenta, comReady, meNow } from "./comunidad.js";
+import { initInstalar, showBanner, canInstall, install, later as installLater } from "./instalar.js";
 
 const STORES = [
   ["any", "Cualquiera"], ["mercadona", "Mercadona"], ["carrefour", "Carrefour"], ["lidl", "Lidl"], ["dia", "Dia"],
@@ -335,9 +336,23 @@ const HOME_CARDS = [
 // Solo si la comunidad está activada (js/config.js con los datos de Supabase).
 if (comReady()) HOME_CARDS.push(["com", "Comunidad", "👥", 100, "Recetas de la gente, estrellas, comentarios con foto y una charla para todos."]);
 let homeHTML = "";
+// Saludo: con tu cuenta, «Hola, Nombre»; sin ella, una invitación a entrar y poner tu nombre.
+function renderHello() {
+  const me = comReady() ? meNow() : null, b = $("homeMe");
+  $("homeName").textContent = me?.nombre ? `Hola, ${me.nombre}` : "Super Lista";
+  b.hidden = !comReady() || !!me?.nombre;
+  if (!b.hidden) b.innerHTML = `<span class="hm-av" aria-hidden="true">👋</span><span class="hm-t"><b>¿Cómo te llamas?</b><small>${me ? "Pon tu nombre para que te saludemos" : "Entra o crea tu cuenta gratis y pon tu nombre"}</small></span><span class="lnk" aria-hidden="true">›</span>`;
+}
+$("homeMe").onclick = () => { buzz(); openCuenta({ back: null, mode: "crear" }); };
+$("insGo").onclick = () => { buzz(); install(openSheet); };
+$("insLater").onclick = () => { installLater(); $("homeIns").hidden = true; };
+initInstalar(() => { if (home) renderHome(); });
+addEventListener("superlista:cuenta", () => { if (home) renderHome(); });
 async function renderHome() {
   const h = new Date().getHours();
   $("homeHi").textContent = h >= 6 && h < 14 ? "¡Buenos días!" : h >= 14 && h < 21 ? "¡Buenas tardes!" : "¡Buenas noches!";
+  renderHello();
+  $("homeIns").hidden = !showBanner();
   const info = await homeInfo().catch(() => null);
   const l = list(), left = l.items.filter((i) => !i.done);
   const total = left.reduce((a, i) => a + (itemPrice(i) ?? 0), 0);
@@ -1393,9 +1408,11 @@ function openSettings() {
       <input type="checkbox" role="switch" id="setNotif"${a.notif && Notification.permission === "granted" ? " checked" : ""}></label>` : ""}
     <p class="note" id="setNote"></p>
     ${comReady() ? `<button type="button" class="pantry-btn set-link" id="setAcct"><span><b>Tu cuenta</b><small>${esc(meNow()?.nombre ? `Has entrado como ${meNow().nombre}` : "Entra para valorar, comentar y compartir recetas")}</small></span><span class="lnk">›</span></button>` : ""}
+    ${canInstall() ? `<button type="button" class="pantry-btn set-link" id="setIns"><span><b>📲 Instalar la app</b><small>Tenla en tu pantalla de inicio y úsala sin cobertura</small></span><span class="lnk">›</span></button>` : ""}
     <button type="button" class="pantry-btn set-link" id="setCred"><span><b>Fotos de las recetas</b><small>De dónde salen y su licencia</small></span><span class="lnk">Ver ›</span></button>`);
   $("setCred").onclick = () => openCredits();
   if ($("setAcct")) $("setAcct").onclick = () => openCuenta({ back: null });
+  if ($("setIns")) $("setIns").onclick = () => install(openSheet);
   $("setAlerts").onchange = (e) => {
     st.alerts = { ...(st.alerts ?? {}), on: e.target.checked };
     persist();

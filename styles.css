@@ -582,6 +582,27 @@ body.home .wrap{padding-bottom:110px}
 .homescr{display:flex;flex-direction:column;gap:14px;padding-top:6px}
 .home-top h1{font:800 2.2rem/1.05 var(--display);letter-spacing:-.02em;margin:0}
 .home-hi{margin:0 0 2px;color:var(--muted);font-weight:600}
+.home-top h1{overflow-wrap:anywhere}
+.home-me{margin-top:10px;display:flex;align-items:center;gap:10px;width:100%;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--fg);padding:10px 14px;text-align:left;cursor:pointer;font:inherit}
+.home-me:active{background:var(--accent-soft)}
+.hm-av{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);font-size:1.2rem}
+.hm-t{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
+.hm-t b{font-size:.95rem}
+.hm-t small{color:var(--muted);font-size:.82rem}
+.home-me .lnk{font-size:1.3rem;padding:0}
+.home-ins{display:flex;align-items:center;gap:10px;border-radius:16px;background:var(--accent-soft);padding:10px 8px 10px 12px}
+.home-ins[hidden]{display:none}
+.home-ins img{flex:none;width:44px;height:44px;border-radius:11px}
+.hi-t{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
+.hi-t b{font-size:.95rem}
+.hi-t small{color:var(--muted);font-size:.8rem;line-height:1.3}
+.home-ins .btn{flex:none}
+.hi-x{flex:none;width:32px;height:32px;border:0;border-radius:50%;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+.hi-x svg{width:18px;height:18px}
+.ins{display:flex;flex-direction:column;gap:12px}
+.ins-lead{margin:0;line-height:1.45}
+.ins-steps{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:12px;line-height:1.45}
+.ins-ico{width:22px;height:22px;vertical-align:-5px;color:var(--accent)}
 .hcards{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-inline:-16px;padding:4px 16px 10px;-webkit-overflow-scrolling:touch}
 .hcards::-webkit-scrollbar{display:none}
 .hcard{position:relative;flex:none;width:min(84%,440px);height:min(64vh,520px);min-height:360px;border:0;border-radius:28px;overflow:hidden;padding:0;cursor:pointer;
