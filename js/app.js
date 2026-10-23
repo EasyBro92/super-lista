@@ -5,7 +5,10 @@ import { barcodeSVG, bestFormat } from "./barcode.js";
 import { readTicket, parseTicket } from "./ticket.js";
 import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, cheaperAlts, unitPrice, filterBarHTML, filterBarClick, applyFilters, fichaData, priceHistory, fichaSections } from "./ficha.js";
 import { haptic, swipeRows, sheetGestures, pullToRefresh } from "./gestos.js";
+import { avoidSet, conflicts, labelAllergens, ALLER } from "./alergias.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
+import { initComunidad, openComunidad, openCuenta, comReady, meNow } from "./comunidad.js";
+import { initInstalar, showBanner, canInstall, install, later as installLater } from "./instalar.js";
 
 const STORES = [
   ["any", "Cualquiera"], ["mercadona", "Mercadona"], ["carrefour", "Carrefour"], ["lidl", "Lidl"], ["dia", "Dia"],
@@ -226,20 +229,24 @@ async function flyOne(id) {
 }
 
 // ---------- Deshacer ----------
-let undoSnap = null, toastTimer = null;
+let undoSnap = null, toastTimer = null, undoAfter = null;
 function snapshot() { return JSON.stringify({ lists: st.lists, history: st.history }); }
-function withUndo(msg, fn) {
+// Con una ventana abierta (p. ej. Compras) el aviso se pone dentro de ella; si no, quedaría tapado.
+function placeToast() {
+  const t = $("toast"), host = sheet.open ? sheet.querySelector(".sheet-in") : document.querySelector(".dock-in");
+  if (t.parentElement !== host) { if (sheet.open) host.insertBefore(t, $("sheetTabs")); else host.prepend(t); }
+}
+function withUndo(msg, fn, after = null) {
   const snap = snapshot();
   fn();
   save(); render();
-  undoSnap = snap;
+  undoSnap = snap; undoAfter = after;
   const t = $("toast");
   $("toastMsg").textContent = msg;
-  // Con una hoja abierta, el aviso va dentro de ella (lo de fuera queda tapado).
-  if (sheet.open) { t.classList.add("in-sheet"); sheet.querySelector(".sheet-in").append(t); }
+  placeToast();
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; undoSnap = null; }, 5000);
+  toastTimer = setTimeout(() => { t.hidden = true; undoSnap = null; undoAfter = null; }, 6000);
 }
 function undo() {
   if (!undoSnap) return;
@@ -247,7 +254,9 @@ function undo() {
   if (!st.lists.some((l) => l.id === st.current)) st.current = st.lists[0].id;
   undoSnap = null; $("toast").hidden = true;
   save(); render(); buzz();
-  if (sheet.open && sheet.dataset.sec === "history") openHistory();
+  const after = undoAfter; undoAfter = null;
+  if (after && sheet.open) after();
+  else if (sheet.open && sheet.dataset.sec === "history") openHistory();
 }
 const buzz = haptic;
 const SWIPE_DEL = {};
@@ -336,10 +345,26 @@ const HOME_CARDS = [
   ["tengo", "Con lo que tengo", "🏠", 200, "Qué puedes cocinar con lo que tienes en casa y qué caduca pronto."],
   ["history", "Compras", "🧾", 330, "Tus compras anteriores, lo que gastaste y tus tarjetas de cliente."],
 ];
+// Solo si la comunidad está activada (js/config.js con los datos de Supabase).
+if (comReady()) HOME_CARDS.push(["com", "Comunidad", "👥", 100, "Recetas de la gente, estrellas, comentarios con foto y una charla para todos."]);
 let homeHTML = "";
+// Saludo: con tu cuenta, «Hola, Nombre»; sin ella, una invitación a entrar y poner tu nombre.
+function renderHello() {
+  const me = comReady() ? meNow() : null, b = $("homeMe");
+  $("homeName").textContent = me?.nombre ? `Hola, ${me.nombre}` : "Super Lista";
+  b.hidden = !comReady() || !!me?.nombre;
+  if (!b.hidden) b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>${me ? "Tu nombre" : "Entrar"}</span>`;
+}
+$("homeMe").onclick = () => { buzz(); openCuenta({ back: null }); };
+$("insGo").onclick = () => { buzz(); install(openSheet); };
+$("insLater").onclick = () => { installLater(); $("homeIns").hidden = true; };
+initInstalar(() => { if (home) renderHome(); });
+addEventListener("superlista:cuenta", () => { if (home) renderHome(); });
 async function renderHome() {
   const h = new Date().getHours();
   $("homeHi").textContent = h >= 6 && h < 14 ? "¡Buenos días!" : h >= 14 && h < 21 ? "¡Buenas tardes!" : "¡Buenas noches!";
+  renderHello();
+  $("homeIns").hidden = !showBanner();
   const info = await homeInfo().catch(() => null);
   const l = list(), left = l.items.filter((i) => !i.done);
   const total = left.reduce((a, i) => a + (itemPrice(i) ?? 0), 0);
@@ -350,6 +375,7 @@ async function renderHome() {
     recipes: info ? `${info.momentEmo} ${info.para}: ${info.inMoment} recetas` : "",
     plan: info?.hoy.length ? `Hoy: ${info.hoy[0]}` : info?.planN ? `${info.planN} recetas esta semana` : "Aún sin planificar",
     tengo: info?.soon.length ? `⏰ ${info.soon[0].n} caduca pronto` : info?.ready ? `Puedes hacer ${info.ready} recetas ya` : "Marca lo que tienes en casa",
+    com: meNow()?.nombre ? `Hola, ${meNow().nombre}` : "Entra o crea tu cuenta gratis",
     history: spent ? `Este mes: ${eur(spent)}${st.budget ? ` de ${eur(st.budget)}` : ""}` : last ? `Última: ${new Date(last.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}${last.total ? ` · ${eur(last.total)}` : ""}${nc ? ` · ${nc} tarjeta${nc === 1 ? "" : "s"}` : ""}` : nc ? `${nc} tarjeta${nc === 1 ? "" : "s"} de cliente` : "Aún no has terminado ninguna compra",
   };
   // Lista y Compras: si aún no hay foto propia, las fotos de tus productos.
@@ -384,6 +410,7 @@ function goSection(k) {
   if (k === "recipes") openRecipes();
   else if (k === "plan" || k === "pantry" || k === "tengo") openRecipes(null, null, k);
   else if (k === "history") openHistory();
+  else if (k === "com") openComunidad({ from: null });
 }
 $("hcards").addEventListener("click", (e) => { const b = e.target.closest("[data-go]"); if (b) goSection(b.dataset.go); });
 $("hcards").addEventListener("scroll", () => {
@@ -437,6 +464,13 @@ function render() {
       : "Consejo: desliza un producto a la izquierda para borrarlo, a la derecha para marcarlo como comprado, o mantenlo pulsado para ver más opciones."}</p>`);
   fresh.clear();
 }
+// Aviso en la lista si algo lleva lo que has marcado en 🛡️ Alergias (por el nombre del producto).
+function algWarn(it) {
+  const av = avoidSet(st.diet?.evita);
+  if (!av.size) return "";
+  const c = conflicts(`${it.label} ${it.prod?.n ?? ""}`, av).filter((k) => !(k === "lactosa" && av.has("leche")));
+  return c.length ? `<span class="alg-w" title="Revisa la etiqueta">⚠️ ${esc(c.map((k) => ALLER.get(k)[2].replace(" (alergia)", "").toLowerCase()).join(", "))}</span>` : "";
+}
 function rowHTML(it, l) {
   const p = it.prod;
   const sub = p ? [it.note, p.n, p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : it.note || "Toca la foto para elegir producto";
@@ -445,7 +479,7 @@ function rowHTML(it, l) {
     <div class="swipe-bg" aria-hidden="true"><span class="bg-done">${CHECK_SVG}${it.done ? "Pendiente" : "Comprado"}</span><span class="bg-del">Borrar${TRASH_SVG}</span></div>
     <div class="row-in">
     <button class="thumb" type="button" data-pick="${it.id}" aria-label="Cambiar producto de ${esc(it.label)}">${thumbHTML(p, it.emoji)}</button>
-    <span class="info"><span class="name">${esc(it.label)}</span><span class="sub">${esc(sub)}</span></span>
+    <span class="info"><span class="name">${esc(it.label)}${algWarn(it)}</span><span class="sub">${esc(sub)}</span></span>
     <span class="right">
       <button class="qty" type="button" data-qty="${it.id}">${esc(it.qty || "1")}</button>
       ${price != null ? `<span class="price">${dropHTML(p)}${eur(price)}</span>` : ""}
@@ -461,7 +495,7 @@ function tileHTML(it, l) {
   return `<li class="item gt${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}${incoming.has(it.id) ? " incoming" : ""}" data-id="${it.id}"
       role="checkbox" aria-checked="${it.done}" aria-label="${esc(it.label)}${q ? `, ${esc(q)}` : ""}" tabindex="0">
     <span class="gt-ph">${thumbHTML(p, it.emoji)}${q ? `<span class="gt-q">${esc(q)}</span>` : ""}${badgeHTML(p)}<span class="gt-cat" aria-hidden="true">${(CAT_LOOK[CATS.includes(it.cat) ? it.cat : "Otros"] ?? CAT_LOOK.Otros)[0]}</span><span class="gt-ck" aria-hidden="true">${CHECK_SVG}</span></span>
-    <span class="gt-n">${esc(it.label)}</span>
+    <span class="gt-n">${esc(it.label)}</span>${algWarn(it)}
     <span class="gt-s">${esc(it.note || (p ? [p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : ""))}</span>
     ${price != null ? `<span class="gt-p">${eur(price)}</span>` : ""}
   </li>`;
@@ -503,8 +537,7 @@ $("sheetClose").addEventListener("click", sheetBack);
 sheet.addEventListener("cancel", (e) => { if (sheet.classList.contains("cooking") && cookBack()) e.preventDefault(); });
 sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSheet(); });
 // Si la hoja se ha vuelto a abrir con otro contenido (p. ej. del menú a «Editar»), no se borra.
-sheet.addEventListener("close", () => { if (sheet.open) return; delete sheet.dataset.sec;
-  const t = $("toast"); if (t.classList.contains("in-sheet")) { t.classList.remove("in-sheet"); $("favs").before(t); } stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
+sheet.addEventListener("close", () => { if (sheet.open) return; placeToast(); delete sheet.dataset.sec; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
 
 async function openPicker(id, query) {
   const l = list();
@@ -714,14 +747,62 @@ function openHistory() {
         <span class="h-who"><b>${esc(STORE_NAME[h.store] ?? "Compra")}</b><small>${esc(d)}</small></span>${h.total ? `<b class="h-tot">${eur(h.total)}</b>` : ""}</div>
       <p class="h-items"><span>${n} producto${n === 1 ? "" : "s"}:</span> ${esc(h.items.map((i) => i.label).join(", "))}</p>
       <div class="h-btns"><button class="btn ghost small" type="button" data-repeat="${st.history.length - 1 - k}">↺ Volver a apuntar</button>
+        <button class="btn ghost small" type="button" data-fix="${st.history.length - 1 - k}">✎ Corregir</button>
         <button type="button" class="sw-del only-mouse">Borrar</button></div></article></div>`;
   }).join("")}</div>`);
   wire();
   $("sheetBody").onclick = async (e) => {
+    const f = e.target.closest("[data-fix]"); if (f) return openPurchase(+f.dataset.fix);
     const b = e.target.closest("[data-repeat]"); if (!b) return;
     const h = st.history[+b.dataset.repeat];
     for (const i of h.items) await addItem({ query: i.label, qty: i.qty, count: i.count || 1 }, i.prod);
     save(); render(); closeSheet(); setStatus(`Apuntados ${h.items.length} productos de esa compra.`);
+  };
+}
+
+// Corregir una compra: quitar lo que se marcó sin querer o devolverlo a la lista. Siempre con «Deshacer».
+function openPurchase(idx) {
+  const h = st.history[idx]; if (!h) return openHistory();
+  const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  const back = (i) => {
+    const l = list(); if (l.items.some((x) => !x.done && norm(x.label) === norm(i.label))) return;
+    const g = guess(i.label), it = { id: uid(), label: i.label, qty: i.qty ?? "", count: i.count || 1, done: false, prod: i.prod ?? null, cat: i.prod?.c ?? g.cat, emoji: g.emoji, added: Date.now() };
+    l.items.push(it); fresh.add(it.id);
+  };
+  const fixTotal = () => { if (h.total) h.total = Math.max(0, Math.round(h.items.reduce((s, i) => s + (itemPrice(i) ?? 0), 0) * 100) / 100); };
+  const reopen = () => { const y = sheet.scrollTop; openPurchase(idx); sheet.scrollTop = y; };
+  openSheet("Corregir compra", `<button class="btn ghost small pc-back" type="button" id="pcBack">‹ Volver a Compras</button>
+    <p class="note">${esc(STORE_NAME[h.store] ?? "Compra")} · ${esc(d)}. Si marcaste algo sin querer, quítalo de aquí. «A la lista» lo vuelve a apuntar como pendiente.</p>
+    <ul class="pc-list">${h.items.map((i, k) => {
+      const pr = itemPrice(i);
+      return `<li><span class="pc-ph">${photoHTML(i.prod?.img, guess(i.label).emoji, i.label)}</span>
+        <span class="pc-name"><b>${esc(i.label)}</b>${pr != null ? `<small>${eur(pr)}</small>` : ""}</span>
+        <button type="button" class="pc-btn" data-back="${k}">A la lista</button>
+        <button type="button" class="pc-btn del" data-del="${k}" aria-label="Quitar ${esc(i.label)}">Quitar</button></li>`;
+    }).join("")}</ul>
+    <div class="pc-foot"><button class="btn ghost" type="button" id="pcAllBack">↩ Devolver todo a la lista</button>
+      <button class="btn ghost danger" type="button" id="pcDel">Borrar esta compra</button></div>`);
+  $("pcBack").onclick = openHistory;
+  // Si se queda sin productos, la compra desaparece del historial.
+  const drop = (k, toList) => withUndo(toList ? `«${h.items[k].label}» vuelve a la lista` : `Quitado «${h.items[k].label}»`, () => {
+    const [i] = h.items.splice(k, 1);
+    if (toList) back(i);
+    fixTotal();
+    if (!h.items.length) st.history.splice(idx, 1);
+  }, reopen);
+  $("sheetBody").onclick = (e) => {
+    const b = e.target.closest("[data-back],[data-del]"); if (!b) return;
+    const k = +(b.dataset.back ?? b.dataset.del);
+    buzz(); drop(k, b.dataset.back != null);
+    if (st.history[idx] === h) reopen(); else openHistory();
+  };
+  $("pcAllBack").onclick = () => {
+    withUndo(`${h.items.length} producto${h.items.length === 1 ? "" : "s"} de vuelta en la lista`, () => { h.items.forEach(back); st.history.splice(idx, 1); }, openHistory);
+    openHistory();
+  };
+  $("pcDel").onclick = () => {
+    withUndo(`Compra borrada${h.total ? ` (${eur(h.total)})` : ""}`, () => { st.history.splice(idx, 1); }, openHistory);
+    openHistory();
   };
 }
 
@@ -1394,8 +1475,14 @@ function openSettings() {
     ${canNotif ? `<label class="tset"${a.on ? "" : " hidden"} id="setNotifRow"><span><b>También como notificación del móvil</b><small>Sale aunque estés en otra app, solo si Super Lista está abierta o en segundo plano.</small></span>
       <input type="checkbox" role="switch" id="setNotif"${a.notif && Notification.permission === "granted" ? " checked" : ""}></label>` : ""}
     <p class="note" id="setNote"></p>
+    ${comReady() ? `<button type="button" class="pantry-btn set-link" id="setAcct"><span><b>Tu cuenta</b><small>${esc(meNow()?.nombre ? `Has entrado como ${meNow().nombre}` : "Entra para valorar, comentar y compartir recetas")}</small></span><span class="lnk">›</span></button>` : ""}
+    ${canInstall() ? `<button type="button" class="pantry-btn set-link" id="setIns"><span><b>📲 Instalar la app</b><small>Tenla en tu pantalla de inicio y úsala sin cobertura</small></span><span class="lnk">›</span></button>` : ""}
+    <button type="button" class="pantry-btn set-link" id="setDiet"><span><b>🛡️ Alergias y dieta</b><small>${esc(st.diet?.evita?.length ? `Marcadas: ${st.diet.evita.map((k) => ALLER.get(k)?.[2]).filter(Boolean).join(", ")}` : "Marca lo que no puedes tomar y adapto las recetas")}</small></span><span class="lnk">Cambiar ›</span></button>
     <button type="button" class="pantry-btn set-link" id="setCred"><span><b>Fotos de las recetas</b><small>De dónde salen y su licencia</small></span><span class="lnk">Ver ›</span></button>`);
   $("setCred").onclick = () => openCredits();
+  $("setDiet").onclick = () => openRecipes(null, null, "diet");
+  if ($("setAcct")) $("setAcct").onclick = () => openCuenta({ back: null });
+  if ($("setIns")) $("setIns").onclick = () => install(openSheet);
   $("setAlerts").onchange = (e) => {
     st.alerts = { ...(st.alerts ?? {}), on: e.target.checked };
     persist();
@@ -1518,11 +1605,25 @@ function openFicha(p, { it = null, title = p?.n ?? "", swap = false, onAdd = nul
     }
     const secs = fichaSections(p, d, ph);
     const el = $("ficha");
-    if (!secs.length) { el.innerHTML = `<p class="note">${esc(STORE_NAME[p.s] ?? "Este súper")} no publica los ingredientes de este producto.</p>`; return; }
+    if (!secs.length) { el.innerHTML = fichaAlgHTML(p, d) + `<p class="note">${esc(STORE_NAME[p.s] ?? "Este súper")} no publica los ingredientes de este producto.</p>`; return; }
     const src = d.src?.length ? `<p class="note fsrc">Datos de ${esc(d.src.join(" y "))}. Revisa siempre el envase si tienes alergias.</p>` : "";
-    el.innerHTML = secs.map(([n, h]) => `<section class="fsec">${n === "Resumen" ? "" : `<h3>${esc(n)}</h3>`}${h}</section>`).join("") + src;
+    el.innerHTML = fichaAlgHTML(p, d) + secs.map(([n, h]) => `<section class="fsec">${n === "Resumen" ? "" : `<h3>${esc(n)}</h3>`}${h}</section>`).join("") + src;
   });
 }
+
+// En la ficha: si el producto lleva (o puede llevar) algo que has marcado en 🛡️ Alergias.
+function fichaAlgHTML(p, d) {
+  const av = avoidSet(st.diet?.evita);
+  if (!av.size) return "";
+  const nm = (ks) => ks.filter((k) => !(k === "lactosa" && av.has("leche"))).map((k) => ALLER.get(k)[2].replace(" (alergia)", "").toLowerCase()).join(", ");
+  const has = [...new Set([...labelAllergens([...(d.alg ?? []), d.algText ?? ""], av), ...conflicts(p.n, av)])];
+  const tr = labelAllergens(d.traces, av).filter((k) => !has.includes(k));
+  if (has.length) return `<div class="adbox bad"><b>⚠️ Lleva ${esc(nm(has))}</b><span>Lo has marcado en Alergias. Mira si hay una versión «sin» en otro súper.</span></div>`;
+  if (tr.length) return `<div class="adbox warn"><b>⚠️ Puede contener trazas de ${esc(nm(tr))}</b><span>Según la etiqueta.</span></div>`;
+  if (d.alg?.length || d.algText) return `<div class="adbox ok"><b>✓ Según la etiqueta, no lleva lo que has marcado</b><span>${esc(dietSummary(av))}. Revisa el envase por si cambia.</span></div>`;
+  return "";
+}
+const dietSummary = (av) => `Sin ${[...av].filter((k) => !(k === "lactosa" && av.has("leche"))).map((k) => ALLER.get(k)[2].replace(" (alergia)", "").toLowerCase()).join(", sin ")}`;
 
 // Gestos de la hoja (arrastrar abajo para cerrar, desde el borde izquierdo para volver) y deslizar para borrar.
 sheetGestures(sheet, { close: closeSheet, back: sheetBack });
@@ -1556,6 +1657,7 @@ document.addEventListener("error", (e) => {
 
 // ---------- Arranque ----------
 initSync({ st, list, persist, render: () => render(), setStatus, uid });
+initComunidad({ st, save, setStatus, buzz, esc, openSheet, sheet, body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
 render();
 catalogFor(list().store);
 if (st.shop) keepAwake();

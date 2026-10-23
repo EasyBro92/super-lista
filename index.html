@@ -59,7 +59,15 @@
 </script>
 <div class="wrap">
   <section class="homescr" id="home" aria-label="Inicio" hidden>
-    <div class="home-top"><p class="home-hi" id="homeHi">Hola</p><h1>Super Lista</h1></div>
+    <div class="home-top"><div class="ht-txt"><p class="home-hi" id="homeHi">Hola</p><h1 id="homeName">Super Lista</h1></div>
+      <button type="button" class="home-me" id="homeMe" hidden></button></div>
+    <div class="home-ins" id="homeIns" hidden>
+      <img src="icons/icon-192.png" alt="" width="44" height="44">
+      <span class="hi-t"><b>Instala Super Lista</b><small>Ábrela como una app, también sin cobertura.</small></span>
+      <button type="button" class="btn small" id="insGo">Instalar</button>
+      <button type="button" class="hi-x" id="insLater" aria-label="Ahora no">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
     <div class="hcards" id="hcards"></div>
     <div class="hdots" id="hdots" aria-hidden="true"></div>
     <p class="home-tip">Desliza para ver todas las secciones</p>
