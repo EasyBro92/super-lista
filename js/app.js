@@ -341,9 +341,9 @@ function renderHello() {
   const me = comReady() ? meNow() : null, b = $("homeMe");
   $("homeName").textContent = me?.nombre ? `Hola, ${me.nombre}` : "Super Lista";
   b.hidden = !comReady() || !!me?.nombre;
-  if (!b.hidden) b.innerHTML = `<span class="hm-av" aria-hidden="true">👋</span><span class="hm-t"><b>¿Cómo te llamas?</b><small>${me ? "Pon tu nombre para que te saludemos" : "Entra o crea tu cuenta gratis y pon tu nombre"}</small></span><span class="lnk" aria-hidden="true">›</span>`;
+  if (!b.hidden) b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>${me ? "Tu nombre" : "Entrar"}</span>`;
 }
-$("homeMe").onclick = () => { buzz(); openCuenta({ back: null, mode: "crear" }); };
+$("homeMe").onclick = () => { buzz(); openCuenta({ back: null }); };
 $("insGo").onclick = () => { buzz(); install(openSheet); };
 $("insLater").onclick = () => { installLater(); $("homeIns").hidden = true; };
 initInstalar(() => { if (home) renderHome(); });
