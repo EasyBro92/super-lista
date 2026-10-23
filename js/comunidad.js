@@ -41,6 +41,8 @@ async function refreshMe() {
   const { data } = await c.auth.getSession();
   const s = data?.session;
   if (!s) { setMe(null); return null; }
+  const md = s.user.user_metadata ?? {};
+  acct.wanted ??= String(md.full_name ?? md.name ?? "").trim().slice(0, 30) || undefined; // nombre que da Google o Apple
   try { setMe({ ...(await call("com_yo")), email: s.user.email }); }
   catch { me ??= { id: s.user.id, email: s.user.email, nombre: null }; } // sin conexión: lo último que se sabía
   return me;
@@ -75,8 +77,48 @@ const authMsg = (e) => AUTH_ERR[e?.code] ?? (/fetch|network/i.test(e?.message ??
 export function initComunidad(api) {
   A = api;
   if (!comReady()) return;
-  // Volviendo del correo de «nueva contraseña», o si ya habías entrado: se conecta al abrir.
-  if (me || /access_token=|type=recovery|error_description=/.test(location.hash)) start();
+  // Volviendo del correo de «nueva contraseña», de Google o Apple, o si ya habías entrado: se conecta al abrir.
+  const back = /access_token=|type=recovery|error_description=/.test(location.hash);
+  if (me || back) start().then(() => afterOAuth(back));
+}
+// Al volver de Google o Apple: si es la primera vez, a elegir nombre; si no, un saludo.
+const OAUTH = "superlista.oauth";
+function afterOAuth(back) {
+  let from = null;
+  try { from = localStorage.getItem(OAUTH); localStorage.removeItem(OAUTH); } catch {}
+  if (!back || !from) return;
+  if (!me) return A.setStatus("No se ha podido entrar. Prueba otra vez.", true);
+  if (!me.nombre) return openCuenta({ back: null, then: () => openComunidad({ from: null }) });
+  A.setStatus(`¡Hola, ${me.nombre}!`);
+}
+// Qué formas de entrar están activadas en Supabase (Google, Apple…). Los botones solo salen si lo están.
+let provs = null;
+function providers() {
+  const c = supaCfg();
+  provs ??= fetch(`${c.url.replace(/\/+$/, "")}/auth/v1/settings`, { headers: { apikey: c.key } })
+    .then((r) => (r.ok ? r.json() : {})).then((x) => x.external ?? {}).catch(() => { provs = null; return {}; });
+  return provs;
+}
+const PROV = [
+  ["google", "Seguir con Google", `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.9-3c-1 .7-2.4 1.2-4 1.2-3.1 0-5.7-2.1-6.6-4.9H1.4v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.4 14.4a7.2 7.2 0 0 1 0-4.7V6.6H1.4a12 12 0 0 0 0 10.9l4-3.1z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.4 6.6l4 3.1C6.3 6.9 8.9 4.8 12 4.8z"/></svg>`],
+  ["apple", "Seguir con Apple", `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.5 2-3.7 2.1-3.8a4.6 4.6 0 0 0-3.6-2c-1.5-.2-3 .9-3.8.9s-2-.9-3.3-.9a4.9 4.9 0 0 0-4.1 2.5c-1.8 3.1-.5 7.6 1.3 10.1.8 1.2 1.8 2.6 3.1 2.6s1.7-.8 3.3-.8 2 .8 3.3.8 2.2-1.3 3-2.5a10 10 0 0 0 1.4-2.8 4.3 4.3 0 0 1-2.7-4.1zM13.9 5.2A4.4 4.4 0 0 0 15 2a4.5 4.5 0 0 0-2.9 1.5 4.2 4.2 0 0 0-1.1 3.1 3.7 3.7 0 0 0 2.9-1.4z"/></svg>`],
+];
+async function paintProviders() {
+  const el = $("aoauth"); if (!el) return;
+  const on = await providers();
+  const list = PROV.filter(([k]) => on[k]);
+  if (!list.length || !el.isConnected) return;
+  el.hidden = false;
+  el.innerHTML = list.map(([k, t, svg]) => `<button type="button" class="btn oauth-btn oauth-${k}" data-prov="${k}">${svg}<span>${t}</span></button>`).join("")
+    + `<p class="oauth-or"><span>o con tu correo</span></p>`;
+  el.onclick = async (e) => {
+    const b = e.target.closest("[data-prov]"); if (!b) return;
+    b.disabled = true;
+    try { localStorage.setItem(OAUTH, b.dataset.prov); } catch {}
+    const { error } = await (await sb()).auth.signInWithOAuth({ provider: b.dataset.prov, options: { redirectTo: location.origin + location.pathname } })
+      .catch(() => ({ error: { message: OFFLINE } }));
+    if (error) { b.disabled = false; errBox($("aerr"), new ComError(authMsg(error))); }
+  };
 }
 
 // ---------- Utilidades ----------
@@ -132,7 +174,7 @@ function errBox(el, e) { if (!el) return A.setStatus(e.message, true); if ($("ao
 let acct = { back: null, then: null, mode: "entrar" };
 // back: qué hace «atrás»; then: qué hacer al terminar de entrar (por defecto, volver).
 export async function openCuenta(opt = {}) {
-  acct = { back: opt.back ?? null, then: opt.then ?? opt.back ?? null, mode: opt.mode ?? acct.mode ?? "entrar" };
+  acct = { back: opt.back ?? null, then: opt.then ?? opt.back ?? null, mode: opt.mode ?? acct.mode ?? "entrar", wanted: acct.wanted };
   sheetFor("Tu cuenta", acct.back);
   A.body().innerHTML = `<p class="note">Un momento…</p>`;
   await start();
@@ -144,6 +186,7 @@ function paintCuenta(note = "") {
     const crear = acct.mode === "crear";
     B.innerHTML = `<div class="plan acct">
       <div class="acct-hero"><span aria-hidden="true">👋</span><p>Con una cuenta puedes <b>valorar recetas</b>, <b>comentar</b>, subir fotos y <b>compartir tus recetas</b> con la comunidad. Tu lista sigue funcionando igual sin cuenta.</p></div>
+      <div class="oauth" id="aoauth" hidden></div>
       <div class="seg" id="amode" role="group" aria-label="Entrar o crear cuenta">
         <button type="button" data-m="entrar" aria-pressed="${!crear}">Entrar</button><button type="button" data-m="crear" aria-pressed="${crear}">Crear cuenta</button></div>
       <form id="aform" class="acct-form" novalidate>
@@ -158,6 +201,7 @@ function paintCuenta(note = "") {
     $("amode").onclick = (e) => { const b = e.target.closest("[data-m]"); if (b) { acct.mode = b.dataset.m; paintCuenta(); } };
     $("aform").onsubmit = (e) => { e.preventDefault(); crear ? doSignUp() : doSignIn(); };
     if ($("aforgot")) $("aforgot").onclick = doForgot;
+    paintProviders();
     return;
   }
   if (!me.nombre) {
