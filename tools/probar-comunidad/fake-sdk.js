@@ -21,6 +21,15 @@ export function createClient(url, key, opts = {}) {
     onAuthStateChange(f) { subs.push(f); setTimeout(() => f("INITIAL_SESSION", session)); return { data: { subscription: { unsubscribe() {} } } }; },
     signUp: (b) => enter("signup", b),
     signInWithPassword: (b) => enter("login", b),
+    // Imita volver de Google: crea la cuenta (con el nombre que da Google) y recarga con #access_token.
+    async signInWithOAuth({ provider, options }) {
+      window.__oauth = provider;
+      const email = `${provider}.${Date.now()}@gmail.com`;
+      const r = await post("/fake/auth/signup", { email, password: "oauth-123456" });
+      session = { user: { ...r.user, user_metadata: { full_name: "Marta López" } }, access_token: r.user.id }; save();
+      history.replaceState(null, "", `${options.redirectTo}#access_token=falso&token_type=bearer`); location.reload();
+      return { data: {}, error: null };
+    },
     async signOut() { session = null; save(); emit("SIGNED_OUT"); return { error: null }; },
     async resetPasswordForEmail(email) { window.__resetFor = email; return { data: {}, error: null }; },
     async updateUser({ password }) { await post("/fake/auth/password", { password }); emit("USER_UPDATED"); return { data: { user: session.user }, error: null }; },

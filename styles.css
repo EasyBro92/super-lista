@@ -900,3 +900,12 @@ body.home .wrap{padding-bottom:110px}
 .rev-h,.rev-t{margin:0;font-size:.88rem}
 .rev-t{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--fg)}
 .rev-img{max-width:100%;max-height:180px;border-radius:10px;align-self:flex-start}
+/* Entrar con Google o Apple */
+.oauth{display:flex;flex-direction:column;gap:8px}
+.oauth-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:1px solid var(--line)}
+.oauth-btn svg{width:20px;height:20px;flex:none}
+.oauth-google{background:#fff;color:#1f1f1f;border-color:#dadce0}
+.oauth-apple{background:#000;color:#fff;border-color:#000}
+@media (prefers-color-scheme: dark){.oauth-apple{background:#fff;color:#000;border-color:#fff}}
+.oauth-or{display:flex;align-items:center;gap:10px;margin:4px 0 0;font-size:.8rem;color:var(--muted)}
+.oauth-or::before,.oauth-or::after{content:"";flex:1;height:1px;background:var(--line)}

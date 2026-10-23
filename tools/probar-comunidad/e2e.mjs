@@ -147,6 +147,18 @@ check("cuenta borrada", (await luis.textContent("#sheetBody")).includes("se han 
 const files2 = await (await fetch(`${BASE}fake/files`)).json();
 check("sus fotos también se borran", files2.length === 1);
 
+// --- Entrar con Google (Marta) ---
+const marta = await ctx("marta");
+await openCom(marta);
+await marta.click("#cme"); await marta.waitForTimeout(800);
+check("botón de Google visible (y el de Apple no, porque está apagado)", (await marta.locator('[data-prov="google"]').count()) === 1 && (await marta.locator('[data-prov="apple"]').count()) === 0);
+await shot(marta, "13-entrar-google");
+await marta.click('[data-prov="google"]'); await marta.waitForTimeout(2000);
+check("al volver de Google pide el nombre, ya relleno", (await marta.inputValue("#aname").catch(() => "")) === "Marta López");
+await shot(marta, "14-google-nombre");
+await marta.click('#nform button[type="submit"]'); await marta.waitForTimeout(1000);
+check("con Google ya está dentro de la comunidad", (await marta.textContent("#cme").catch(() => "")).includes("Marta"));
+
 console.log(`\n${ok} bien, ${bad} mal`);
 console.log(errs.length ? `Errores en la consola:\n${errs.join("\n")}` : "Sin errores en la consola");
 await b.close();

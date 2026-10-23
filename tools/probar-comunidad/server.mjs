@@ -75,6 +75,7 @@ http.createServer(async (req, res) => {
       if (!f) { res.writeHead(404); return res.end(); }
       res.writeHead(200, { "content-type": f.type }); return res.end(f.buf);
     }
+    if (u.pathname === "/auth/v1/settings") return json(res, 200, { external: { email: true, google: true, apple: false } });
     if (u.pathname === "/fake/files") return json(res, 200, [...files.keys()]);
     let fp = path.join(ROOT, decodeURIComponent(u.pathname));
     if (!fp.startsWith(ROOT)) { res.writeHead(403); return res.end(); }
