@@ -35,6 +35,7 @@ function start() {
 function setMe(m) {
   me = m;
   try { if (m) localStorage.setItem(ME, JSON.stringify(m)); else localStorage.removeItem(ME); } catch {}
+  dispatchEvent(new Event("superlista:cuenta")); // la pantalla de inicio cambia el saludo
 }
 async function refreshMe() {
   const c = await sb();
