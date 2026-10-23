@@ -1,6 +1,7 @@
 // Recetas: qué cocinar con lo que tienes en casa y apuntar en la lista lo que falta.
 import { tokens, guess, norm } from "./parser.js";
 import { nutrition, NUT } from "./nutricion.js";
+import { mountSocial, openComunidad, comReady } from "./comunidad.js";
 
 // Sección de cada ingrediente, para ordenar «Lo que tengo en casa» como en el súper.
 const SECTIONS = {
@@ -107,7 +108,7 @@ export async function homeInfo() {
   const staples = new Set(STAPLES.map(key));
   const ready = recipes.filter((r) => allowed(r) && !check(r).missing.length && r.ings.some((i) => !i.opt && !staples.has(i.k))).length;
   const hoy = plan().filter((e) => e.d === ymd()).map((e) => e.n);
-  const pick = (f) => recipes.filter((r) => r.foto && !r.mine && f(r))[Math.floor(Date.now() / 864e5) % 7];
+  const pick = (f) => recipes.filter((r) => r.foto && !r.mine && !r.com && f(r))[Math.floor(Date.now() / 864e5) % 7];
   const today = recipes.find((r) => r.n === hoy[0] && r.foto);
   return {
     total: recipes.length, moment: mo, momentEmo: emo, para, inMoment: recipes.filter((r) => r.m?.[mo]).length,
@@ -232,6 +233,9 @@ export async function openRecipes(id, moment, view) {
 // Botón de cerrar, gesto de atrás o deslizar hacia abajo: un paso atrás (paso a paso → receta → recetas o menú).
 export function cookBack() {
   if (ui.view === "cook") { showRecipe(ui.id); return true; }
+  // Comunidad y cuenta: cada pantalla dice adónde vuelve; sin destino, se cierra.
+  if (ui.view === "com") { if (ui.viewBack) { ui.viewBack(); return true; } return false; }
+  if (ui.view === "recipe" && ui.from === "com") { (ui.comBack ?? showList)(); return true; }
   if (ui.view === "recipe" && ui.from === "gen") { showGen(); return true; }
   if (ui.view === "gen") { showPlan(); return true; }
   if ((ui.view === "recipe" && ui.from === "plan") || (ui.view === "list" && ui.pickDay)) { showPlan(); return true; }
@@ -279,6 +283,7 @@ const meta = (r, s = r.r) => `${r.z ? `${origin(r)} · ` : ""}${mins(r.t)} · ${
 const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
 
 function showList(restore = false) {
+  dropShared();
   setView("list");
   ui.moment ??= nowMoment();
   if (!chipsFor(ui.moment).includes(ui.tag)) ui.tag = "Todas";
@@ -295,7 +300,8 @@ function showList(restore = false) {
     ${ui.pickDay ? `<div class="pickbar"><span>📅 Toca una receta para el menú <b>${A.esc(delDay(ui.pickDay))}</b></span><button type="button" class="lnk" id="cpickx">Cancelar</button></div>`
     : `<div class="cbtns"><button type="button" class="pantry-btn" id="cpantry"><span>🏠 En casa</span><b>${plural(n, "ingrediente", "ingredientes")}</b></button>
       <button type="button" class="pantry-btn" id="cplan"><span>📅 Menú</span><b>${np ? plural(np, "receta", "recetas") : "Planificar"}</b></button>
-      <button type="button" class="pantry-btn" id="cdiet"><span>🥗 Dieta</span><b>${A.esc(dietLabel())}</b></button></div>`}
+      <button type="button" class="pantry-btn" id="cdiet"><span>🥗 Dieta</span><b>${A.esc(dietLabel())}</b></button></div>
+      ${comReady() ? `<button type="button" class="pantry-btn com-go" id="ccom"><span><b>👥 Comunidad</b><small>Recetas de la gente, estrellas y la charla</small></span><span class="lnk">›</span></button>` : ""}`}
     <div class="srow"><label class="vh" for="cq">Buscar receta o ingrediente</label>
     <input id="cq" class="bsearch" type="search" placeholder="Busca una receta o un ingrediente…" value="${A.esc(ui.q)}" enterkeyhint="search" autocomplete="off">
     <button type="button" class="round" id="cnew" title="Crear o pegar tu propia receta" aria-label="Crear tu receta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
@@ -328,6 +334,7 @@ function showList(restore = false) {
   $$("cq").oninput = (e) => { clearTimeout(tmo); tmo = setTimeout(() => { ui.q = e.target.value.trim(); fillList(); }, 160); };
   if (ui.pickDay) $$("cpickx").onclick = showPlan;
   else { $$("cpantry").onclick = showPantry; $$("cplan").onclick = showPlan; $$("cdiet").onclick = showDiet; }
+  if ($$("ccom")) $$("ccom").onclick = () => { keepScroll(); openComunidad({ from: "recipes" }); };
   $$("cnew").onclick = () => showEdit(null);
   $$("clist").onclick = (e) => {
     const h = e.target.closest("[data-fav-r]");
@@ -510,7 +517,7 @@ function showRecipe(id) {
     : `<p class="ready">Ya tienes en la lista todo lo que falta.</p>`;
   const days = nextDays(), inPlan = new Set(plan().filter((e) => e.n === r.n).map((e) => e.d));
   A.body().innerHTML = `
-    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : ui.from === "gen" ? "Menú propuesto" : "Recetas"}</button>
+    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : ui.from === "gen" ? "Menú propuesto" : ui.from === "com" ? "Comunidad" : "Recetas"}</button>
     <div class="cdetail">
       ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>${heart(r)}</figure>` : ""}
       <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>${heart(r)}`}
@@ -522,7 +529,7 @@ function showRecipe(id) {
         <div class="serv" role="group" aria-label="Raciones"><span>Raciones</span>
           <button type="button" class="round" id="sminus" aria-label="Menos raciones"${sv <= 1 ? " disabled" : ""}>−</button>
           <b aria-live="polite">${sv}</b><button type="button" class="round" id="splus" aria-label="Más raciones">+</button></div>
-        <button type="button" class="btn ghost small" id="cplanadd" aria-expanded="false">📅 ${inPlan.size ? "En tu menú" : "Al menú"}</button>
+        ${r.com ? "" : `<button type="button" class="btn ghost small" id="cplanadd" aria-expanded="false">📅 ${inPlan.size ? "En tu menú" : "Al menú"}</button>`}
       </div>
       ${r.mine ? `<div class="row"><button type="button" class="btn ghost small" id="cedit">✏️ Editar mi receta</button>
         <button type="button" class="btn danger small" id="cdel">Borrar</button></div>` : ""}
@@ -534,6 +541,7 @@ function showRecipe(id) {
       <h3 class="cgroup">Preparación</h3>
       <button class="btn cookgo" type="button" id="ccook">👩‍🍳 Cocinar paso a paso</button>
       <ol class="steps">${r.p.map((s) => `<li>${A.esc(s)}</li>`).join("")}</ol>
+      <section class="social" id="csocial" aria-label="Opiniones"></section>
     </div>`;
   $$("cback").onclick = () => cookBack();
   A.body().querySelector(".rmo")?.addEventListener("click", (e) => {
@@ -549,7 +557,7 @@ function showRecipe(id) {
   };
   $$("sminus").onclick = () => { setServ(r, sv - 1); A.buzz(); showRecipe(id); };
   $$("splus").onclick = () => { setServ(r, sv + 1); A.buzz(); showRecipe(id); };
-  $$("cplanadd").onclick = (e) => {
+  if ($$("cplanadd")) $$("cplanadd").onclick = (e) => {
     const open = $$("pdays").hidden;
     $$("pdays").hidden = !open; e.currentTarget.setAttribute("aria-expanded", String(open));
   };
@@ -585,6 +593,42 @@ function showRecipe(id) {
     showRecipe(id);
   };
   A.body().querySelector(".cdetail").scrollTop = prev;
+  mountSocial($$("csocial"), r, () => { const k = r.com ? recipes.findIndex((x) => x.com?.id === r.com.id) : recipes.indexOf(r); if (k >= 0) showRecipe(k); else showList(true); });
+}
+
+// ---------- Comunidad (js/comunidad.js) ----------
+// Las recetas de la comunidad se añaden al final mientras las miras y se quitan al volver a la lista.
+function dropShared() { if (recipes) for (let k = recipes.length - 1; k >= 0 && recipes[k].com; k--) recipes.pop(); }
+export function comView(back) { setView("com"); ui.viewBack = back; }
+export function showRecipesList() { ui.viewBack = ui.comBack = null; showList(true); }
+export async function newRecipe() { await loadRecipes(); ui.editId = null; showEdit(null); }
+export const readPhoto = (uid) => readPhotos()[uid] ?? null;
+export async function openShared(row, back) {
+  await loadRecipes();
+  const d = row.datos ?? {};
+  const k0 = recipes.findIndex((x) => x.com?.id === row.id);
+  const idx = k0 >= 0 ? k0 : recipes.length;
+  const r = prep({ n: String(d.n ?? "Receta"), e: d.e ?? "🍲", t: +d.t || 30, r: +d.r || 2, d: d.d ?? "Fácil", tags: (d.tags ?? []).filter((t) => typeof t === "string"),
+    m: d.m && typeof d.m === "object" ? d.m : {}, i: (d.i ?? []).filter((x) => Array.isArray(x)).map(([n, q]) => [String(n), String(q ?? "")]), p: (d.p ?? []).map(String) }, idx);
+  r.com = { id: row.id, autor: row.autor, mia: row.mia, creado: row.creado };
+  r.src = d;
+  r.foto = row.fotoURL ? { img: row.fotoURL } : null;
+  recipes[idx] = r;
+  A.sheet.className = "sheet browsing cooking";
+  ui.comBack = back; ui.from = "com"; ui.view = "list";
+  showRecipe(idx);
+}
+// «Guardar en mis recetas» desde una receta de la comunidad. false si ya la tenías.
+export function saveCopy(r) {
+  A.st.myR ??= [];
+  if (A.st.myR.some((m) => m.from === r.com.id)) return false;
+  const d = r.src, uid = Math.random().toString(36).slice(2, 10);
+  A.st.myR.push({ uid, from: r.com.id, n: r.n, e: r.e, t: r.t, r: r.r, d: r.d, tags: ["Mis recetas", ...r.tags.filter((t) => t !== "Mis recetas")], m: r.m, i: r.i, p: r.p });
+  if (r.foto?.img) setPhoto(uid, r.foto.img);
+  A.save(); addMine();
+  // addMine deja solo las recetas de la app y las tuyas: la de la comunidad que estás viendo vuelve al final.
+  r.id = ui.id = recipes.length; recipes.push(r);
+  return true;
 }
 
 // ---------- Cocinar paso a paso ----------

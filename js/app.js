@@ -5,6 +5,7 @@ import { barcodeSVG, bestFormat } from "./barcode.js";
 import { readTicket, parseTicket } from "./ticket.js";
 import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, cheaperAlts, unitPrice, filterBarHTML, filterBarClick, applyFilters, fichaData, priceHistory, fichaSections } from "./ficha.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
+import { initComunidad, openComunidad, openCuenta, comReady, meNow } from "./comunidad.js";
 
 const STORES = [
   ["any", "Cualquiera"], ["mercadona", "Mercadona"], ["carrefour", "Carrefour"], ["lidl", "Lidl"], ["dia", "Dia"],
@@ -331,6 +332,8 @@ const HOME_CARDS = [
   ["tengo", "Con lo que tengo", "🏠", 200, "Qué puedes cocinar con lo que tienes en casa y qué caduca pronto."],
   ["history", "Compras", "🧾", 330, "Tus compras anteriores, lo que gastaste y tus tarjetas de cliente."],
 ];
+// Solo si la comunidad está activada (js/config.js con los datos de Supabase).
+if (comReady()) HOME_CARDS.push(["com", "Comunidad", "👥", 100, "Recetas de la gente, estrellas, comentarios con foto y una charla para todos."]);
 let homeHTML = "";
 async function renderHome() {
   const h = new Date().getHours();
@@ -345,6 +348,7 @@ async function renderHome() {
     recipes: info ? `${info.momentEmo} ${info.para}: ${info.inMoment} recetas` : "",
     plan: info?.hoy.length ? `Hoy: ${info.hoy[0]}` : info?.planN ? `${info.planN} recetas esta semana` : "Aún sin planificar",
     tengo: info?.soon.length ? `⏰ ${info.soon[0].n} caduca pronto` : info?.ready ? `Puedes hacer ${info.ready} recetas ya` : "Marca lo que tienes en casa",
+    com: meNow()?.nombre ? `Hola, ${meNow().nombre}` : "Entra o crea tu cuenta gratis",
     history: spent ? `Este mes: ${eur(spent)}${st.budget ? ` de ${eur(st.budget)}` : ""}` : last ? `Última: ${new Date(last.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}${last.total ? ` · ${eur(last.total)}` : ""}${nc ? ` · ${nc} tarjeta${nc === 1 ? "" : "s"}` : ""}` : nc ? `${nc} tarjeta${nc === 1 ? "" : "s"} de cliente` : "Aún no has terminado ninguna compra",
   };
   // Lista y Compras: si aún no hay foto propia, las fotos de tus productos.
@@ -379,6 +383,7 @@ function goSection(k) {
   if (k === "recipes") openRecipes();
   else if (k === "plan" || k === "pantry" || k === "tengo") openRecipes(null, null, k);
   else if (k === "history") openHistory();
+  else if (k === "com") openComunidad({ from: null });
 }
 $("hcards").addEventListener("click", (e) => { const b = e.target.closest("[data-go]"); if (b) goSection(b.dataset.go); });
 $("hcards").addEventListener("scroll", () => {
@@ -1387,8 +1392,10 @@ function openSettings() {
     ${canNotif ? `<label class="tset"${a.on ? "" : " hidden"} id="setNotifRow"><span><b>También como notificación del móvil</b><small>Sale aunque estés en otra app, solo si Super Lista está abierta o en segundo plano.</small></span>
       <input type="checkbox" role="switch" id="setNotif"${a.notif && Notification.permission === "granted" ? " checked" : ""}></label>` : ""}
     <p class="note" id="setNote"></p>
+    ${comReady() ? `<button type="button" class="pantry-btn set-link" id="setAcct"><span><b>Tu cuenta</b><small>${esc(meNow()?.nombre ? `Has entrado como ${meNow().nombre}` : "Entra para valorar, comentar y compartir recetas")}</small></span><span class="lnk">›</span></button>` : ""}
     <button type="button" class="pantry-btn set-link" id="setCred"><span><b>Fotos de las recetas</b><small>De dónde salen y su licencia</small></span><span class="lnk">Ver ›</span></button>`);
   $("setCred").onclick = () => openCredits();
+  if ($("setAcct")) $("setAcct").onclick = () => openCuenta({ back: null });
   $("setAlerts").onchange = (e) => {
     st.alerts = { ...(st.alerts ?? {}), on: e.target.checked };
     persist();
@@ -1551,6 +1558,7 @@ document.addEventListener("error", (e) => {
 
 // ---------- Arranque ----------
 initSync({ st, list, persist, render: () => render(), setStatus, uid });
+initComunidad({ st, save, setStatus, buzz, esc, openSheet, sheet, body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
 render();
 catalogFor(list().store);
 if (st.shop) keepAwake();
