@@ -808,3 +808,34 @@ body.home .wrap{padding-bottom:110px}
 .gopts .seg{grid-template-columns:repeat(3,1fr)}
 .gslots{display:flex;gap:6px;flex-wrap:wrap}
 .gfoot{margin-top:12px;font-size:.75rem}
+
+/* ---------- Alergias e intolerancias ---------- */
+.diet .dgrid{grid-template-columns:repeat(auto-fill,minmax(102px,1fr))}
+.dbtn small{font:500 .68rem/1.2 var(--body);color:var(--muted);text-align:center}
+.dsep{grid-column:1/-1;height:0}
+.diet .seg{margin-bottom:4px}
+.cbtns .pantry-btn.on{background:color-mix(in srgb,var(--warn) 12%,var(--surface));border-color:color-mix(in srgb,var(--warn) 40%,var(--line))}
+.cbtns .pantry-btn.on b{color:var(--warn)}
+.dask{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:start;border:1.5px solid color-mix(in srgb,var(--warn) 45%,var(--line));
+  background:color-mix(in srgb,var(--warn) 8%,var(--surface));border-radius:14px;padding:10px 12px;font-size:.84rem;line-height:1.35}
+.dask>span:first-child{font-size:1.5rem;line-height:1}
+.dask b{display:block;font-size:.92rem}
+.dask-b{grid-column:2;display:flex;gap:8px;margin-top:4px}
+.radapt{display:block;font-size:.72rem;font-weight:700;color:var(--accent);margin-top:1px}
+.radapt.bad{color:var(--danger)}
+.adbox{display:flex;flex-direction:column;gap:3px;border-radius:14px;padding:10px 12px;margin:10px 0 4px;font-size:.86rem;line-height:1.4;
+  background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line))}
+.adbox small{color:var(--muted);font-size:.76rem}
+.adbox.bad{background:color-mix(in srgb,var(--danger) 10%,var(--surface));border-color:color-mix(in srgb,var(--danger) 40%,var(--line))}
+.adbox.bad>b{color:var(--danger)}
+.adbox.warn{background:color-mix(in srgb,var(--warn) 10%,var(--surface));border-color:color-mix(in srgb,var(--warn) 40%,var(--line))}
+.adbox.warn>b{color:var(--warn)}
+.adbox.ok>b{color:var(--accent)}
+.ing.swapped .inm small{color:var(--accent);font-weight:600}
+.ing.risky .inm small{color:var(--danger);font-weight:600}
+.ing.gone{cursor:default;opacity:.75}
+.ing.gone small{color:var(--muted)}
+.cook-ings em{font-style:normal;color:var(--muted);font-size:.85em}
+.alg-w{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font:700 .7rem/1.5 var(--body);vertical-align:middle;
+  color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,var(--surface))}
+.gt .alg-w{margin:2px 0 0;align-self:flex-start}

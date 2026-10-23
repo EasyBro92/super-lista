@@ -1,6 +1,7 @@
 // Recetas: qué cocinar con lo que tienes en casa y apuntar en la lista lo que falta.
 import { tokens, guess, norm } from "./parser.js";
 import { nutrition, NUT } from "./nutricion.js";
+import { ALLERGENS, ALLER, allergensOf, avoidSet, substitute } from "./alergias.js";
 
 // Sección de cada ingrediente, para ordenar «Lo que tengo en casa» como en el súper.
 const SECTIONS = {
@@ -105,7 +106,7 @@ export async function homeInfo() {
   await loadRecipes();
   const [mo, emo, para] = MOMENT.get(nowMoment());
   const staples = new Set(STAPLES.map(key));
-  const ready = recipes.filter((r) => allowed(r) && !check(r).missing.length && r.ings.some((i) => !i.opt && !staples.has(i.k))).length;
+  const ready = recipes.filter((r) => allowed(r) && !check(r).missing.length && ingsOf(r).some((i) => !i.opt && !staples.has(i.k))).length;
   const hoy = plan().filter((e) => e.d === ymd()).map((e) => e.n);
   const pick = (f) => recipes.filter((r) => r.foto && !r.mine && f(r))[Math.floor(Date.now() / 864e5) % 7];
   const today = recipes.find((r) => r.n === hoy[0] && r.foto);
@@ -132,62 +133,103 @@ function loadRecipes() {
 }
 
 // ---------- Dieta y alergias ----------
-// Se deduce de los ingredientes; es una ayuda, no sustituye mirar las etiquetas.
-const ALLERGENS = [
-  ["gluten", "🌾", "Gluten", /\b(harina(?! de (maiz|arroz|garbanzo))|pan|pan rallado|macarrones|espaguetis|fideos(?! de arroz)|lasana|tallarines|gnocchi|tortellini|pasta|cuscus|bulgur|cerveza|galletas|hojaldre|masa|bizcochos?|croissants?|tortillas de trigo|pan de pita|cereales|copos de avena|salsa de soja|seitan|picatostes|muesli|granola)\b/],
-  ["lactosa", "🥛", "Lactosa", /\b(leche(?! de (coco|avena|almendras?|soja|arroz))|mantequilla|nata|queso|quesos|yogur|yogures|mozzarella|mascarpone|parmesano|leche condensada|helado|crema de cacao|bechamel|requeson|burrata|ghee)\b/],
-  ["huevo", "🥚", "Huevo", /\b(huevos?|yemas?|claras?|mayonesa|bizcochos de soletilla)\b/],
-  ["frutos", "🥜", "Frutos secos", /\b(nueces|nuez|almendras?|avellanas?|anacardos?|cacahuetes?|pistachos?|pinones|frutos secos|crema de cacahuete|pesto|praline|cacahuete)\b/],
-  ["marisco", "🦐", "Marisco", /\b(gambas?|langostinos?|mejillones|almejas|calamares|calamar|sepia|pulpo|surimi|berberechos|cigalas)\b/],
-  ["pescado", "🐟", "Pescado", /\b(salmon|merluza|bacalao|atun|sardinas|lubina|dorada|anchoas|boquerones|salsa de pescado|caldo de pescado|corvina|caballa|rape)\b/],
-  ["cerdo", "🐷", "Cerdo", /\b(bacon|panceta|chorizo|jamon(?! de pavo)|lomo de cerdo|costillas|salchichas|salchichon|morcilla|cerdo|sobrasada|lacon)\b/],
-];
-const ALLER = new Map(ALLERGENS.map((a) => [a[0], a]));
+// Se deduce de los ingredientes (js/alergias.js); es una ayuda, no sustituye mirar las etiquetas.
 function allergens(r) {
-  const names = r.i.filter(([n]) => !r.o?.includes(n)).map(([n]) => norm(n)).join(" | ");
-  return ALLERGENS.filter(([, , , re]) => re.test(names)).map((a) => a[0]);
+  return [...new Set(r.i.filter(([n]) => !r.o?.includes(n)).flatMap(([n]) => allergensOf(n)))];
 }
-const diet = () => (A.st.diet ??= { tipo: "", evita: [] });
+// st.diet = { tipo: "" | "vegetariana" | "vegana", evita: [alergias], modo: "adaptar" | "ocultar", asked: ya se preguntó }
+const diet = () => { const d = (A.st.diet ??= { tipo: "", evita: [] }); d.modo ??= "adaptar"; return d; };
+const dietSig = () => { const d = diet(); return `${d.modo}|${[...d.evita].sort().join(",")}`; };
+// La receta cambiada para lo que no puedes tomar: «Leche» → «Leche sin lactosa». ok = false si algo no tiene cambio.
+function adapt(r) {
+  const sig = dietSig();
+  if (r._ad?.sig === sig) return r._ad;
+  const avoid = avoidSet(diet().evita);
+  const out = { sig, ok: true, changes: [], stuck: [], ings: r.ings };
+  if (avoid.size && diet().modo === "adaptar") {
+    out.ings = r.ings.map((i) => {
+      const s = substitute(i.n, r, avoid, i.opt);
+      if (!s) { out.ok = false; out.stuck.push(i.n); return i; }
+      if (!s.why.length) return i;
+      out.changes.push({ from: i.n, to: s.to, why: s.why });
+      return s.to ? { ...i, n: s.to, k: key(s.to), from: i.n, why: s.why } : { ...i, opt: true, gone: true, from: i.n, why: s.why };
+    });
+  } else if (avoid.size) {
+    out.stuck = r.ings.filter((i) => !i.opt && allergensOf(i.n).some((a) => avoid.has(a))).map((i) => i.n);
+    out.ok = !out.stuck.length;
+  }
+  return (r._ad = out);
+}
+const ingsOf = (r) => adapt(r).ings;
+// Para la lista de la compra, sin la explicación entre paréntesis: «Tamari (salsa de soja sin gluten)» → «Tamari».
+const shopName = (n) => n.replace(/\s*\(.*\)\s*$/, "");
 function allowed(r) {
   const d = diet();
   if (d.tipo === "vegana" && !r.tags.includes("Vegana")) return false;
   if (d.tipo === "vegetariana" && !r.filters.includes("Vegetariana")) return false;
-  return !r.lleva.some((a) => d.evita.includes(a));
+  return adapt(r).ok;
 }
+const algName = (k) => ALLER.get(k)[2].replace(" (alergia)", "").toLowerCase();
 const dietLabel = () => {
-  const d = diet(), bits = [d.tipo && cap(d.tipo), ...d.evita.map((a) => `sin ${ALLER.get(a)[2].toLowerCase()}`)].filter(Boolean);
-  return bits.length ? bits.join(", ") : "Sin filtros";
+  const d = diet(), bits = [d.tipo && cap(d.tipo), ...d.evita.map((a) => `sin ${algName(a)}`)].filter(Boolean);
+  return bits.length ? bits.join(", ") : "Ninguna";
 };
+const shortDiet = () => { const d = diet(), n = d.evita.length + (d.tipo ? 1 : 0); return !n ? "Marcar" : n <= 2 ? dietLabel() : `${n} marcadas`; };
 function showDiet() {
   keepScroll();
   setView("diet");
-  A.setTitle("Dieta y alergias", true);
+  A.setTitle("Alergias y dieta", true);
   const d = diet();
+  d.asked = true; A.save();
+  const ALG = ALLERGENS.filter(([k]) => k !== "cerdo");
+  const btn = ([k, e, t, x]) => `<button type="button" class="dbtn" data-evita="${k}" aria-pressed="${d.evita.includes(k)}"><span aria-hidden="true">${e}</span>${A.esc(t)}<small>${A.esc(x)}</small></button>`;
   A.body().innerHTML = `
     <button type="button" class="back" id="cback">‹ Recetas</button>
-    <div class="plan">
-      <p class="note">Las recetas que no encajen dejan de salir en la lista de recetas y en las ideas. Se mira por los ingredientes: revisa siempre las etiquetas.</p>
+    <div class="plan diet">
+      <h3 class="cgroup">¿Qué no puedes tomar? <span>toca para marcar</span></h3>
+      <div class="dgrid" id="devita">${ALG.map(btn).join("")}</div>
+      <h3 class="cgroup">Si una receta lo lleva</h3>
+      <div class="seg" id="dmodo" role="group" aria-label="Qué hacer con las recetas que lo llevan">
+        <button type="button" data-modo="adaptar" aria-pressed="${d.modo === "adaptar"}">🔄 Adáptala</button>
+        <button type="button" data-modo="ocultar" aria-pressed="${d.modo === "ocultar"}">🙈 No me la enseñes</button></div>
+      <p class="note" id="dmodonote"></p>
       <h3 class="cgroup">Tu dieta</h3>
       <div class="dgrid" id="dtipo">${[["", "🍽️", "Como de todo"], ["vegetariana", "🥕", "Vegetariana"], ["vegana", "🌱", "Vegana"]].map(([v, e, t]) =>
-        `<button type="button" class="dbtn" data-tipo="${v}" aria-pressed="${d.tipo === v}"><span aria-hidden="true">${e}</span>${t}</button>`).join("")}</div>
-      <h3 class="cgroup">No quiero recetas con</h3>
-      <div class="dgrid" id="devita">${ALLERGENS.map(([k, e, t]) =>
-        `<button type="button" class="dbtn" data-evita="${k}" aria-pressed="${d.evita.includes(k)}"><span aria-hidden="true">${e}</span>${t}</button>`).join("")}</div>
+        `<button type="button" class="dbtn" data-tipo="${v}" aria-pressed="${d.tipo === v}"><span aria-hidden="true">${e}</span>${t}</button>`).join("")}
+        <span class="dsep"></span>${btn(ALLER.get("cerdo"))}</div>
+      <p class="note">Se mira por los ingredientes de cada receta y por la etiqueta de los productos cuando el súper la publica. Es una ayuda: revisa siempre el envase.</p>
     </div>
     <div class="bfoot"><span id="dcount"></span><button class="btn" type="button" id="ddone">Ver recetas</button></div>`;
-  const count = () => { const n = recipes.filter(allowed).length; $$("dcount").textContent = `${n} de ${recipes.length} recetas encajan`; };
+  const count = () => {
+    A.render();
+    let same = 0, ad = 0;
+    for (const r of recipes) if (allowed(r)) adapt(r).changes.length ? ad++ : same++;
+    const hid = recipes.length - same - ad;
+    $$("dcount").innerHTML = `<b>${same + ad}</b> de ${recipes.length} recetas para ti${ad ? ` · ${ad} adaptadas` : ""}${hid ? ` · ${hid} ocultas` : ""}`;
+    $$("dmodonote").textContent = d.modo === "adaptar"
+      ? "Cambio los ingredientes por otros que sí puedes tomar (por ejemplo, leche sin lactosa o pan sin gluten). Si no hay cambio posible, la receta no sale."
+      : "Las recetas que lo lleven no saldrán en Recetas, en los menús ni en «¿Qué cocino hoy?».";
+  };
   count();
   $$("dtipo").onclick = (e) => {
+    const c = e.target.closest("[data-evita]");
+    if (c) return toggle(c);
     const b = e.target.closest("[data-tipo]"); if (!b) return;
     d.tipo = b.dataset.tipo;
-    for (const c of $$("dtipo").children) c.setAttribute("aria-pressed", String(c === b));
+    for (const x of $$("dtipo").querySelectorAll("[data-tipo]")) x.setAttribute("aria-pressed", String(x === b));
     A.buzz(); A.save(); count();
   };
-  $$("devita").onclick = (e) => {
-    const b = e.target.closest("[data-evita]"); if (!b) return;
+  const toggle = (b) => {
     const k = b.dataset.evita, i = d.evita.indexOf(k);
     if (i >= 0) d.evita.splice(i, 1); else d.evita.push(k);
     b.setAttribute("aria-pressed", String(i < 0));
+    A.buzz(); A.save(); count();
+  };
+  $$("devita").onclick = (e) => { const b = e.target.closest("[data-evita]"); if (b) toggle(b); };
+  $$("dmodo").onclick = (e) => {
+    const b = e.target.closest("[data-modo]"); if (!b) return;
+    d.modo = b.dataset.modo;
+    for (const c of $$("dmodo").children) c.setAttribute("aria-pressed", String(c === b));
     A.buzz(); A.save(); count();
   };
   $$("cback").onclick = () => cookBack();
@@ -203,7 +245,7 @@ const has = (k) => k in pantry();
 const inList = (k) => A.list().items.some((i) => !i.done && key(i.label) === k);
 
 function check(r) {
-  const need = r.ings.filter((i) => !i.opt);
+  const need = ingsOf(r).filter((i) => !i.opt);
   const missing = need.filter((i) => !has(i.k));
   return { need, missing, have: need.length - missing.length };
 }
@@ -222,6 +264,7 @@ export async function openRecipes(id, moment, view) {
   ui.from = null; ui.pickDay = null;
   if (moment && (MOMENT.has(moment) || moment === ALL) && moment !== ui.moment) { ui.moment = moment; ui.tag = "Todas"; ui.scroll = 0; }
   if (view === "plan") return showPlan();
+  if (view === "diet") return showDiet();
   if (view === "pantry") return showPantry();
   if (view === "tengo") { ui.mode = "tengo"; ui.q = ""; return showList(); }
   if (view?.startsWith("use:")) { ui.q = view.slice(4); ui.mode = "todas"; ui.moment = ALL; ui.tag = "Todas"; return showList(); }
@@ -295,7 +338,10 @@ function showList(restore = false) {
     ${ui.pickDay ? `<div class="pickbar"><span>📅 Toca una receta para el menú <b>${A.esc(delDay(ui.pickDay))}</b></span><button type="button" class="lnk" id="cpickx">Cancelar</button></div>`
     : `<div class="cbtns"><button type="button" class="pantry-btn" id="cpantry"><span>🏠 En casa</span><b>${plural(n, "ingrediente", "ingredientes")}</b></button>
       <button type="button" class="pantry-btn" id="cplan"><span>📅 Menú</span><b>${np ? plural(np, "receta", "recetas") : "Planificar"}</b></button>
-      <button type="button" class="pantry-btn" id="cdiet"><span>🥗 Dieta</span><b>${A.esc(dietLabel())}</b></button></div>`}
+      <button type="button" class="pantry-btn${diet().evita.length || diet().tipo ? " on" : ""}" id="cdiet"><span>🛡️ Alergias</span><b>${A.esc(shortDiet())}</b></button></div>
+      ${diet().asked || diet().evita.length || diet().tipo ? "" : `<div class="dask" id="dask"><span aria-hidden="true">🛡️</span><span><b>¿Tienes alguna alergia o intolerancia?</b>
+        Márcala y adapto las recetas: gluten, lactosa, huevo, frutos secos, marisco…</span>
+        <span class="dask-b"><button type="button" class="btn small" data-diet>Marcar</button><button type="button" class="btn ghost small" id="dno">No tengo</button></span></div>`}`}
     <div class="srow"><label class="vh" for="cq">Buscar receta o ingrediente</label>
     <input id="cq" class="bsearch" type="search" placeholder="Busca una receta o un ingrediente…" value="${A.esc(ui.q)}" enterkeyhint="search" autocomplete="off">
     <button type="button" class="round" id="cnew" title="Crear o pegar tu propia receta" aria-label="Crear tu receta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
@@ -327,7 +373,13 @@ function showList(restore = false) {
   let tmo;
   $$("cq").oninput = (e) => { clearTimeout(tmo); tmo = setTimeout(() => { ui.q = e.target.value.trim(); fillList(); }, 160); };
   if (ui.pickDay) $$("cpickx").onclick = showPlan;
-  else { $$("cpantry").onclick = showPantry; $$("cplan").onclick = showPlan; $$("cdiet").onclick = showDiet; }
+  else {
+    $$("cpantry").onclick = showPantry; $$("cplan").onclick = showPlan; $$("cdiet").onclick = showDiet;
+    $$("dask")?.addEventListener("click", (e) => {
+      if (e.target.closest("[data-diet]")) return showDiet();
+      if (e.target.closest("#dno")) { diet().asked = true; A.save(); $$("dask").remove(); A.setStatus("Vale. Si algún día lo necesitas, está en 🛡️ Alergias."); }
+    });
+  }
   $$("cnew").onclick = () => showEdit(null);
   $$("clist").onclick = (e) => {
     const h = e.target.closest("[data-fav-r]");
@@ -371,12 +423,19 @@ function toggleFav(r) {
   return k < 0;
 }
 const heart = (r) => `<button type="button" class="rfav" data-fav-r="${r.id}" aria-pressed="${isFav(r)}" aria-label="${isFav(r) ? "Quitar de" : "Guardar en"} favoritas">${isFav(r) ? "❤️" : "🤍"}</button>`;
+// Etiqueta de la tarjeta: «Adaptada: sin gluten» o, si se ve igual (tus recetas), un aviso.
+function adaptTag(r) {
+  const a = adapt(r);
+  if (!a.ok) return `<span class="radapt bad">⚠️ Lleva ${A.esc([...new Set(r.lleva.filter((k) => avoidSet(diet().evita).has(k)).map(algName))].join(", ") || a.stuck.join(", "))}</span>`;
+  if (!a.changes.length) return "";
+  return `<span class="radapt">🔄 Adaptada: sin ${A.esc([...new Set(a.changes.flatMap((c) => c.why))].map(algName).join(", sin "))}</span>`;
+}
 function card(r, c) {
   const miss = c.missing.map((i) => i.n);
   const line = !miss.length ? `<span class="rh ok">✓ Tienes todo lo necesario</span>`
     : `<span class="rh">${miss.length === 1 ? "Te falta" : `Te faltan ${miss.length}`}: ${A.esc(miss.slice(0, 4).join(", "))}${miss.length > 4 ? "…" : ""}</span>`;
   return `<div class="rcw"><button type="button" class="rc" data-r="${r.id}">${pic(r)}
-    <span class="ri"><span class="rn">${A.esc(r.n)}</span><span class="rm">${A.esc(meta(r))}${r.nut ? ` · ${kcal(r.nut.kcal)}` : ""}</span>${line}</span></button>${heart(r)}</div>`;
+    <span class="ri"><span class="rn">${A.esc(r.n)}</span><span class="rm">${A.esc(meta(r))}${r.nut ? ` · ${kcal(r.nut.kcal)}` : ""}</span>${adaptTag(r)}${line}</span></button>${heart(r)}</div>`;
 }
 
 function fillList() {
@@ -386,7 +445,7 @@ function fillList() {
     && qt.every((w) => [...r.toks].some((t) => t.startsWith(w))));
   const hidden = rs.filter((r) => !allowed(r) && !r.mine).length;
   rs = rs.filter((r) => allowed(r) || r.mine);
-  const hideNote = hidden ? `<button type="button" class="dnote" data-diet>🥗 ${plural(hidden, "receta oculta", "recetas ocultas")} por tu dieta (${A.esc(dietLabel())}) · Cambiar</button>` : "";
+  const hideNote = hidden ? `<button type="button" class="dnote" data-diet>🛡️ ${plural(hidden, "receta oculta", "recetas ocultas")} porque llevan algo que no tomas (${A.esc(dietLabel().toLowerCase())}) · Cambiar</button>` : "";
   const rows = rs.map((r) => ({ r, c: check(r) }));
   const el = $$("clist");
   if (ui.mode === "todas" && ui.tag === "Del mundo" && !qt.length) {
@@ -421,7 +480,7 @@ function fillList() {
   }
   // «Con lo que tengo»: primero lo que puedes hacer ya, luego lo que necesita 1, 2 o 3 cosas más.
   const staples = new Set(STAPLES.map(key));
-  const usable = ({ r, c }) => c.missing.length <= 3 && r.ings.some((i) => !i.opt && !staples.has(i.k) && has(i.k));
+  const usable = ({ r, c }) => c.missing.length <= 3 && ingsOf(r).some((i) => !i.opt && !staples.has(i.k) && has(i.k));
   const useful = rows.filter(usable);
   if (!useful.length && recipes.some((r) => usable({ r, c: check(r) }))) {
     const mo = ui.moment === ALL ? "" : ` ${MOMENT.get(ui.moment)[2].toLowerCase()}`;
@@ -498,13 +557,21 @@ function showRecipe(id) {
   A.setTitle(r.n, true);
   const c = check(r), sv = servOf(r), f = sv / r.r;
   const toAdd = c.missing.filter((i) => !inList(i.k));
-  const ings = r.ings.map((i) => {
+  const ad = adapt(r), avoid = avoidSet(diet().evita);
+  const ings = ingsOf(r).map((i) => {
+    if (i.gone) return `<li><div class="ing gone"><span class="ie" aria-hidden="true">🚫</span>
+      <span class="inm"><s>${A.esc(i.from)}</s><small>Quítalo: lleva ${A.esc(i.why.map(algName).join(" y "))}</small></span></div></li>`;
     const st = has(i.k) ? "have" : inList(i.k) ? "list" : i.opt ? "optional" : "miss";
     const label = { have: "En casa", list: "En la lista", optional: "Opcional", miss: "Falta" }[st];
-    return `<li><button type="button" class="ing ${st}" data-ing="${A.esc(i.k)}" data-n="${A.esc(i.n)}" aria-pressed="${st === "have"}">
+    const bad = !i.from && allergensOf(i.n).filter((a) => avoid.has(a));
+    return `<li><button type="button" class="ing ${st}${i.from ? " swapped" : ""}${bad?.length ? " risky" : ""}" data-ing="${A.esc(i.k)}" data-n="${A.esc(i.n)}" aria-pressed="${st === "have"}">
       <span class="ic" aria-hidden="true">${A.CHECK_SVG}</span><span class="ie" aria-hidden="true">${A.esc(guess(i.n).emoji)}</span>
-      <span class="inm">${A.esc(i.n)}<small>${A.esc(scaleQty(i.q, f) || "")}</small></span><span class="ist">${label}</span></button></li>`;
+      <span class="inm">${A.esc(i.n)}<small>${i.from ? `🔄 en vez de ${A.esc(i.from)} · ` : bad?.length ? `⚠️ lleva ${A.esc(bad.map(algName).join(" y "))} · ` : ""}${A.esc(scaleQty(i.q, f) || "")}</small></span><span class="ist">${label}</span></button></li>`;
   }).join("");
+  const adaptBox = !avoid.size ? "" : !ad.ok
+    ? `<div class="adbox bad"><b>⚠️ Ojo: esta receta lleva ${A.esc(ad.stuck.join(", "))}</b><span>No tiene un cambio fácil para lo que has marcado (${A.esc(dietLabel().toLowerCase())}).</span></div>`
+    : ad.changes.length ? `<div class="adbox"><b>🔄 Adaptada para ti</b><span>${ad.changes.map((c) => c.to ? `${A.esc(c.from)} → <b>${A.esc(c.to)}</b>` : `sin ${A.esc(c.from.toLowerCase())}`).join(" · ")}</span>
+      <small>En los pasos, donde ponga el ingrediente de antes usa el nuevo.</small></div>` : "";
   const btn = !c.missing.length ? `<p class="ready">🎉 Tienes todo para hacerla.</p>`
     : toAdd.length ? `<button class="btn" type="button" id="cadd">Apuntar lo que falta (${toAdd.length})</button>`
     : `<p class="ready">Ya tienes en la lista todo lo que falta.</p>`;
@@ -516,7 +583,7 @@ function showRecipe(id) {
       <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>${heart(r)}`}
         <div><p class="rm">${A.esc(meta(r, sv))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p>
           ${r.nut ? `<p class="rnut"><b>≈ ${kcal(r.nut.kcal)}</b> por ración · ${r.nut.p} g proteína · ${r.nut.h} g hidratos · ${r.nut.g} g grasa</p>` : ""}
-          ${r.lleva.length ? `<p class="rlleva${r.lleva.some((a) => diet().evita.includes(a)) ? " warn" : ""}">Lleva: ${r.lleva.map((a) => `${ALLER.get(a)[1]} ${ALLER.get(a)[2].toLowerCase()}`).join(" · ")}</p>` : ""}
+          ${r.lleva.length ? `<p class="rlleva">Lleva${ad.changes.length ? " (la original)" : ""}: ${r.lleva.filter((a) => a !== "leche").map((a) => `${ALLER.get(a)[1]} ${algName(a)}`).join(" · ")}</p>` : ""}
           ${r.m ? `<p class="rmo">${Object.keys(r.m).filter((m) => MOMENT.has(m)).map((m) => `<button type="button" class="mo-tag" data-go-moment="${m}">${MOMENT.get(m)[1]} ${m}</button>`).join("")}</p>` : ""}</div></div>
       <div class="rtools">
         <div class="serv" role="group" aria-label="Raciones"><span>Raciones</span>
@@ -528,6 +595,7 @@ function showRecipe(id) {
         <button type="button" class="btn danger small" id="cdel">Borrar</button></div>` : ""}
       <div class="pdays" id="pdays" hidden><span>¿Qué día la haces?</span><div>${days.map((d) =>
         `<button type="button" class="chip" data-day="${d}" aria-pressed="${inPlan.has(d)}">${A.esc(dayShort(d))}</button>`).join("")}</div></div>
+      ${adaptBox}
       <h3 class="cgroup">Ingredientes <span>toca para marcar lo que tienes</span></h3>
       <ul class="ings">${ings}</ul>
       <div class="row">${btn}</div>
@@ -579,7 +647,7 @@ function showRecipe(id) {
   const add = $$("cadd");
   if (add) add.onclick = async () => {
     add.disabled = true;
-    for (const i of toAdd) await A.addItem({ query: i.n });
+    for (const i of toAdd) await A.addItem({ query: shopName(i.n) });
     A.save(); A.render(); A.buzz(20);
     A.setStatus(`Apuntado para ${r.n}: ${toAdd.map((i) => i.n).join(", ")}.`);
     showRecipe(id);
@@ -653,7 +721,7 @@ function showCook(id, step) {
       <p class="cook-t">${A.esc(s)}</p>
       ${tms.length ? `<div class="cook-tm">${tms.map((t) => `<button type="button" class="btn ghost" data-timer="${t}">⏱ Temporizador ${fmtDur(t)}</button>`).join("")}</div>` : ""}
       <details class="cook-ings"${ui.step === 0 ? " open" : ""}><summary>Ingredientes para ${plural(sv, "ración", "raciones")}</summary>
-        <ul>${r.ings.map((i) => `<li><span>${A.esc(i.n)}</span><small>${A.esc(scaleQty(i.q, f) || "")}</small></li>`).join("")}</ul></details>
+        <ul>${ingsOf(r).filter((i) => !i.gone).map((i) => `<li><span>${A.esc(i.n)}${i.from ? ` <em>(en vez de ${A.esc(i.from.toLowerCase())})</em>` : ""}</span><small>${A.esc(scaleQty(i.q, f) || "")}</small></li>`).join("")}</ul></details>
     </div>
     <div class="bfoot"><button type="button" class="btn ghost" id="cprev"${ui.step ? "" : " disabled"}>‹ Anterior</button>
       <button type="button" class="btn" id="cnext">${last ? "Terminar 🎉" : "Siguiente ›"}</button></div>`;
@@ -848,7 +916,7 @@ function showPlan() {
           const r = by.get(e.n); if (!r) return "";
           const m = check(r).missing.length;
           return `<div class="pent"><button type="button" class="rc" data-open="${k}">${pic(r)}<span class="ri">${e.m ? `<span class="pslot">${A.esc(e.m)}</span>` : ""}<span class="rn">${A.esc(r.n)}</span>
-            <span class="rm">${A.esc(`${mins(r.t)} · ${plural(e.s, "ración", "raciones")}`)}</span>
+            <span class="rm">${A.esc(`${mins(r.t)} · ${plural(e.s, "ración", "raciones")}`)}</span>${adaptTag(r)}
             <span class="rh${m ? "" : " ok"}">${m ? `Te ${m === 1 ? "falta 1 ingrediente" : `faltan ${m} ingredientes`}` : "✓ Tienes todo"}</span></span></button>
             <button type="button" class="pdel" data-del="${k}" aria-label="Quitar ${A.esc(r.n)} del menú">×</button></div>`;
         }).join("")}
@@ -872,7 +940,7 @@ function showPlan() {
   const pm = $$("pmiss");
   if (pm) pm.onclick = async () => {
     pm.disabled = true;
-    for (const n of miss) await A.addItem({ query: n });
+    for (const n of miss) await A.addItem({ query: shopName(n) });
     A.save(); A.render(); A.buzz(20);
     A.setStatus(`Apuntado para el menú: ${miss.join(", ")}.`);
     showPlan();
@@ -961,12 +1029,12 @@ function showGen() {
       <div class="ghero" style="--h:${t.h}"><span class="mt-e" aria-hidden="true">${t.e}</span><div><b>${A.esc(t.n)}</b><small>${A.esc(t.d)}</small></div></div>
       <div class="gopts"><div class="seg" role="group" aria-label="Para cuándo">${seg}</div>
         <div class="gslots" role="group" aria-label="Qué comidas">${SLOTS.map((s) => `<button type="button" class="chip" data-gslot="${s}" aria-pressed="${g.slots.includes(s)}">${s}</button>`).join("")}</div></div>
-      ${diet().tipo || diet().evita.length ? `<p class="note">Respeta tu dieta: ${A.esc(dietLabel().toLowerCase())}.</p>` : ""}
+      ${diet().tipo || diet().evita.length ? `<p class="note">🛡️ Respeta lo que has marcado: ${A.esc(dietLabel().toLowerCase())}.</p>` : ""}
       ${g.menu.map((d, di) => {
         const dk = d.meals.reduce((n, m) => n + kc(m.r ?? {}), 0), dp = d.meals.reduce((n, m) => n + pr(m.r ?? {}), 0);
         return `<section class="pday"><h4 class="pday-h">${A.esc(cap(dayName(d.d)))}${dk ? ` <span>${kcal(dk)} · ${dp} g proteína</span>` : ""}</h4>
         ${d.meals.map((m, mi) => m.r ? `<div class="pent"><button type="button" class="rc" data-gopen="${m.r.id}">${pic(m.r)}<span class="ri"><span class="pslot">${A.esc(m.s)}</span><span class="rn">${A.esc(m.r.n)}</span>
-            <span class="rm">${A.esc(`${mins(m.r.t)}${m.r.nut ? ` · ${kcal(m.r.nut.kcal)} · ${m.r.nut.p} g proteína` : ""}`)}</span></span></button>
+            <span class="rm">${A.esc(`${mins(m.r.t)}${m.r.nut ? ` · ${kcal(m.r.nut.kcal)} · ${m.r.nut.p} g proteína` : ""}`)}</span>${adaptTag(m.r)}</span></button>
             <button type="button" class="pdel pswap" data-gswap="${di}.${mi}" aria-label="Cambiar ${A.esc(m.r.n)} por otra receta" title="Cambiar por otra">↻</button></div>`
           : `<p class="note">No hay recetas de ${A.esc(m.s.toLowerCase())} de este tipo${diet().evita.length || diet().tipo ? " con tu dieta" : ""}.</p>`).join("")}</section>`; }).join("")}
       <p class="note gfoot">Calorías por persona, aproximadas. Es una orientación, no sustituye el consejo de un profesional.</p>
