@@ -9,6 +9,7 @@ const cfg = () => {
   return SUPABASE?.url && SUPABASE?.key ? SUPABASE : null;
 };
 export const syncReady = () => !!cfg();
+export { cfg as supaCfg, SDK }; // también lo usa la comunidad (js/comunidad.js)
 
 async function rpc(fn, args) {
   const c = cfg();
