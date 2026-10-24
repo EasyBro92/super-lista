@@ -302,7 +302,7 @@ function renderSummary() {
   const priced = left.filter((i) => itemPrice(i) != null);
   const total = priced.reduce((s, i) => s + itemPrice(i), 0);
   const pct = Math.round((inCart / l.items.length) * 100);
-  const view = st.view ?? "grid";
+  const view = st.view ?? "list";
   el.innerHTML = `<div class="sum-top">
       <div class="sum-ring" style="--p:${pct}" role="img" aria-label="${inCart} de ${l.items.length} en el carro"><span>${inCart}/${l.items.length}</span></div>
       <div class="sum-txt"><b>${left.length ? `${left.length} por comprar` : "¡Todo en el carro!"}</b>
@@ -445,7 +445,7 @@ function render() {
       <button class="btn" type="button" data-browse>Ver productos</button></div>`;
     return;
   }
-  const grid = (st.view ?? "grid") === "grid";
+  const grid = (st.view ?? "list") === "grid";
   el.classList.toggle("grid", grid);
   const by = {};
   const left = l.items.filter((i) => !i.done), cart = l.items.filter((i) => i.done);
@@ -1377,7 +1377,7 @@ $("summary").addEventListener("click", (e) => {
   if (e.target.closest("[data-aisles]")) return openAisles();
   const sc = e.target.closest("[data-showcard]"); if (sc) return showCard(+sc.dataset.showcard);
   const v = e.target.closest("[data-view]");
-  if (v && v.dataset.view !== (st.view ?? "grid")) { st.view = v.dataset.view; persist(); render(); buzz(); }
+  if (v && v.dataset.view !== (st.view ?? "list")) { st.view = v.dataset.view; persist(); render(); buzz(); }
 });
 $("list").addEventListener("keydown", (e) => {
   const li = e.target.closest?.("li.gt"); if (!li || (e.key !== "Enter" && e.key !== " ")) return;
