@@ -1032,3 +1032,15 @@ html{overscroll-behavior-y:contain}
 @media (prefers-color-scheme: dark){.oauth-apple{background:#fff;color:#000;border-color:#fff}}
 .oauth-or{display:flex;align-items:center;gap:10px;margin:4px 0 0;font-size:.8rem;color:var(--muted)}
 .oauth-or::before,.oauth-or::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* Recetas: la cabecera se encoge al bajar y vuelve al subir */
+.sheet.cooking #sheetBody>.cwrap{flex:1;min-height:0;position:relative;overflow:hidden;margin-inline:-16px}
+.cwrap>.clist{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:0 16px 16px}
+.chead{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;flex-direction:column;gap:10px;padding:0 16px 10px;background:var(--surface);will-change:transform;
+  transition:box-shadow .25s ease}
+.chead>*{flex:none}
+.chead-top{display:flex;flex-direction:column;gap:10px;transform-origin:50% 100%;will-change:transform,opacity}
+.chead.lifted{box-shadow:0 6px 14px -8px rgb(0 0 0 / .18)}
+.chead.snap{transition:transform .36s cubic-bezier(.32,.72,0,1),box-shadow .25s ease}
+.chead.snap .chead-top{transition:transform .36s cubic-bezier(.32,.72,0,1),opacity .3s ease}
+@media (prefers-reduced-motion:reduce){.chead.snap,.chead.snap .chead-top{transition:none}}

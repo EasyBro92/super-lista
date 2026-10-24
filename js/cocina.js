@@ -88,6 +88,47 @@ function setView(v) {
   if (v === "cook") lockScreen(); else { screenLock?.release?.().catch(() => {}); screenLock = null; }
 }
 let screenLock = null;
+
+// Cabecera de recetas que se encoge al bajar, como las barras del iPhone: sigue al dedo,
+// al soltar se queda abierta o cerrada del todo, y vuelve en cuanto subes un poco.
+let headObs = null;
+function shrinkHead() {
+  headObs?.disconnect();
+  const head = $$("chead"), top = $$("cheadTop"), l = $$("clist");
+  if (!head || !top || !l) return;
+  let H = 0, p = 0, last = 0, tEnd = 0, tSnap = 0;
+  const paint = (y) => {
+    const k = H ? p / H : 0;
+    head.style.transform = `translate3d(0,${-p}px,0)`;
+    // Al estirar hacia abajo arriba del todo, la cabecera se estira un poco, como en iOS.
+    const pull = y < 0 ? Math.min(-y, 120) / 900 : 0;
+    top.style.transform = `scale(${1 - 0.08 * k + pull})`;
+    top.style.opacity = String(Math.max(0, 1 - k * 1.25));
+    top.style.pointerEvents = k > 0.5 ? "none" : "";
+    head.classList.toggle("lifted", y > 4);
+  };
+  const measure = () => {
+    H = top.offsetHeight + parseFloat(getComputedStyle(head).rowGap || 0);
+    l.style.paddingTop = `${head.offsetHeight}px`;
+    p = Math.min(p, H); paint(l.scrollTop);
+  };
+  const snap = () => {
+    const y = l.scrollTop;
+    if (y < H || p === 0 || p === H) return;
+    head.classList.add("snap");
+    p = p > H / 2 ? H : 0; paint(y);
+    clearTimeout(tSnap); tSnap = setTimeout(() => head.classList.remove("snap"), 380);
+  };
+  l.addEventListener("scroll", () => {
+    const raw = l.scrollTop, y = Math.max(0, raw);
+    head.classList.remove("snap");
+    p = Math.min(Math.max(0, p + y - last), H, y); last = y;
+    paint(raw);
+    clearTimeout(tEnd); tEnd = setTimeout(snap, 140);
+  }, { passive: true });
+  headObs = new ResizeObserver(measure); headObs.observe(head);
+  measure();
+}
 async function lockScreen() {
   if (screenLock || !("wakeLock" in navigator) || document.visibilityState !== "visible") return;
   try { screenLock = await navigator.wakeLock.request("screen"); screenLock.addEventListener("release", () => { screenLock = null; }); } catch {}
@@ -336,7 +377,7 @@ function showList(restore = false) {
   const n = Object.keys(pantry()).length, np = plan().length;
   const tabs = [...MOMENTS, [ALL, "📖"]].map(([mo, emo]) => `<button type="button" data-moment="${mo}" aria-pressed="${mo === ui.moment}">
       <span class="mo-e" aria-hidden="true">${emo}</span><span class="mo-n">${mo}</span></button>`).join("");
-  A.body().innerHTML = `
+  A.body().innerHTML = `<div class="cwrap"><div class="chead" id="chead"><div class="chead-top" id="cheadTop">
     <div class="moments" id="cmoment" role="group" aria-label="Momento del día">${tabs}</div>
     <div class="seg" id="cmode" role="group" aria-label="Qué recetas ver">
       <button type="button" data-mode="tengo" aria-pressed="${ui.mode === "tengo"}">Con lo que tengo</button>
@@ -350,12 +391,14 @@ function showList(restore = false) {
         Márcala y adapto las recetas: gluten, lactosa, huevo, frutos secos, marisco…</span>
         <span class="dask-b"><button type="button" class="btn small" data-diet>Marcar</button><button type="button" class="btn ghost small" id="dno">No tengo</button></span></div>`}
       ${comReady() ? `<button type="button" class="pantry-btn com-go" id="ccom"><span><b>👥 Comunidad</b><small>Recetas de la gente, estrellas y la charla</small></span><span class="lnk">›</span></button>` : ""}`}
+    </div>
     <div class="srow"><label class="vh" for="cq">Buscar receta o ingrediente</label>
     <input id="cq" class="bsearch" type="search" placeholder="Busca una receta o un ingrediente…" value="${A.esc(ui.q)}" enterkeyhint="search" autocomplete="off">
     <button type="button" class="round" id="cnew" title="Crear o pegar tu propia receta" aria-label="Crear tu receta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
-    <div class="btabs" id="ctags">${tagChips()}</div>
-    <div class="clist" id="clist"></div>`;
+    <div class="btabs" id="ctags">${tagChips()}</div></div>
+    <div class="clist" id="clist"></div></div>`;
   fillList();
+  shrinkHead();
   const on = $$("ctags").querySelector('[aria-pressed="true"]');
   if (on && on.dataset.tag !== "Todas") $$("ctags").scrollLeft = on.offsetLeft - $$("ctags").offsetLeft - 16;
   if (restore) { const l = $$("clist"), y = ui.scroll; l.scrollTop = y; requestAnimationFrame(() => { l.scrollTop = y; }); }
