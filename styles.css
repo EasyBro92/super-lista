@@ -417,6 +417,8 @@ body.shop .thumb .slogo{width:22px;height:22px}
 .sum-txt>b{font:800 1.1rem var(--display)}
 .sum-txt span{color:var(--muted);font-size:.84rem}
 .sum-eur{color:var(--fg);font-size:1rem}
+.seg.views button{display:flex;align-items:center;justify-content:center;gap:7px;font-size:.86rem}
+.seg.views svg{width:16px;height:16px;flex:none}
 .seg.mini{flex:none;display:flex;padding:2px;border-radius:10px}
 .seg.mini button{width:34px;height:30px;padding:0;display:grid;place-items:center;border-radius:8px}
 .seg.mini svg{width:16px;height:16px}
@@ -437,6 +439,11 @@ body.shop .thumb .slogo{width:22px;height:22px}
   transition:transform .12s,opacity .2s;outline-offset:2px}
 @media (prefers-color-scheme: dark){#list.grid li.gt{background:hsl(var(--h,90) 22% 17%)}}
 #list.grid li.gt:active{transform:scale(.95)}
+#list.grid li.gt{touch-action:pan-y}
+#list.grid li.gt.swiping{transition:none}
+.gt-del{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--danger);color:var(--danger-ink);font:800 .85rem var(--body);opacity:calc(var(--k,0) * .9);pointer-events:none;transition:opacity .15s}
+.gt-del svg{width:26px;height:26px;transform:scale(calc(.7 + var(--k,0) * .3))}
+li.gt.armed .gt-del{opacity:1}
 .gt-ph{position:relative;display:block;aspect-ratio:1;border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 1px 3px rgb(0 0 0 / .08)}
 .gt-ph .photo{position:absolute;inset:0}
 .gt-ph>.emo,.gt-ph .photo .emo{font-size:44px}
