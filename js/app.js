@@ -307,10 +307,10 @@ function renderSummary() {
       <div class="sum-ring" style="--p:${pct}" role="img" aria-label="${inCart} de ${l.items.length} en el carro"><span>${inCart}/${l.items.length}</span></div>
       <div class="sum-txt"><b>${left.length ? `${left.length} por comprar` : "¡Todo en el carro!"}</b>
         <span>${priced.length ? `Total aprox. <b class="sum-eur">${eur(total)}</b>${left.length > priced.length ? ` · ${left.length - priced.length} sin precio` : ""}` : inCart ? `${inCart} en el carro` : "Sin precios en este súper"}</span></div>
-      <div class="seg mini" role="group" aria-label="Cómo ver la lista">
-        <button type="button" data-view="grid" aria-pressed="${view === "grid"}" title="Cuadrícula con fotos"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></button>
-        <button type="button" data-view="list" aria-pressed="${view === "list"}" title="Lista"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
     </div>
+    <div class="seg views" role="group" aria-label="Cómo ver la lista">
+      <button type="button" data-view="grid" aria-pressed="${view === "grid"}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>En cuadros</button>
+      <button type="button" data-view="list" aria-pressed="${view === "list"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Uno debajo de otro</button></div>
     ${(() => { const k = (st.cards ?? []).findIndex((c) => c.store === l.store); return k < 0 ? "" : `<button type="button" class="sum-cmp card" data-showcard="${k}"><span aria-hidden="true">💳</span> Tarjeta ${esc(st.cards[k].name)} <b>Enseñar en caja ›</b></button>`; })()}
     ${left.length && pricedStores().length > 1 ? `<button type="button" class="sum-cmp" data-compare><span aria-hidden="true">⚖️</span> ¿Dónde sale más barata? <b>Comparar súpers ›</b></button>` : ""}
     ${budgetLine(total)}
@@ -460,7 +460,7 @@ function render() {
       <ul class="items">${by[c].sort((a, b) => a.added - b.added).map(one).join("")}</ul></section>`).join(""))
     + (cart.length ? `<section class="cat cart"><h2><span class="cat-ic" aria-hidden="true">✅</span>En el carro<span class="cat-n">${cart.length}</span></h2>
       <ul class="items">${cart.sort((a, b) => a.added - b.added).map(one).join("")}</ul></section>` : "")
-    + (st.gestured ? "" : `<p class="hint">${grid ? "Consejo: toca un producto para meterlo en el carro y mantenlo pulsado para cambiarlo, editarlo o borrarlo."
+    + (st.gestured ? "" : `<p class="hint">${grid ? "Consejo: toca un producto para meterlo en el carro, deslízalo a la izquierda para quitarlo o mantenlo pulsado para cambiarlo o editarlo."
       : "Consejo: desliza un producto a la izquierda para borrarlo, a la derecha para marcarlo como comprado, o mantenlo pulsado para ver más opciones."}</p>`);
   fresh.clear();
 }
@@ -494,7 +494,7 @@ function tileHTML(it, l) {
   const q = it.qty && it.qty !== "1" ? it.qty : it.count > 1 ? `×${it.count}` : "";
   return `<li class="item gt${it.done ? " done" : ""}${fresh.has(it.id) ? " fresh" : ""}${incoming.has(it.id) ? " incoming" : ""}" data-id="${it.id}"
       role="checkbox" aria-checked="${it.done}" aria-label="${esc(it.label)}${q ? `, ${esc(q)}` : ""}" tabindex="0">
-    <span class="gt-ph">${thumbHTML(p, it.emoji)}${q ? `<span class="gt-q">${esc(q)}</span>` : ""}${badgeHTML(p)}<span class="gt-cat" aria-hidden="true">${(CAT_LOOK[CATS.includes(it.cat) ? it.cat : "Otros"] ?? CAT_LOOK.Otros)[0]}</span><span class="gt-ck" aria-hidden="true">${CHECK_SVG}</span></span>
+    <span class="gt-ph">${thumbHTML(p, it.emoji)}${q ? `<span class="gt-q">${esc(q)}</span>` : ""}${badgeHTML(p)}<span class="gt-cat" aria-hidden="true">${(CAT_LOOK[CATS.includes(it.cat) ? it.cat : "Otros"] ?? CAT_LOOK.Otros)[0]}</span><span class="gt-ck" aria-hidden="true">${CHECK_SVG}</span><span class="gt-del" aria-hidden="true">${TRASH_SVG}Quitar</span></span>
     <span class="gt-n">${esc(it.label)}</span>${algWarn(it)}
     <span class="gt-s">${esc(it.note || (p ? [p.f, l.store === "any" ? STORE_NAME[p.s] : ""].filter(Boolean).join(" · ") : ""))}</span>
     ${price != null ? `<span class="gt-p">${eur(price)}</span>` : ""}
@@ -1388,7 +1388,7 @@ $("list").addEventListener("keydown", (e) => {
 // Deslizar a la izquierda: borrar. A la derecha: marcar como comprado. Mantener pulsado: opciones.
 let suppressClickUntil = 0;
 let g = null;
-const SWIPE = 90;
+const SWIPE = 90, TILE_SWIPE = 60;
 $("list").addEventListener("pointerdown", (e) => {
   const row = e.target.closest(".row-in, li.gt"); if (!row || e.button > 0) return;
   const tile = row.classList.contains("gt"), li = tile ? row : row.parentElement;
@@ -1401,30 +1401,37 @@ $("list").addEventListener("pointerdown", (e) => {
 });
 $("list").addEventListener("pointermove", (e) => {
   if (!g || e.pointerId !== g.pid) return;
-  const dx = e.clientX - g.x, dy = e.clientY - g.y;
-  // En la cuadrícula no se desliza: moverse cancela el «mantener pulsado».
-  if (g.tile) { if (Math.hypot(dx, dy) > 10) { clearTimeout(g.timer); g = null; } return; }
+  let dx = e.clientX - g.x; const dy = e.clientY - g.y;
+  // En la cuadrícula solo se desliza a la izquierda, para quitar el producto.
+  if (!g.mode && g.tile && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) && dx > 0) { clearTimeout(g.timer); g = null; return; }
   if (!g.mode) {
     if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { clearTimeout(g.timer); g = null; return; }
-    if (Math.abs(dx) > 10) { g.mode = "swipe"; clearTimeout(g.timer); g.row.setPointerCapture?.(e.pointerId); g.li.classList.add("swiping"); }
+    if (Math.abs(dx) > 10) { g.mode = "swipe"; clearTimeout(g.timer); try { g.row.setPointerCapture?.(e.pointerId); } catch {} g.li.classList.add("swiping"); }
     else return;
   }
+  if (g.tile) dx = Math.min(dx, 0);
   g.dx = dx;
   g.row.style.transform = `translateX(${dx}px)`;
+  if (g.tile) g.row.style.setProperty("--k", Math.min(1, -dx / TILE_SWIPE));
   g.li.classList.toggle("to-del", dx < 0);
   g.li.classList.toggle("to-done", dx > 0);
-  const passed = Math.abs(dx) > SWIPE;
+  const passed = Math.abs(dx) > (g.tile ? TILE_SWIPE : SWIPE);
   if (passed !== g.passed) { g.passed = passed; g.li.classList.toggle("armed", passed); if (passed) buzz(); }
 });
 function endGesture(e) {
   if (!g || (e && e.pointerId !== g.pid)) return;
   clearTimeout(g.timer);
-  const { row, li, dx, mode, id } = g;
+  const { row, li, dx, mode, id, tile } = g;
   g = null;
   if (mode !== "swipe") return;
   st.gestured = true;
   suppressClickUntil = Date.now() + 400;
   li.classList.remove("swiping");
+  if (tile) {
+    if (dx < -TILE_SWIPE) { row.style.transform = "translateX(-130%)"; li.classList.add("leaving"); setTimeout(() => removeItem(id), 180); }
+    else { row.style.transform = ""; row.style.removeProperty("--k"); li.classList.remove("to-del", "to-done", "armed"); }
+    return;
+  }
   if (dx < -SWIPE) {
     row.style.transform = `translateX(-110%)`;
     li.classList.add("leaving");
