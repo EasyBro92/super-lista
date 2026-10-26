@@ -42,6 +42,16 @@ if (set.mailer_autoconfirm === true) {
     t("valorar una receta de la app", !v.error, JSON.stringify(v.error));
     const c = await sb.rpc("com_comentar", { p_hilo: `c:${rid.data}`, p_texto: "Comentario de prueba", p_foto: null });
     t("comentar", !c.error, JSON.stringify(c.error));
+    // Límite de 15 fotos por hora (supabase/comunidad.sql, com_puede_subir): la 16.ª no debe entrar.
+    const extra = [];
+    for (let k = 2; k <= 16; k++) {
+      const pk = `${uid}/limite${k}.png`;
+      const r = await sb.storage.from("fotos").upload(pk, png, { contentType: "image/png" });
+      if (r.error) break;
+      extra.push(pk);
+    }
+    w("límite de 15 fotos por hora activo", extra.length === 14, `(entraron ${extra.length + 1} fotos; ¿falta volver a ejecutar comunidad.sql?)`);
+    if (extra.length) await sb.storage.from("fotos").remove(extra);
     await sb.storage.from("fotos").remove([path]);
     const del = await sb.rpc("com_borrar_cuenta");
     t("borrar la cuenta de prueba (y todo lo suyo)", del.data === true, JSON.stringify(del.error));

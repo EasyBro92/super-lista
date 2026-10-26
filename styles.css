@@ -161,6 +161,9 @@ form.bar input:focus{outline:none}
 
 .toast{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--toast);color:var(--toast-ink);border-radius:14px;padding:10px 10px 10px 16px;font-size:.92rem;box-shadow:0 8px 24px rgb(0 0 0 / .18)}
 .toast button{border:0;background:none;color:var(--toast-ink);font:700 .92rem var(--body);text-decoration:underline;text-underline-offset:3px;padding:6px 8px;cursor:pointer}
+.full-warn{display:flex;align-items:center;gap:10px;border-radius:14px;padding:10px 10px 10px 14px;font-size:.9rem;line-height:1.35;background:var(--surface);color:var(--fg);box-shadow:0 0 0 2px var(--warn),0 8px 24px rgb(0 0 0 / .14)}
+.full-warn[hidden]{display:none}
+.full-warn .btn{flex:none;min-height:44px}
 .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:-6px auto 0}
 .sheet{transition:transform .2s ease}
 .sheet-head{touch-action:none}

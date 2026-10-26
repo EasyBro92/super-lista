@@ -150,7 +150,7 @@ async function upload(blob) {
   const c = await sb();
   const path = `${me.id}/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}.jpg`;
   const { error } = await c.storage.from("fotos").upload(path, blob, { contentType: "image/jpeg", upsert: false });
-  if (error) throw new ComError(/fetch|network/i.test(error.message ?? "") ? OFFLINE : "No he podido subir la foto. Prueba con otra más pequeña.");
+  if (error) throw new ComError(/fetch|network/i.test(error.message ?? "") ? OFFLINE : "No he podido subir la foto. Si has subido muchas seguidas, espera un rato y prueba otra vez.");
   return path;
 }
 async function dropFoto(p) { if (p) try { await (await sb()).storage.from("fotos").remove([p]); } catch {} }

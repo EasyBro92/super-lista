@@ -3,6 +3,7 @@ import { tokens, guess, norm } from "./parser.js";
 import { nutrition, NUT } from "./nutricion.js";
 import { ALLERGENS, ALLER, allergensOf, avoidSet, substitute } from "./alergias.js";
 import { mountSocial, openComunidad, comReady } from "./comunidad.js";
+import { ready as fotosReady, getFoto, allFotos, setFoto } from "./fotos.js";
 
 // Sección de cada ingrediente, para ordenar «Lo que tengo en casa» como en el súper.
 const SECTIONS = {
@@ -164,7 +165,7 @@ export async function homeInfo() {
 }
 function loadRecipes() {
   const get = (u, d) => fetch(u).then((r) => (r.ok ? r.json() : d)).catch(() => d);
-  loading ??= Promise.all([get("data/recetas.json", []), get("data/recetas-fotos.json", {})]).then(([rs, fotos]) => {
+  loading ??= Promise.all([get("data/recetas.json", []), get("data/recetas-fotos.json", {}), fotosReady]).then(([rs, fotos]) => {
     rs.forEach((r, idx) => { prep(r, idx); r.foto = fotos[r.n] ?? null; });
     homeFotos = Object.fromEntries(Object.entries(fotos).filter(([k]) => k.startsWith("Inicio ")).map(([k, v]) => [k.slice(7), v]));
     A.markGeneric(rs.flatMap((r) => r.i.map((x) => x[0])));
@@ -715,7 +716,7 @@ function dropShared() { if (recipes) for (let k = recipes.length - 1; k >= 0 && 
 export function comView(back) { setView("com"); ui.viewBack = back; }
 export function showRecipesList() { ui.viewBack = ui.comBack = null; showList(true); }
 export async function newRecipe() { await loadRecipes(); ui.editId = null; showEdit(null); }
-export const readPhoto = (uid) => readPhotos()[uid] ?? null;
+export const readPhoto = getFoto;
 export async function openShared(row, back) {
   await loadRecipes();
   const d = row.datos ?? {};
@@ -737,7 +738,7 @@ export function saveCopy(r) {
   if (A.st.myR.some((m) => m.from === r.com.id)) return false;
   const d = r.src, uid = Math.random().toString(36).slice(2, 10);
   A.st.myR.push({ uid, from: r.com.id, n: r.n, e: r.e, t: r.t, r: r.r, d: r.d, tags: ["Mis recetas", ...r.tags.filter((t) => t !== "Mis recetas")], m: r.m, i: r.i, p: r.p });
-  if (r.foto?.img) setPhoto(uid, r.foto.img);
+  if (r.foto?.img) setFoto(uid, r.foto.img);
   A.save(); addMine();
   // addMine deja solo las recetas de la app y las tuyas: la de la comunidad que estás viendo vuelve al final.
   r.id = ui.id = recipes.length; recipes.push(r);
@@ -835,14 +836,12 @@ function showCook(id, step) {
 
 // ---------- Mis recetas ----------
 // Se guardan en el móvil; la foto va aparte para no hacer pesado el guardado de la lista.
-const PHOTOS = "superlista.misfotos";
-const readPhotos = () => { try { return JSON.parse(localStorage.getItem(PHOTOS) || "{}"); } catch { return {}; } };
-function setPhoto(uid, url) { const f = readPhotos(); if (url) f[uid] = url; else delete f[uid]; try { localStorage.setItem(PHOTOS, JSON.stringify(f)); return true; } catch { return false; } }
-const delPhoto = (uid) => setPhoto(uid, null);
+// Las fotos de tus recetas están en js/fotos.js.
+const delPhoto = (uid) => setFoto(uid, null);
 function addMine() {
   if (!recipes) return;
   recipes.length = baseCount;
-  const fotos = readPhotos();
+  const fotos = allFotos();
   for (const m of A.st.myR ?? []) {
     const r = prep(structuredClone(m), recipes.length);
     r.mine = true; r.foto = fotos[m.uid] ? { img: fotos[m.uid] } : null;
@@ -932,7 +931,7 @@ function showEdit(id) {
     if (x.ings.length) $$("eings").value = x.ings.join("\n");
     if (x.steps.length) $$("esteps").value = x.steps.join("\n");
   };
-  $$("esave").onclick = () => {
+  $$("esave").onclick = async () => {
     const name = $$("ename").value.trim();
     const ings = $$("eings").value.split(/\n/).map(parseIng).filter(Boolean);
     const steps = $$("esteps").value.split(/\n/).map((x) => x.trim()).filter(Boolean);
@@ -947,9 +946,11 @@ function showEdit(id) {
     // Si el nombre cambia, el menú sigue apuntando a la receta.
     if (k >= 0 && A.st.myR[k].n !== name) for (const e of plan()) if (e.n === A.st.myR[k].n) e.n = name;
     if (k >= 0) A.st.myR[k] = rec; else A.st.myR.push(rec);
-    if (st.photo !== (r?.foto?.img ?? null) && !setPhoto(uid, st.photo)) A.setStatus("La receta se ha guardado, pero la foto no cabe en el móvil.", true);
-    A.save(); addMine(); A.buzz(20);
+    const photoDone = st.photo !== (r?.foto?.img ?? null) ? setFoto(uid, st.photo) : Promise.resolve(true);
+    A.save(); A.buzz(20);
     if (!r) A.setStatus(`📝 Receta guardada: ${name}.`);
+    await photoDone.then((ok) => { if (!ok) A.setStatus("La receta se ha guardado, pero la foto no cabe en el móvil.", true); });
+    addMine();
     showRecipe(recipes.findIndex((x) => x.uid === uid));
   };
 }

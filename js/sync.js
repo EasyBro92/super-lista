@@ -16,7 +16,13 @@ async function rpc(fn, args) {
   const h = { apikey: c.key, "Content-Type": "application/json" };
   if (c.key.startsWith("eyJ")) h.Authorization = `Bearer ${c.key}`; // clave «anon» antigua
   const r = await fetch(`${c.url.replace(/\/+$/, "")}/rest/v1/rpc/${fn}`, { method: "POST", headers: h, body: JSON.stringify(args) });
-  if (!r.ok) throw new Error(`${fn}: ${r.status}`);
+  if (!r.ok) {
+    // Los límites del servidor (lista muy grande, demasiadas listas nuevas…) llegan con un mensaje para enseñarlo tal cual.
+    const b = await r.json().catch(() => null);
+    const e = new Error(b?.code === "P0001" && b.message ? b.message : `${fn}: ${r.status}`);
+    e.limit = b?.code === "P0001";
+    throw e;
+  }
   return r.json();
 }
 
@@ -71,6 +77,8 @@ function apply(l, m) {
 
 // ---------- Subir y bajar ----------
 const waits = new Map(), busy = new Map();
+let limitMsg = null; // último aviso de los límites del servidor, para enseñarlo al compartir
+export const shareError = () => limitMsg;
 function later(id, ms = 400) { clearTimeout(waits.get(id)); waits.set(id, setTimeout(() => push(id), ms)); }
 async function push(id) {
   const l = A.st.lists.find((x) => x.id === id);
@@ -80,12 +88,15 @@ async function push(id) {
   try {
     for (let k = 0; k < 6; k++) {
       const res = await rpc("guardar_lista", { p_id: l.sid, p_datos: docOf(l), p_rev: l.rev ?? 0 });
-      if (res.ok) { l.rev = res.rev; l.pend = false; A.persist(); ping(l); break; }
+      if (res.ok) { l.rev = res.rev; l.pend = false; limitMsg = null; A.persist(); ping(l); break; }
       // Otro móvil guardó antes: se junta con lo suyo y se vuelve a intentar.
       apply(l, merge(l, res.datos ?? {})); l.rev = res.rev; A.persist(); A.render();
     }
     offline(false);
-  } catch { offline(true); later(id, 15000); }
+  } catch (e) {
+    if (e?.limit) { limitMsg = e.message; A.setStatus(e.message, true); later(id, 5 * 60000); } // no es la conexión: se reintenta más tarde
+    else { offline(true); later(id, 15000); }
+  }
   finally { const again = busy.get(id) === "again"; busy.delete(id); if (again) push(id); }
 }
 async function pull(l) {
@@ -141,6 +152,7 @@ export function syncCurrent() {
 export const shareURL = (l) => `${location.origin}${location.pathname}#unirse=${l.sid}`;
 export async function share(l) {
   const now = Date.now();
+  limitMsg = null;
   l.sid = crypto.randomUUID?.() ?? "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16));
   l.rev = 0; l.gone = {}; l.mt = now; l.pend = true;
   for (const i of l.items) i.t = now;

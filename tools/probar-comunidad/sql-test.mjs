@@ -138,6 +138,25 @@ await t("el cajón de fotos existe, es público y limita a 2 MB", async () => {
   const b = (await pool.query("select * from storage.buckets where id = 'fotos'")).rows[0];
   eq([b.public, +b.file_size_limit], [true, 2097152]);
 });
+const foto = (u, n) => as(u, "insert into storage.objects (bucket_id, name) values ('fotos', $1)", [`${u}/${n}.jpg`]);
+await t("fotos: como mucho 15 por hora", async () => {
+  for (let k = 1; k < 15; k++) await foto(ana, `h${k}`); // ya tenía 1
+  await fails(foto(ana, "h15"), /row-level security/);
+});
+await t("fotos: las de hace más de una hora ya no cuentan para ese límite", async () => {
+  await pool.query("update storage.objects set created_at = now() - interval '2 hours' where name like $1", [`${ana}/%`]);
+  await foto(ana, "luego");
+});
+await t("fotos: como mucho 150 por persona", async () => {
+  await pool.query("insert into storage.objects (bucket_id, name, created_at) select 'fotos', $1 || '/v' || g || '.jpg', now() - interval '1 day' from generate_series(1, 150) g", [pepe]);
+  await fails(foto(pepe, "otra"), /row-level security/);
+});
+await t("fotos: si el cajón llega a 800 MB no se sube más", async () => {
+  await foto(mod, "antes");
+  await pool.query("insert into storage.objects (bucket_id, name, metadata) values ('fotos', 'x/grande.jpg', jsonb_build_object('size', 800 * 1024 * 1024))");
+  await fails(foto(mod, "despues"), /row-level security/);
+  await pool.query("delete from storage.objects where name = 'x/grande.jpg'");
+});
 console.log(`\n${ok} bien, ${bad} mal`);
 await pool.end();
 process.exit(bad ? 1 : 0);

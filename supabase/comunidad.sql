@@ -76,11 +76,21 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.moderadores where id = auth.uid());
 $$;
 
--- Para las normas de las fotos: ¿tienes cuenta y no estás bloqueado?
+-- Para las normas de las fotos: ¿tienes cuenta, no estás bloqueado y no has subido demasiadas?
+-- Como mucho 15 fotos por hora y 150 en total por persona, y entre todos 800 MB (el plan gratis de Supabase trae 1 GB).
 create or replace function public.com_puede_subir() returns boolean
-language sql stable security definer set search_path = public as $$
-  select auth.uid() is not null and not exists (select 1 from public.perfiles where id = auth.uid() and bloqueado);
-$$;
+language plpgsql stable security definer set search_path = public as $$
+declare u uuid := auth.uid(); hora int := 0; total int := 0; ocupado bigint := 0;
+begin
+  if u is null or exists (select 1 from public.perfiles where id = u and bloqueado) then return false; end if;
+  begin
+    select count(*) filter (where created_at > now() - interval '1 hour'), count(*) into hora, total
+      from storage.objects where bucket_id = 'fotos' and name like u::text || '/%';
+    select coalesce(sum((metadata->>'size')::bigint), 0) into ocupado from storage.objects where bucket_id = 'fotos';
+  exception when others then return true; -- si no se pueden contar, se deja subir como antes
+  end;
+  return hora < 15 and total < 150 and ocupado < 800 * 1024 * 1024;
+end $$;
 
 -- Devuelve tu id si puedes publicar; si no, un error que la app enseña tal cual.
 create or replace function public.com_quien() returns uuid
