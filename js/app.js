@@ -6,9 +6,10 @@ import { readTicket, parseTicket } from "./ticket.js";
 import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, cheaperAlts, unitPrice, filterBarHTML, filterBarClick, applyFilters, fichaData, priceHistory, fichaSections } from "./ficha.js";
 import { haptic, swipeRows, sheetGestures, pullToRefresh } from "./gestos.js";
 import { avoidSet, conflicts, labelAllergens, ALLER } from "./alergias.js";
-import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL } from "./sync.js";
+import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL, shareError } from "./sync.js";
 import { initComunidad, openComunidad, openCuenta, comReady, meNow } from "./comunidad.js";
 import { initInstalar, showBanner, canInstall, install, later as installLater } from "./instalar.js";
+import { ready as fotosReady, allFotos, replaceFotos } from "./fotos.js";
 
 const STORES = [
   ["any", "Cualquiera"], ["mercadona", "Mercadona"], ["carrefour", "Carrefour"], ["lidl", "Lidl"], ["dia", "Dia"],
@@ -60,7 +61,19 @@ function load() {
 }
 // En las listas compartidas, guardar también marca qué ha cambiado y lo envía.
 function save() { stamp(); persist(); }
-function persist() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch {} }
+// Si el móvil no tiene sitio, se avisa con una franja fija (antes fallaba sin decir nada y se perdían los cambios).
+let notSaved = false;
+function persist() {
+  try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { return setNotSaved(true); }
+  if (notSaved) setNotSaved(false);
+}
+function setNotSaved(on) {
+  notSaved = on;
+  const w = $("fullWarn"); if (w) w.hidden = !on;
+}
+// Pide al navegador que no borre los datos de la app para hacer sitio (en Chrome y Safari no sale ninguna ventana;
+// en Firefox sí, por eso ahí no se pide).
+if (navigator.storage?.persist && !/Firefox\//.test(navigator.userAgent)) Promise.resolve(navigator.storage.persisted?.()).then((p) => p || navigator.storage.persist()).catch(() => {});
 const list = () => st.lists.find((l) => l.id === st.current) ?? st.lists[0];
 
 // ---------- Catálogos ----------
@@ -358,6 +371,7 @@ function renderHello() {
 $("homeMe").onclick = () => { buzz(); openCuenta({ back: null }); };
 $("insGo").onclick = () => { buzz(); install(openSheet); };
 $("insLater").onclick = () => { installLater(); $("homeIns").hidden = true; };
+$("fullGo").onclick = () => openBackup();
 initInstalar(() => { if (home) renderHome(); });
 addEventListener("superlista:cuenta", () => { if (home) renderHome(); });
 async function renderHome() {
@@ -670,7 +684,7 @@ function bindShare() {
   if (go) go.onclick = async () => {
     go.disabled = true; go.textContent = "Compartiendo…";
     if (await share(l)) { render(); openLists(); sendLink(l); }
-    else { go.disabled = false; go.textContent = "Compartir esta lista"; setStatus("No he podido compartirla. Revisa la conexión y prueba otra vez.", true); }
+    else { go.disabled = false; go.textContent = "Compartir esta lista"; setStatus(shareError() ?? "No he podido compartirla. Revisa la conexión y prueba otra vez.", true); }
   };
   const send = $("shareSend"); if (send) send.onclick = () => sendLink(l);
   const stop = $("shareStop");
@@ -871,7 +885,6 @@ function ticketReview(t, text) {
 
 // ---------- Copia de seguridad ----------
 // Todo vive en este móvil: la copia guarda listas, recetas propias, menú, despensa, compras y tarjetas en un archivo.
-const PHOTOS_KEY = "superlista.misfotos";
 function openBackup(note = "") {
   const myR = (st.myR ?? []).length, nl = st.lists.length;
   openSheet("Copia de seguridad", `<p class="note">Guarda en un archivo todo lo que tienes en la app: ${nl} lista${nl === 1 ? "" : "s"}, ${st.history.length} compra${st.history.length === 1 ? "" : "s"}, ${myR} receta${myR === 1 ? "" : "s"} tuya${myR === 1 ? "" : "s"}, el menú, lo que tienes en casa y tus tarjetas. Guárdalo en Drive o mándatelo por WhatsApp; si cambias de móvil o se borran los datos, lo recuperas aquí.</p>
@@ -884,7 +897,8 @@ function openBackup(note = "") {
   $("bkFile").onchange = (e) => readBackup(e.target.files?.[0]);
 }
 async function saveBackup() {
-  let fotos = {}; try { fotos = JSON.parse(localStorage.getItem(PHOTOS_KEY) || "{}"); } catch {}
+  await fotosReady;
+  const fotos = allFotos();
   const now = new Date();
   const name = `super-lista-${now.toISOString().slice(0, 10)}.json`;
   const blob = new Blob([JSON.stringify({ app: "superlista", v: 1, date: now.toISOString(), state: st, fotos })], { type: "application/json" });
@@ -912,10 +926,10 @@ async function readBackup(f) {
     <span>Tiene ${s2.lists.length} lista${s2.lists.length === 1 ? "" : "s"} y ${(s2.history ?? []).length} compra${(s2.history ?? []).length === 1 ? "" : "s"}. Sustituye lo que hay ahora en la app.</span>
     <div class="bk-row"><button class="btn" type="button" id="bkYes">Sí, recuperar</button><button class="btn ghost" type="button" id="bkNo">Cancelar</button></div></div>`;
   $("bkNo").onclick = () => openBackup();
-  $("bkYes").onclick = () => {
+  $("bkYes").onclick = async () => {
     try {
+      await replaceFotos(data.fotos ?? {});
       localStorage.setItem(KEY, JSON.stringify(s2));
-      localStorage.setItem(PHOTOS_KEY, JSON.stringify(data.fotos ?? {}));
     } catch { return openBackup("No he podido guardar la copia: el móvil no tiene espacio para la app."); }
     location.reload();
   };

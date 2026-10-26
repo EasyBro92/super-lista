@@ -44,7 +44,7 @@ function iosSteps() {
   if (inApp) return `<div class="ins"><p class="ins-lead">Estás viendo Super Lista dentro de otra app. Para instalarla, ábrela primero en <b>Safari</b>:</p>
     <ol class="ins-steps"><li>Toca los <b>tres puntos</b> o el botón de <b>compartir</b> de esta app.</li><li>Elige <b>«Abrir en Safari»</b> (o «Abrir en el navegador»).</li><li>En Safari, toca <b>Instalar</b> otra vez y sigue los pasos.</li></ol></div>`;
   const ipad = /iPad/.test(ua) || navigator.platform === "MacIntel";
-  return `<div class="ins"><p class="ins-lead">Así tendrás Super Lista en tu pantalla de inicio, como cualquier app: se abre a pantalla completa y funciona sin cobertura.</p>
+  return `<div class="ins"><p class="ins-lead">Así tendrás Super Lista en tu pantalla de inicio, como cualquier app: se abre a pantalla completa, funciona sin cobertura y Safari no borra tus listas aunque pases días sin abrirla.</p>
     <ol class="ins-steps">
       <li>Toca el botón <b>Compartir</b> ${SHARE} ${ipad || /CriOS|FxiOS|EdgiOS/.test(ua) ? "arriba a la derecha, junto a la dirección" : "abajo, en la barra de Safari"}.</li>
       <li>Baja un poco y toca <b>«Añadir a pantalla de inicio»</b> ${ADD}.</li>
