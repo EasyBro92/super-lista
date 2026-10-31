@@ -1159,26 +1159,26 @@
  },
  "Inicio Recetas": {
   "img": "img/recetas/inicio-recetas.jpg",
-  "autor": "Shixart1985",
-  "licencia": "CC BY 2.0",
-  "fuente": "https://commons.wikimedia.org/wiki/File:Colorful_vegetables_simmering_in_a_pot_on_a_stove_at_home.jpg"
+  "autor": "Jebulon",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Cooking_a_paella.jpg"
  },
  "Inicio Menú": {
   "img": "img/recetas/inicio-menu.jpg",
-  "autor": "Afifa Afrin",
-  "licencia": "CC BY-SA 4.0",
-  "fuente": "https://commons.wikimedia.org/wiki/File:Dinner_table_arrangement_with_food_of_a_middle_class_Bangladeshi_family_04.jpg"
+  "autor": "Super Rabbit One from UK",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Tapas_(165938155).jpg"
  },
  "Inicio Compras": {
   "img": "img/recetas/inicio-compras.jpg",
-  "autor": "Triplec85",
+  "autor": "Carloss",
   "licencia": "CC BY-SA 4.0",
-  "fuente": "https://commons.wikimedia.org/wiki/File:Supermarket_checkout_Tegut_Tauberbischofsheim_2.jpg"
+  "fuente": "https://commons.wikimedia.org/wiki/File:Mercadona_Nuevo_Modelo_de_Tienda3.jpg"
  },
  "Inicio En casa": {
   "img": "img/recetas/inicio-en-casa.jpg",
-  "autor": "USDAgov",
-  "licencia": "Public domain",
-  "fuente": "https://commons.wikimedia.org/wiki/File:Food_Safety_-_Cut_Waste_in_Refrigerators_(20200605-FSIS-LSC-0096).jpg"
+  "autor": "Shixart1985",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Person_reaches_for_a_jar_on_a_wooden_shelf_filled_with_various_containers_in_a_kitchen_or_pantry_setting.jpg"
  }
 }
