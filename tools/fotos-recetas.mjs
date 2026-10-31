@@ -60,8 +60,10 @@ async function candidatas() {
         for (const s of d.query?.search ?? []) files.push(s.title);
       } catch {}
     }
-    const uniq = [...new Set(files)].slice(0, 9);
-    const c = (await filesInfo(uniq, 300)).filter((x) => x.thumb);
+    // Las fotos de Inicio se eligen entre más opciones y ya a buen tamaño.
+    const big = n.startsWith("Inicio ");
+    const uniq = [...new Set(files)].slice(0, big ? 30 : 9);
+    const c = (await filesInfo(uniq, big ? 900 : 300)).filter((x) => x.thumb);
     c.sort((a, b) => uniq.indexOf(a.file) - uniq.indexOf(b.file));
     for (const [k, x] of c.entries()) {
       try {
