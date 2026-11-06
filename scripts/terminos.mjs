@@ -81,5 +81,6 @@ export async function terminos() {
   for (const r of recetas) for (const [n] of r.i) add(n);
   EXTRA.split(",").forEach(add);
   MAS.split(",").forEach(add);
-  return [...set.values()];
+  // TERMS_MAX sirve para probar con pocas búsquedas.
+  return [...set.values()].slice(0, Number(process.env.TERMS_MAX) || undefined);
 }

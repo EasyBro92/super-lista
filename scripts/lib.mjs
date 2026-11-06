@@ -85,3 +85,36 @@ export function product({ name, brand = "", format = "", price = null, unit = ""
   if (isNew) o.nw = 1;
   return o;
 }
+
+// Saca los objetos JSON completos que empiezan donde encaja «start» dentro de un HTML (cuenta llaves, respeta comillas).
+export function jsonObjects(text, start) {
+  const out = [];
+  const re = new RegExp(start.source, "g");
+  let m;
+  while ((m = re.exec(text))) {
+    let depth = 0, str = false, esc = false, i = m.index;
+    for (; i < text.length; i++) {
+      const ch = text[i];
+      if (str) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') str = false; continue; }
+      if (ch === '"') str = true;
+      else if (ch === "{") depth++;
+      else if (ch === "}" && --depth === 0) break;
+    }
+    try { out.push(JSON.parse(text.slice(m.index, i + 1))); } catch {}
+    re.lastIndex = i + 1;
+  }
+  return out;
+}
+
+// Página web con reintentos; devuelve null si no se pudo.
+export async function getText(url, { headers = {}, tries = 3 } = {}) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      const r = await fetch(url, { headers, signal: AbortSignal.timeout(40000) });
+      if (r.status === 404) return "";
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.text();
+    } catch { await sleep(5000 * (i + 1)); }
+  }
+  return null;
+}

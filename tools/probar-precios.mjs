@@ -1,39 +1,23 @@
-// Prueba qué datos dan las webs de supermercados desde GitHub Actions (el contenedor de desarrollo no llega).
-// Guarda en out/probe/ la respuesta de cada una.
+// Prueba desde GitHub Actions (el contenedor de desarrollo no llega) los programas que descargan cada súper,
+// con pocas búsquedas, y guarda en out/probe/ un resumen y una muestra de productos.
 import fs from "node:fs/promises";
-
-const BROWSER = { "User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36", "Accept-Language": "es-ES,es;q=0.9", Accept: "application/json, text/html, */*" };
+process.env.TERMS_MAX ||= "12";
+process.env.ECI_MAX_PAGES ||= "2";
+process.env.GADIS_MAX ||= "14";
+const { fetchAhorramas } = await import("../scripts/fetch-ahorramas.mjs");
+const { fetchGadis } = await import("../scripts/fetch-gadis.mjs");
+const { fetchEci } = await import("../scripts/fetch-eci.mjs");
+const { fetchAldiOfertas } = await import("../scripts/fetch-aldi.mjs");
 await fs.mkdir("out/probe", { recursive: true });
 const sum = [];
-async function get(k, u, opts = {}) {
+for (const [k, f] of Object.entries({ ahorramas: fetchAhorramas, gadis: fetchGadis, elcorteingles: fetchEci, aldi: fetchAldiOfertas })) {
+  const t0 = Date.now();
   try {
-    const r = await fetch(u, { headers: { ...BROWSER, ...(opts.headers ?? {}) }, method: opts.method ?? "GET", body: opts.body, redirect: "follow", signal: AbortSignal.timeout(25000) });
-    const t = await r.text();
-    const cors = r.headers.get("access-control-allow-origin");
-    await fs.writeFile(`out/probe/${k}.txt`, `${r.status} ${r.headers.get("content-type")} cors=${cors} final=${r.url}\n${u}\n\n${t.slice(0, 3000000)}`);
-    const marks = ["__INITIAL_STATE__", "productEntities", "\"price\"", "€", "application/ld+json", "__NEXT_DATA__", "dataLayer"].filter((m) => t.includes(m)).join(",");
-    sum.push(`${k}: ${r.status} ${t.length}b cors=${cors} [${marks}] → ${r.url}`);
-    return t;
-  } catch (e) { sum.push(`${k}: ERROR ${e.message}`); return ""; }
+    const items = await f();
+    const conPrecio = items.filter((p) => p.p != null).length;
+    sum.push(`${k}: ${items.length} productos, ${conPrecio} con precio, ${items.filter((p) => p.o).length} ofertas, ${Math.round((Date.now() - t0) / 1000)} s`);
+    await fs.writeFile(`out/probe/${k}.json`, JSON.stringify(items.slice(0, 400), null, 1));
+  } catch (e) { sum.push(`${k}: ERROR ${e.message}`); }
 }
-
-// Segunda ronda: páginas de sección y paginación de los que respondieron.
-const SEARCH = {
-  ahorramas48: "https://www.ahorramas.com/on/demandware.store/Sites-Ahorramas-Site/es/Search-UpdateGrid?q=leche&start=48&sz=48",
-  ahorramasYog: "https://www.ahorramas.com/on/demandware.store/Sites-Ahorramas-Site/es/Search-UpdateGrid?q=yogur&start=0&sz=48",
-  gadisLac: "https://www.gadisline.com/lacteos",
-  gadisLac2: "https://www.gadisline.com/lacteos?page=2",
-  gadisBus: "https://www.gadisline.com/busqueda?q=leche",
-  gadisBus2: "https://www.gadisline.com/search?q=leche",
-  eciLac: "https://www.elcorteingles.es/supermercado/lacteos/",
-  eciLac2: "https://www.elcorteingles.es/supermercado/lacteos/2/",
-  eciBus: "https://www.elcorteingles.es/supermercado/buscar/?term=leche&search=text",
-  lidlYog: "https://www.lidl.es/q/api/search?q=yogur&locale=es_ES&assortment=ES&version=2.1.0&fetchsize=100",
-  aldiOf: "https://www.aldi.es/ofertas.html",
-  aldiProd: "https://www.aldi.es/productos.html",
-  aldiFres: "https://www.aldi.es/productos/frescos.html",
-  bonpreuEs: "https://www.compraonline.bonpreuesclat.cat/search?q=leche&lang=es",
-};
-for (const [k, u] of Object.entries(SEARCH)) await get(k, u);
 await fs.writeFile("out/probe/resumen.txt", sum.join("\n"));
 console.log(sum.join("\n"));
