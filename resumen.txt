@@ -1,0 +1,4 @@
+ahorramas: 438 productos, 438 con precio, 84 ofertas, 46 s
+gadis: 670 productos, 670 con precio, 54 ofertas, 43 s
+elcorteingles: 527 productos, 527 con precio, 159 ofertas, 43 s
+aldi: 194 productos, 194 con precio, 194 ofertas, 3 s
