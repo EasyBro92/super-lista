@@ -15,16 +15,19 @@ const SEARCH = {
   alcampo: "https://www.compraonline.alcampo.es/search?q=", consum: "https://tienda.consum.es/es/s/",
   carrefour: "https://www.carrefour.es/?q=", eroski: "https://supermercado.eroski.es/es/search/results/?q=",
   elcorteingles: "https://www.elcorteingles.es/supermercado/buscar/?term=", lidl: "https://www.lidl.es/q/search?q=",
-  aldi: "https://www.aldi.es/busqueda.html?query=",
+  aldi: "https://www.aldi.es/busqueda.html?query=", ahorramas: "https://www.ahorramas.com/buscador?q=",
 };
 // Lidl y Aldi no venden comida por internet: su web solo informa.
-export const SELLS_ONLINE = new Set(["mercadona", "dia", "alcampo", "consum", "carrefour", "eroski", "elcorteingles"]);
+export const SELLS_ONLINE = new Set(["mercadona", "dia", "alcampo", "consum", "carrefour", "eroski", "elcorteingles", "ahorramas", "gadis"]);
 export function webUrl(p) {
   if (!p?.s) return "";
   if (p.s === "mercadona" && p.id) return `https://tienda.mercadona.es/product/${encodeURIComponent(p.id)}`;
   if (p.s === "dia" && p.w) return `https://www.dia.es${p.w}`;
   if (p.s === "alcampo" && p.id) return `https://www.compraonline.alcampo.es/products/${encodeURIComponent(p.id)}`;
   if (p.s === "consum" && p.id) return `https://tienda.consum.es/es/p/x/${encodeURIComponent(p.id)}`;
+  // Ahorramas, Gadis, El Corte Inglés y las ofertas de Aldi guardan la dirección de su ficha.
+  const HOST = { ahorramas: "https://www.ahorramas.com", gadis: "https://www.gadisline.com", elcorteingles: "https://www.elcorteingles.es", aldi: "https://www.aldi.es" };
+  if (p.w && HOST[p.s]) return HOST[p.s] + p.w;
   const base = SEARCH[p.s];
   if (!base) return "";
   // Para buscar vale el nombre sin el formato ni símbolos raros.

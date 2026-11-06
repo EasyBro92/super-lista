@@ -5,24 +5,24 @@ import { norm } from "./parser.js";
 // [clave, emoji, nombre, explicación corta, «lo lleva», «no lo lleva aunque lo parezca», palabras de las etiquetas de los envases]
 export const ALLERGENS = [
   ["gluten", "🌾", "Gluten", "Celiaquía o intolerancia",
-    /\b(harina(?! de (maiz|arroz|garbanzo|almendra))|pan|pan rallado|macarrones|espaguetis|fideos(?! de arroz)|lasana|tallarines|gnocchi|tortellini|pasta(?! de (curry|soja|sesamo))|cuscus|bulgur|cerveza|galletas|hojaldre|masa( de pizza| de empanadillas| quebrada)?|bizcochos?|croissants?|tortillas de trigo|pan de pita|cereales|copos de avena|salsa de soja|seitan|picatostes|muesli|granola|gyozas|fideos ramen|trigo|cebada|centeno|espelta)\b/,
+    /\b(harina(?! de (maiz|arroz|garbanzo|almendra))|pan|pan rallado|macarrones|espaguetis|fideos(?! de arroz)|lasana|canelones|tallarines|gnocchi|tortellini|pasta(?! de (curry|soja|sesamo))|cuscus|bulgur|cerveza|galletas|hojaldre|masa( de pizza| de empanadillas| quebrada)?|bizcochos?|croissants?|tortillas de trigo|pan de pita|cereales|copos de avena|salsa de soja|seitan|picatostes|muesli|granola|gyozas|fideos ramen|trigo|cebada|centeno|espelta)\b/,
     /\bsin gluten\b|\btamari\b|\bgluten free\b/, /\b(gluten|trigo|cebada|centeno|avena|espelta|kamut)\b/],
   ["lactosa", "🥛", "Lactosa", "Intolerancia: vale lo «sin lactosa»",
-    /\b(leche(?! de (coco|avena|almendras?|soja|arroz))|mantequilla|nata|queso|quesos|yogur|yogures|mozzarella|mascarpone|parmesano|leche condensada|helado|crema de cacao|bechamel|requeson|burrata)\b/,
+    /\b(leche(?! de (coco|avena|almendras?|soja|arroz))|mantequilla|nata|queso|quesos|yogur|yogures|mozzarella|mascarpone|parmesano|leche condensada|helado|crema de cacao|bechamel|requeson|burrata|cuajada)\b/,
     /\bsin lactosa\b|\b0\s?% lactosa\b|\bvegan[oa]?\b|\bvegetal\b|\bbebida de\b|\bde (coco|soja|avena|almendras?|arroz)\b/, /\b(lactosa|leche|lacteos?|lacticos?|nata|queso|mantequilla|suero)\b/],
   ["leche", "🍼", "Leche (alergia)", "Alergia a la proteína: nada de lácteos",
-    /\b(leche(?! de (coco|avena|almendras?|soja|arroz))|mantequilla|nata|queso|quesos|yogur|yogures|mozzarella|mascarpone|parmesano|leche condensada|helado|crema de cacao|bechamel|requeson|burrata|ghee)\b/,
+    /\b(leche(?! de (coco|avena|almendras?|soja|arroz))|mantequilla|nata|queso|quesos|yogur|yogures|mozzarella|mascarpone|parmesano|leche condensada|helado|crema de cacao|bechamel|requeson|burrata|cuajada|ghee)\b/,
     /\bvegan[oa]?\b|\bvegetal\b|\bbebida de\b|\bsin leche\b|\bmargarina\b|\bde (coco|soja|avena|almendras?|arroz)\b/, /\b(leche|lacteos?|lacticos?|lactosa|nata|queso|mantequilla|suero|caseina)\b/],
   ["huevo", "🥚", "Huevo", "Alergia al huevo",
-    /\b(huevos?|yemas?|claras?|mayonesa|bizcochos de soletilla)\b/, /\bsin huevo\b|\bvegan[oa]?\b/, /\b(huevos?|ovoproductos?|albumina)\b/],
+    /\b(huevos?|yemas?|claras?|mayonesa|alioli|bizcochos de soletilla)\b/, /\bsin huevo\b|\bvegan[oa]?\b/, /\b(huevos?|ovoproductos?|albumina)\b/],
   ["frutos", "🥜", "Frutos secos", "Nueces, almendras, cacahuete…",
     /\b(nueces|nuez(?! moscada)|almendras?|avellanas?|anacardos?|cacahuetes?|pistachos?|pinones|frutos secos|crema de cacahuete|pesto|praline|crema de cacao)\b/,
     /\bsin frutos secos\b/, /\b(frutos de cascara|frutos secos|cacahuetes?|almendras?|avellanas?|nueces|nuez(?! moscada)|pistachos?|anacardos?|macadamia|pecan)\b/],
   ["marisco", "🦐", "Marisco", "Gambas, mejillones, calamar…",
-    /\b(gambas?|langostinos?|mejillones|almejas|calamares|calamar|sepia|pulpo|surimi|berberechos|cigalas|salsa de ostras)\b/,
+    /\b(gambas?|langostinos?|mejillones|almejas|calamares|calamar|sepia|pulpo|surimi|berberechos|cigalas|bogavante|salsa de ostras)\b/,
     null, /\b(crustaceos?|moluscos?|gambas?|mejillon(es)?|marisco)\b/],
   ["pescado", "🐟", "Pescado", "Cualquier pescado",
-    /\b(salmon|merluza|bacalao|atun|sardinas|lubina|dorada|anchoas|boquerones|salsa de pescado|caldo de pescado|corvina|caballa|rape)\b/,
+    /\b(salmon|merluza|bacalao|atun|sardinas|lubina|dorada|anchoas|boquerones|salsa de pescado|caldo de pescado|corvina|caballa|rape|bonito)\b/,
     null, /\b(pescados?|anchoas?|atun|salmon|merluza|bacalao)\b/],
   ["soja", "🫘", "Soja", "Salsa de soja, tofu, edamame…",
     /\b(salsa de soja|tofu|edamame|gochujang|pasta de soja picante|miso|bebida de soja|yogur de soja|tamari|soja texturizada)\b/,
@@ -36,7 +36,7 @@ export const ALLERGENS = [
   ["sulfitos", "🍷", "Sulfitos", "Vino, vinagre, pasas…",
     /\b(vino blanco|vino tinto|vino|vinagre|pasas|orejones)\b/, null, /\b(sulfitos?|sulfuroso|metabisulfito|e-?22\d)\b/],
   ["cerdo", "🐷", "Cerdo", "Por religión o gusto",
-    /\b(bacon|panceta|chorizo(?! de (pavo|pollo))|jamon(?! de pavo)|lomo de cerdo|costillas|salchichas(?! de (pollo|pavo))|salchichon|morcilla|cerdo|sobrasada|lacon)\b/,
+    /\b(bacon|panceta|chorizo(?! de (pavo|pollo))|jamon(?! de pavo)|lomo de cerdo|costillas|salchichas(?! de (pollo|pavo))|salchichon|morcilla|cerdo|sobrasada|lacon|tocino|gelatina)\b/,
     /\b(de pavo|de pollo)\b/, /\b(cerdo|porcino)\b/],
 ];
 export const ALLER = new Map(ALLERGENS.map((a) => [a[0], a]));
@@ -77,6 +77,7 @@ const SUBS = {
     "Croissants": ["Croissants sin gluten"], "Tortillas de trigo": ["Tortillas de maíz", "Wraps sin gluten"], "Cereales": ["Cereales sin gluten"],
     "Copos de avena": ["Copos de avena sin gluten"], "Granola": ["Granola sin gluten"], "Salsa de soja": ["Tamari (salsa de soja sin gluten)"],
     "Fideos ramen": ["Fideos de arroz"], "Gyozas": ["Gyozas sin gluten"],
+    "Láminas de lasaña": ["Láminas de lasaña sin gluten"], "Placas de canelones": ["Placas de canelones sin gluten"],
   },
   lactosa: {
     "Leche": ["Leche sin lactosa"], "Mantequilla": ["Mantequilla sin lactosa"], "Nata": ["Nata sin lactosa"], "Nata para cocinar": ["Nata para cocinar sin lactosa"],
@@ -85,6 +86,7 @@ const SUBS = {
     "Queso parmesano": ["Queso rallado sin lactosa"], "Queso feta": ["Queso fresco sin lactosa"], "Queso de cabra": ["Queso fresco sin lactosa"], "Queso brie": ["Queso sin lactosa"],
     "Mascarpone": ["Queso crema sin lactosa"], "Yogur griego": ["Yogur griego sin lactosa"], "Yogures": ["Yogures sin lactosa"],
     "Leche condensada": ["Leche condensada sin lactosa"], "Helado": ["Helado sin lactosa"], "Crema de cacao": ["Crema de cacao sin lactosa"],
+    "Leche evaporada": ["Leche evaporada sin lactosa", "Nata sin lactosa"], "Cuajada": ["Yogures sin lactosa"],
   },
   leche: {
     "Leche": ["Bebida de avena", "Bebida de arroz"], "Mantequilla": ["Margarina vegetal", "Aceite de oliva"], "Nata": ["Nata vegetal", "Leche de coco"],
@@ -94,9 +96,10 @@ const SUBS = {
     "Queso feta": ["Queso vegano", "Tofu"], "Queso de cabra": ["Queso vegano"], "Queso brie": ["Queso vegano"], "Mascarpone": ["Queso crema vegano"],
     "Yogur griego": ["Yogur de coco", "Yogur de soja"], "Yogures": ["Yogur de coco", "Yogur de soja"],
     "Leche condensada": ["Leche condensada de coco"], "Helado": ["Helado vegano", "Sorbete"], "Crema de cacao": ["Crema de cacao vegana"],
+    "Leche evaporada": ["Leche de coco"], "Cuajada": ["Yogur de coco"],
   },
   huevo: {
-    "Mayonesa": ["Mayonesa vegana"], "Huevos@dulce": ["Semillas de chía (1 cucharada + 3 de agua por huevo)"],
+    "Mayonesa": ["Mayonesa vegana"], "Alioli": ["Ajoaceite sin huevo (ajo y aceite)"], "Huevos@dulce": ["Semillas de chía (1 cucharada + 3 de agua por huevo)"],
   },
   frutos: {
     "Nueces": ["Pipas de girasol peladas"], "Almendras": ["Pipas de calabaza"], "Anacardos": ["Pipas de girasol peladas"],
@@ -111,10 +114,12 @@ const SUBS = {
   },
   sesamo: { "Sésamo": [""], "Aceite de sésamo": ["Aceite de oliva"] },
   mostaza: { "Mostaza": [""] },
-  sulfitos: { "Vino blanco": ["Caldo de verduras"], "Vino tinto": ["Caldo de carne", "Caldo de verduras"], "Vinagre": ["Zumo de limón"], "Pasas": [""] },
+  sulfitos: { "Vino blanco": ["Caldo de verduras"], "Vino tinto": ["Caldo de carne", "Caldo de verduras"], "Vinagre": ["Zumo de limón"], "Pasas": [""], "Brandy": [""] },
   cerdo: {
     "Bacon": ["Bacon de pavo"], "Panceta": ["Bacon de pavo"], "Jamón serrano": ["Jamón de pavo"], "Jamón cocido": ["Pechuga de pavo"],
     "Chorizo": ["Chorizo de pavo"], "Salchichas": ["Salchichas de pollo"], "Lomo de cerdo": ["Lomo de pavo", "Pechuga de pollo"],
+    "Solomillo de cerdo": ["Solomillo de pavo", "Pechuga de pollo"], "Carrilleras de cerdo": ["Carrilleras de ternera"], "Lacón": ["Pechuga de pavo"],
+    "Tocino": ["Bacon de pavo", ""], "Hojas de gelatina": ["Agar-agar (2 g por cada 3 hojas)"],
   },
 };
 // Cosas que van de adorno o en pizca: si no hay sustituto, se pueden quitar.

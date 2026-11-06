@@ -6,6 +6,10 @@ import { fetchOffStore, OFF_STORES } from "./fetch-off.mjs";
 import { fetchConsum } from "./fetch-consum.mjs";
 import { fetchDia } from "./fetch-dia.mjs";
 import { fetchAlcampo } from "./fetch-alcampo.mjs";
+import { fetchAhorramas } from "./fetch-ahorramas.mjs";
+import { fetchGadis } from "./fetch-gadis.mjs";
+import { fetchEci } from "./fetch-eci.mjs";
+import { fetchAldiOfertas } from "./fetch-aldi.mjs";
 import { writeJSON } from "./lib.mjs";
 import { addHistory } from "./historial.mjs";
 import { fetchFichas } from "./fetch-fichas.mjs";
@@ -14,6 +18,8 @@ const STORES = {
   mercadona: { name: "Mercadona", source: "Tienda online de Mercadona", prices: true, fetch: fetchMercadona },
   carrefour: { name: "Carrefour" }, lidl: { name: "Lidl" }, dia: { name: "Dia" }, alcampo: { name: "Alcampo" },
   eroski: { name: "Eroski" }, aldi: { name: "Aldi" }, consum: { name: "Consum" }, elcorteingles: { name: "El Corte Inglés" },
+  ahorramas: { name: "Ahorramas", source: "Buscador de la tienda online de Ahorramas", prices: true, fetch: fetchAhorramas },
+  gadis: { name: "Gadis", source: "Tienda online de Gadis", prices: true, fetch: fetchGadis },
 };
 for (const s of Object.keys(OFF_STORES)) Object.assign(STORES[s], { source: "Open Food Facts", prices: false, fetch: () => fetchOffStore(s) });
 // Súpers cuya tienda online deja consultar precios; si un día fallan, se usa Open Food Facts (sin precios).
@@ -28,6 +34,15 @@ const withOff = (s, fetch) => async () => { try {
 Object.assign(STORES.consum, { source: "Tienda online de Consum", prices: true, fetch: withOff("consum", fetchConsum) });
 Object.assign(STORES.dia, { source: "Buscador de la tienda online de Dia", prices: true, fetch: withOff("dia", fetchDia) });
 Object.assign(STORES.alcampo, { source: "Buscador de la tienda online de Alcampo", prices: true, fetch: withOff("alcampo", fetchAlcampo) });
+Object.assign(STORES.elcorteingles, { source: "Tienda online de El Corte Inglés", prices: true, fetch: withOff("elcorteingles", fetchEci) });
+// Aldi no vende comida online: las ofertas de su folleto (con precio) van delante y detrás el resto de Open Food Facts.
+Object.assign(STORES.aldi, { source: "Folleto de Aldi y Open Food Facts", prices: true, partial: true, fetch: async () => {
+  const of = await fetchAldiOfertas().catch((e) => { console.error(`✗ Aldi (folleto): ${e.message}`); return []; });
+  if (!of.length) Object.assign(STORES.aldi, { source: "Open Food Facts", prices: false, partial: false });
+  const have = new Set(of.map((p) => p.n.toLowerCase()));
+  const off = (await fetchOffStore("aldi").catch(() => [])).filter((p) => !have.has(p.n.toLowerCase()));
+  return [...of, ...off.map((p) => ({ ...p, r: p.r + of.length }))];
+} });
 
 // Bajadas de precio: si un producto cuesta menos que en el catálogo anterior, se guarda el precio de antes («pb»)
 // y el día («pd»). Se mantiene 14 días mientras siga más barato.
@@ -69,6 +84,7 @@ for (const [slug, s] of Object.entries(STORES)) {
   try {
     const items = await s.fetch();
     Object.assign(meta.stores[slug], { source: s.source, prices: s.prices });
+    if (s.partial) meta.stores[slug].partial = true; else delete meta.stores[slug].partial;
     if (items.length < 20) throw new Error(`solo ${items.length} productos`);
     // Open Food Facts a veces responde a medias: si sale menos de la mitad que la última vez, se conserva lo anterior.
     if (prev.count && items.length < prev.count / 2) throw new Error(`solo ${items.length} productos (antes ${prev.count})`);
