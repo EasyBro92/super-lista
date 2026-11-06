@@ -16,7 +16,14 @@ Cada noche el workflow `Actualizar catálogos` descarga:
 | Supermercado | Fuente | Precios |
 | --- | --- | --- |
 | Mercadona | Tienda online de Mercadona | Sí |
-| Carrefour, Lidl, Dia, Alcampo, Eroski, Aldi, Consum, El Corte Inglés | Open Food Facts (base de datos abierta) | No |
+| Consum | Tienda online de Consum | Sí |
+| Dia, Alcampo, Ahorramas | Buscador de su tienda online | Sí |
+| El Corte Inglés, Gadis | Secciones de su tienda online | Sí |
+| Aldi | Ofertas del folleto + Open Food Facts | Solo las ofertas |
+| Carrefour, Lidl, Eroski | Open Food Facts (base de datos abierta) | No |
+
+Los súpers que hay que recorrer búsqueda a búsqueda (Alcampo, Ahorramas, Gadis, El Corte Inglés) tienen un tiempo
+máximo cada noche: empiezan cada día por otra parte y conservan lo de noches anteriores.
 
 Los catálogos se guardan en `data/stores/` y la web se publica en GitHub Pages con el workflow `Publicar web`.
 
