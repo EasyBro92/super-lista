@@ -118,3 +118,22 @@ export async function getText(url, { headers = {}, tries = 3 } = {}) {
   }
   return null;
 }
+
+// Para los súpers que hay que recorrer búsqueda a búsqueda: cada noche se empieza por otro sitio de la lista
+// y se para al acabarse el tiempo; lo de noches anteriores se conserva (ver keepPrevious).
+export function rotate(list, step) {
+  const start = list.length ? (Math.floor(Date.now() / 864e5) * step) % list.length : 0;
+  return [...list.slice(start), ...list.slice(0, start)];
+}
+export const deadline = (min) => { const end = Date.now() + Number(process.env.MAX_MIN || min) * 6e4; return () => Date.now() > end; };
+// Añade al final los productos con precio de la última vez que no han salido hoy.
+export async function keepPrevious(slug, items) {
+  const { readFile } = await import("node:fs/promises");
+  let prev = [];
+  try { prev = JSON.parse(await readFile(`data/stores/${slug}.json`, "utf8")); } catch {}
+  const have = new Set(items.map((p) => p.id ?? p.n));
+  const nuevos = items.length;
+  for (const p of prev) if (p.p != null && !have.has(p.id ?? p.n)) { have.add(p.id ?? p.n); items.push({ ...p, r: items.length }); }
+  console.log(`  ${slug}: ${nuevos} vistos hoy, ${items.length} con los de otros días`);
+  return items;
+}

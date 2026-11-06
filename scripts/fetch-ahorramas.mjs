@@ -1,6 +1,6 @@
 // Productos y precios de Ahorramas desde el buscador de su tienda online
 // (devuelve trozos de HTML con cada producto, su precio y su precio por kilo o litro).
-import { sleep, catFor, product, writeJSON, titleCase } from "./lib.mjs";
+import { sleep, catFor, product, writeJSON, titleCase, rotate, deadline, keepPrevious } from "./lib.mjs";
 import { guess } from "../js/parser.js";
 import { terminos } from "./terminos.mjs";
 
@@ -53,10 +53,12 @@ export async function fetchAhorramas() {
   const out = [];
   const seen = new Set();
   let fails = 0;
-  for (const t of await terminos()) {
+  const late = deadline(16);
+  for (const t of rotate(await terminos(), 150)) {
+    if (late()) break;
     for (let start = 0; start < 96; start += 48) {
       const html = await grid(t, start);
-      if (html == null) { if (++fails > 15) return out; break; }
+      if (html == null) { if (++fails > 15) return keepPrevious("ahorramas", out); break; }
       fails = 0;
       const items = parseGrid(html);
       for (const p of items) {
@@ -68,11 +70,11 @@ export async function fetchAhorramas() {
           rank: out.length, id: p.pid, web: p.web, was: p.was > p.price ? p.was : null, offer: p.offer }));
       }
       if (items.length < 48) break;
-      await sleep(400);
+      await sleep(300);
     }
-    await sleep(400);
+    await sleep(300);
   }
-  return out;
+  return keepPrevious("ahorramas", out);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

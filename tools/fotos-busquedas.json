@@ -1,199 +1,1235 @@
 {
-  "Tortilla de patatas": ["Tortilla de patatas", "Spanish omelette"],
-  "Huevos rotos con jamón": ["Huevos rotos", "huevos rotos jamón"],
-  "Huevos a la flamenca": ["Huevos a la flamenca", "flamenco eggs"],
-  "Revuelto de champiñones y jamón": ["revuelto de setas", "scrambled eggs mushrooms ham"],
-  "Huevos rellenos de atún": ["Huevos rellenos", "deviled eggs tuna"],
-  "Tortilla de calabacín": ["tortilla de calabacín", "zucchini omelette"],
-  "Lentejas con chorizo": ["Lentejas con chorizo", "lentil stew chorizo"],
-  "Lentejas con verduras": ["lentejas estofadas", "lentil stew vegetables"],
-  "Garbanzos con espinacas": ["Espinacas con garbanzos", "chickpeas spinach"],
-  "Potaje de vigilia": ["Potaje de vigilia", "potaje garbanzos bacalao"],
-  "Cocido madrileño": ["Cocido madrileño", "cocido"],
-  "Fabada asturiana": ["Fabada asturiana", "fabada"],
-  "Alubias blancas con almejas": ["Fabes con almejas", "alubias con almejas"],
-  "Patatas a la riojana": ["Patatas a la riojana", "potatoes chorizo stew"],
-  "Estofado de ternera": ["estofado de ternera", "beef stew"],
-  "Patatas guisadas con costillas": ["patatas con costillas", "potato stew ribs"],
-  "Marmitako": ["Marmitako"],
-  "Pollo en pepitoria": ["Pollo en pepitoria", "pepitoria"],
-  "Paella de pollo y verduras": ["Paella valenciana", "paella chicken"],
-  "Paella de marisco": ["Paella de marisco", "seafood paella"],
-  "Arroz a la cubana": ["Arroz a la cubana"],
-  "Arroz con pollo": ["Arroz con pollo"],
-  "Arroz al horno": ["Arroz al horno"],
-  "Merluza en salsa verde": ["Merluza en salsa verde", "hake green sauce"],
-  "Bacalao con tomate": ["bacalao con tomate", "cod tomato sauce"],
-  "Calamares a la romana": ["Calamares a la romana", "fried calamari rings"],
-  "Gambas al ajillo": ["Gambas al ajillo", "garlic prawns"],
-  "Mejillones a la marinera": ["mejillones a la marinera", "mussels marinara"],
-  "Dorada al horno con patatas": ["dorada al horno", "baked sea bream"],
-  "Atún encebollado": ["atún encebollado", "tuna onions"],
-  "Pollo al ajillo": ["Pollo al ajillo", "garlic chicken"],
-  "Albóndigas en salsa": ["Albóndigas en salsa", "albondigas"],
-  "Filetes de pollo empanados": ["pollo empanado", "breaded chicken fillet"],
-  "Pollo asado con patatas": ["pollo asado", "roast chicken potatoes"],
-  "Lomo adobado": ["Lomo adobado", "lomo de orza"],
-  "Flamenquines": ["Flamenquín", "flamenquin"],
-  "Salchichas al vino blanco": ["salchichas al vino", "sausages white wine"],
-  "Carne con tomate": ["carne con tomate", "magro con tomate"],
-  "Pisto manchego": ["Pisto", "pisto manchego"],
-  "Ensaladilla rusa": ["Ensaladilla rusa", "Olivier salad"],
-  "Menestra de verduras": ["Menestra", "menestra de verduras"],
-  "Ensalada mixta": ["ensalada mixta", "Spanish mixed salad"],
-  "Patatas a lo pobre": ["Patatas a lo pobre", "patatas pobre"],
-  "Pimientos rellenos de carne": ["pimientos rellenos", "stuffed peppers"],
-  "Berenjenas rellenas": ["Berenjenas rellenas", "stuffed aubergine"],
-  "Judías verdes con patatas": ["judías verdes con patatas", "green beans potatoes"],
-  "Gazpacho andaluz": ["Gazpacho"],
-  "Salmorejo": ["Salmorejo"],
-  "Crema de calabacín": ["crema de calabacín", "zucchini soup"],
-  "Sopa de ajo": ["Sopa de ajo", "sopa castellana"],
-  "Sopa de fideos": ["sopa de fideos", "noodle soup broth"],
-  "Porrusalda": ["Porrusalda"],
-  "Arroz con leche": ["Arroz con leche", "rice pudding cinnamon"],
-  "Natillas caseras": ["Natillas", "natillas galleta"],
-  "Flan de huevo": ["Flan de huevo", "crème caramel flan"],
-  "Torrijas": ["Torrija", "torrijas"],
-  "Bizcocho de yogur": ["bizcocho de yogur", "yogurt cake"],
-  "Leche frita": ["Leche frita"],
-  "Crema catalana": ["Crema catalana"],
-  "Tarta de Santiago": ["Tarta de Santiago"],
-  "Espaguetis a la carbonara": ["Spaghetti alla carbonara", "carbonara"],
-  "Macarrones a la boloñesa": ["macaroni bolognese", "pasta bolognese"],
-  "Espaguetis al pesto con tomates cherry": ["spaghetti pesto cherry tomatoes", "spaghetti al pesto"],
-  "Macarrones con atún y tomate": ["macarrones con tomate", "pasta tuna tomato"],
-  "Tortellini con nata y jamón": ["tortellini panna prosciutto", "tortellini cream"],
-  "Gnocchi gratinados con tomate y mozzarella": ["gnocchi alla sorrentina", "baked gnocchi mozzarella"],
-  "Espaguetis con ajo, aceite y guindilla": ["Spaghetti aglio olio e peperoncino", "aglio e olio"],
-  "Tallarines con gambas y tomates cherry": ["pasta shrimp cherry tomatoes", "linguine gamberi"],
-  "Tallarines con salmón y espinacas": ["pasta salmon spinach", "tagliatelle salmon"],
-  "Ensalada de pasta con jamón y mozzarella": ["pasta salad mozzarella", "insalata di pasta"],
-  "Macarrones con queso": ["Macaroni and cheese", "mac and cheese"],
-  "Pizza margarita": ["Pizza Margherita"],
-  "Pizza barbacoa de pollo": ["BBQ chicken pizza", "barbecue chicken pizza"],
-  "Minipizzas de pan de pita": ["pita pizza", "mini pizza pita bread"],
-  "Empanada de atún con hojaldre": ["empanada de atún", "empanada gallega"],
-  "Empanadillas de carne en freidora de aire": ["empanadillas", "empanadas baked"],
-  "Trenza de hojaldre de jamón y queso": ["ham and cheese puff pastry", "puff pastry braid"],
-  "Wraps de pollo César": ["chicken caesar wrap", "chicken wrap"],
-  "Burritos de carne y alubias": ["Burrito", "beef bean burrito"],
-  "Quesadillas de pollo y queso": ["chicken quesadilla", "quesadilla"],
-  "Wrap de hummus y verduras": ["hummus wrap", "vegetable wrap"],
-  "Fajitas de ternera": ["beef fajitas", "fajitas"],
-  "Hamburguesa clásica casera": ["Hamburger homemade", "cheeseburger"],
-  "Hamburguesas con cebolla caramelizada y bacon": ["bacon burger caramelized onion", "bacon cheeseburger"],
-  "Hamburguesa vegetal de garbanzos": ["chickpea burger", "veggie burger"],
-  "Pollo al curry con leche de coco": ["chicken curry coconut", "chicken curry"],
-  "Curry de garbanzos y espinacas": ["chana masala spinach", "chickpea curry"],
-  "Wok de pollo con verduras": ["chicken stir fry vegetables", "stir fry chicken"],
-  "Arroz tres delicias": ["Yangzhou fried rice", "fried rice"],
-  "Pad thai de gambas": ["Pad thai shrimp", "Pad thai"],
-  "Ternera con brócoli": ["Beef and broccoli"],
-  "Gyozas a la plancha con salsa de soja": ["Gyoza", "potstickers"],
-  "Poke de salmón": ["salmon poke bowl", "poke bowl"],
-  "Bowl de quinoa con garbanzos asados": ["quinoa bowl chickpeas", "buddha bowl"],
-  "Bowl de pollo teriyaki": ["chicken teriyaki rice bowl", "teriyaki chicken"],
-  "Cuscús con verduras y garbanzos": ["couscous vegetables chickpeas", "vegetable couscous"],
-  "Ensalada de quinoa con feta": ["quinoa salad feta", "quinoa salad"],
-  "Alitas de pollo crujientes en freidora de aire": ["chicken wings", "crispy chicken wings"],
-  "Patatas gajo especiadas en freidora de aire": ["potato wedges", "patatas gajo"],
-  "Salmón en freidora de aire con limón": ["baked salmon lemon", "salmon fillet lemon"],
-  "Calabacín crujiente con parmesano en freidora de aire": ["zucchini fries", "zucchini chips parmesan"],
-  "Nuggets de pollo caseros en freidora de aire": ["chicken nuggets homemade", "chicken nuggets"],
-  "Coliflor asada con especias y salsa de yogur": ["roasted cauliflower", "roasted cauliflower spices"],
-  "Ensalada de queso de cabra con nueces y miel": ["goat cheese salad walnuts", "salade de chèvre chaud"],
-  "Shakshuka": ["Shakshouka", "shakshuka"],
-  "Ensalada caprese": ["Insalata caprese", "caprese salad"],
-  "Croque monsieur": ["Croque monsieur"],
-  "Pita de pollo estilo kebab": ["chicken kebab pita", "chicken shawarma pita"],
-  "Tacos de merluza con guacamole": ["fish tacos", "fish taco guacamole"],
-  "Tostadas de aguacate con huevo": ["avocado toast egg", "avocado toast"],
-  "Tortitas americanas": ["pancakes stack", "American pancakes"],
-  "Porridge de avena con plátano y canela": ["porridge banana", "oatmeal banana"],
-  "Huevos revueltos cremosos": ["Scrambled eggs", "scrambled eggs toast"],
-  "Tortitas de avena y plátano": ["banana oat pancakes", "banana pancakes"],
-  "Tiramisú": ["Tiramisu"],
-  "Mug cake de chocolate": ["mug cake", "chocolate mug cake"],
-  "Tarta de queso al horno": ["baked cheesecake", "tarta de queso"],
-  "Fresas con nata": ["strawberries and cream", "fresas con nata"],
-  "Palmeritas de hojaldre": ["Palmier", "palmeritas"],
-  "Crumble de manzana": ["Apple crumble"],
-  "Pan con tomate y aceite": ["Pa amb tomàquet", "pan con tomate"],
-  "Tostada de pavo y queso fresco": ["Tostada con queso fresco", "turkey cheese toast"],
-  "Tortilla francesa": ["Tortilla francesa", "French omelette"],
-  "Sándwich mixto": ["Sándwich mixto", "ham and cheese sandwich"],
-  "Bol de yogur con granola y fruta": ["Yogur con granola", "yogurt granola bowl"],
-  "Overnight oats de frutos rojos": ["Overnight oats", "overnight oats berries"],
-  "Pudin de chía con mango": ["chia pudding", "chia seed pudding"],
-  "Smoothie bowl de frutos rojos": ["Smoothie bowl", "berry smoothie bowl"],
-  "Batido de plátano y fresa": ["Batido de fresa y plátano", "strawberry banana smoothie"],
-  "Zumo de naranja y zanahoria": ["Zumo de zanahoria y naranja", "carrot orange juice"],
-  "Granola casera": ["Granola", "homemade granola"],
-  "Crepes": ["Crêpe", "crepes"],
-  "Gofres caseros": ["Gofre", "waffles"],
-  "Magdalenas caseras": ["Magdalenas", "Spanish magdalena muffin"],
-  "Churros con chocolate": ["Churros con chocolate", "churros chocolate"],
-  "Muffins de arándanos": ["Muffin de arándanos", "blueberry muffins"],
-  "Huevos benedictinos": ["Huevos Benedictinos", "Eggs Benedict"],
-  "Tostada de salmón ahumado y queso crema": ["Tostada de salmón ahumado", "Smoked salmon toast"],
-  "Tostada de champiñones con huevo poché": ["Tostada de champiñones", "Mushrooms on toast poached egg"],
-  "Frittata de verduras": ["Frittata", "Vegetable frittata"],
-  "Quiche lorraine": ["Quiche lorraine", "Quiche Lorraine"],
-  "Desayuno inglés": ["Desayuno inglés", "Full English breakfast"],
-  "Tostas de queso brie con miel y nueces": ["brie honey", "baked brie walnuts"],
-  "Tortilla de espinacas y queso": ["Tortilla de espinacas", "Spinach omelette"],
-  "Pan con chocolate": ["Pa amb xocolata", "bread with chocolate bar"],
-  "Bocadillo de jamón serrano con tomate": ["Bocadillo de jamón", "Jamón serrano sandwich"],
-  "Bizcocho de chocolate": ["Bizcocho de chocolate", "Chocolate sponge cake"],
-  "Brownie de chocolate": ["Brownie", "Chocolate brownie"],
-  "Galletas con pepitas de chocolate": ["Galletas con pepitas de chocolate", "Chocolate chip cookies"],
-  "Rollitos de canela": ["Rollos de canela", "Cinnamon roll"],
-  "Bizcocho de zanahoria": ["Tarta de zanahoria", "Carrot cake"],
-  "Rosquillas de anís": ["Rosquillas caseras", "rosquilla"],
-  "Brochetas de fruta con chocolate": ["Brochetas de fruta", "Fruit skewers chocolate"],
-  "Hummus con crudités": ["Hummus", "Hummus crudités"],
-  "Nachos con queso y guacamole": ["Nachos", "Nachos cheese guacamole"],
-  "Tortitas de arroz con crema de cacahuete y plátano": ["Tortitas de arroz", "Rice cake peanut butter banana"],
-  "Croissants de jamón y queso": ["Croissant de jamón y queso", "Ham and cheese croissant"],
-  "Banana bread": ["Banana bread", "banana bread loaf"],
-  "Ramen de pollo": ["Ramen", "chicken ramen"],
-  "Makis de salmón y aguacate": ["Makizushi", "salmon avocado maki"],
-  "Pollo katsu con curry japonés": ["Katsu curry", "chicken katsu curry"],
-  "Onigiris de atún": ["Onigiri", "tuna mayo onigiri"],
-  "Bibimbap": ["Bibimbap", "bibimbap bowl"],
-  "Arroz frito con kimchi": ["Kimchi bokkeumbap", "kimchi fried rice"],
-  "Pho de ternera": ["Phở bò", "beef pho"],
-  "Rollitos vietnamitas de papel de arroz con gambas": ["Gỏi cuốn", "vietnamese spring rolls shrimp"],
-  "Curry verde tailandés de pollo": ["Gaeng keow wan", "thai green curry chicken"],
-  "Pollo con anacardos": ["Cashew chicken", "chicken cashew stir fry"],
-  "Pollo tikka masala": ["Chicken tikka masala", "tikka masala curry"],
-  "Dal de lentejas rojas": ["Masoor dal", "red lentil dal"],
-  "Nasi goreng": ["Nasi goreng", "nasi goreng fried egg"],
-  "Pollo kung pao": ["Kung Pao chicken", "kung pao chicken peanuts"],
-  "Mapo tofu": ["Mapo tofu", "mapo doufu sichuan"],
-  "Pollo adobo filipino": ["Chicken adobo", "filipino adobo chicken"],
-  "Tacos al pastor": ["Tacos al pastor", "al pastor tacos"],
-  "Chilaquiles rojos con huevo": ["Chilaquiles", "chilaquiles rojos"],
-  "Ceviche peruano": ["Ceviche", "Peruvian ceviche"],
-  "Lomo saltado": ["Lomo saltado", "Peruvian beef stir fry"],
-  "Arepas de reina pepiada": ["Reina pepiada", "arepa reina pepiada"],
-  "Empanadas argentinas de carne": ["Empanadas argentinas", "Argentine empanadas"],
-  "Feijoada": ["Feijoada", "Brazilian feijoada"],
-  "Pão de queijo": ["Pão de queijo", "Brazilian cheese bread"],
-  "Pollo jerk": ["Jerk chicken", "Jamaican jerk chicken"],
-  "Tajine de pollo con limón y aceitunas": ["Chicken tagine with preserved lemon", "chicken tajine olives lemon"],
-  "Harira": ["Harira", "Moroccan harira soup"],
-  "Mafé de pollo con cacahuete": ["Mafé", "maafe peanut stew"],
-  "Falafel con salsa de yogur": ["Falafel", "falafel yogurt sauce"],
-  "Tabulé": ["Tabbouleh", "Lebanese tabbouleh"],
-  "Musaka griega": ["Moussaka", "Greek moussaka"],
-  "Menemen": ["Menemen", "Turkish menemen eggs"],
-  "Kofta de cordero": ["Kofta kebab", "lamb kofta"],
-  "Baba ganoush": ["Baba ghanoush", "baba ganoush eggplant dip"],
-  "Inicio Lista": ["Carro de la compra", "shopping cart groceries supermarket", "grocery bag vegetables", "supermarket aisle"],
-  "Inicio Recetas": ["Cocina doméstica", "paella cooking pan", "fresh vegetables cutting board kitchen", "cooking vegetables frying pan", "tomatoes garlic olive oil kitchen", "homemade food kitchen incategory:Quality_images", "Mediterranean ingredients table"],
-  "Inicio Menú": ["Spanish lunch table food", "family lunch table Spain", "Mediterranean food table", "tapas table", "lentejas plato", "weekly meal plan food", "home cooked dinner plates table", "food table overhead incategory:Quality_images"],
-  "Inicio En casa": ["Despensa", "groceries on kitchen counter", "kitchen shelf glass jars legumes", "fruit bowl table", "vegetables kitchen table incategory:Quality_images", "spice jars kitchen shelf", "refrigerator vegetables drawer", "pantry shelf food jars"],
-  "Inicio Compras": ["Mercadona", "Mercadona supermercado", "supermarket fruit section Spain", "grocery bags vegetables", "supermarket checkout", "Mercado de la Boquería fruta", "supermercado España"]
+ "Tortilla de patatas": [
+  "Tortilla de patatas",
+  "Spanish omelette"
+ ],
+ "Huevos rotos con jamón": [
+  "Huevos rotos",
+  "huevos rotos jamón"
+ ],
+ "Huevos a la flamenca": [
+  "Huevos a la flamenca",
+  "flamenco eggs"
+ ],
+ "Revuelto de champiñones y jamón": [
+  "revuelto de setas",
+  "scrambled eggs mushrooms ham"
+ ],
+ "Huevos rellenos de atún": [
+  "Huevos rellenos",
+  "deviled eggs tuna"
+ ],
+ "Tortilla de calabacín": [
+  "tortilla de calabacín",
+  "zucchini omelette"
+ ],
+ "Lentejas con chorizo": [
+  "Lentejas con chorizo",
+  "lentil stew chorizo"
+ ],
+ "Lentejas con verduras": [
+  "lentejas estofadas",
+  "lentil stew vegetables"
+ ],
+ "Garbanzos con espinacas": [
+  "Espinacas con garbanzos",
+  "chickpeas spinach"
+ ],
+ "Potaje de vigilia": [
+  "Potaje de vigilia",
+  "potaje garbanzos bacalao"
+ ],
+ "Cocido madrileño": [
+  "Cocido madrileño",
+  "cocido"
+ ],
+ "Fabada asturiana": [
+  "Fabada asturiana",
+  "fabada"
+ ],
+ "Alubias blancas con almejas": [
+  "Fabes con almejas",
+  "alubias con almejas"
+ ],
+ "Patatas a la riojana": [
+  "Patatas a la riojana",
+  "potatoes chorizo stew"
+ ],
+ "Estofado de ternera": [
+  "estofado de ternera",
+  "beef stew"
+ ],
+ "Patatas guisadas con costillas": [
+  "patatas con costillas",
+  "potato stew ribs"
+ ],
+ "Marmitako": [
+  "Marmitako"
+ ],
+ "Pollo en pepitoria": [
+  "Pollo en pepitoria",
+  "pepitoria"
+ ],
+ "Paella de pollo y verduras": [
+  "Paella valenciana",
+  "paella chicken"
+ ],
+ "Paella de marisco": [
+  "Paella de marisco",
+  "seafood paella"
+ ],
+ "Arroz a la cubana": [
+  "Arroz a la cubana"
+ ],
+ "Arroz con pollo": [
+  "Arroz con pollo"
+ ],
+ "Arroz al horno": [
+  "Arroz al horno"
+ ],
+ "Merluza en salsa verde": [
+  "Merluza en salsa verde",
+  "hake green sauce"
+ ],
+ "Bacalao con tomate": [
+  "bacalao con tomate",
+  "cod tomato sauce"
+ ],
+ "Calamares a la romana": [
+  "Calamares a la romana",
+  "fried calamari rings"
+ ],
+ "Gambas al ajillo": [
+  "Gambas al ajillo",
+  "garlic prawns"
+ ],
+ "Mejillones a la marinera": [
+  "mejillones a la marinera",
+  "mussels marinara"
+ ],
+ "Dorada al horno con patatas": [
+  "dorada al horno",
+  "baked sea bream"
+ ],
+ "Atún encebollado": [
+  "atún encebollado",
+  "tuna onions"
+ ],
+ "Pollo al ajillo": [
+  "Pollo al ajillo",
+  "garlic chicken"
+ ],
+ "Albóndigas en salsa": [
+  "Albóndigas en salsa",
+  "albondigas"
+ ],
+ "Filetes de pollo empanados": [
+  "pollo empanado",
+  "breaded chicken fillet"
+ ],
+ "Pollo asado con patatas": [
+  "pollo asado",
+  "roast chicken potatoes"
+ ],
+ "Lomo adobado": [
+  "Lomo adobado",
+  "lomo de orza"
+ ],
+ "Flamenquines": [
+  "Flamenquín",
+  "flamenquin"
+ ],
+ "Salchichas al vino blanco": [
+  "salchichas al vino",
+  "sausages white wine"
+ ],
+ "Carne con tomate": [
+  "carne con tomate",
+  "magro con tomate"
+ ],
+ "Pisto manchego": [
+  "Pisto",
+  "pisto manchego"
+ ],
+ "Ensaladilla rusa": [
+  "Ensaladilla rusa",
+  "Olivier salad"
+ ],
+ "Menestra de verduras": [
+  "Menestra",
+  "menestra de verduras"
+ ],
+ "Ensalada mixta": [
+  "ensalada mixta",
+  "Spanish mixed salad"
+ ],
+ "Patatas a lo pobre": [
+  "Patatas a lo pobre",
+  "patatas pobre"
+ ],
+ "Pimientos rellenos de carne": [
+  "pimientos rellenos",
+  "stuffed peppers"
+ ],
+ "Berenjenas rellenas": [
+  "Berenjenas rellenas",
+  "stuffed aubergine"
+ ],
+ "Judías verdes con patatas": [
+  "judías verdes con patatas",
+  "green beans potatoes"
+ ],
+ "Gazpacho andaluz": [
+  "Gazpacho"
+ ],
+ "Salmorejo": [
+  "Salmorejo"
+ ],
+ "Crema de calabacín": [
+  "crema de calabacín",
+  "zucchini soup"
+ ],
+ "Sopa de ajo": [
+  "Sopa de ajo",
+  "sopa castellana"
+ ],
+ "Sopa de fideos": [
+  "sopa de fideos",
+  "noodle soup broth"
+ ],
+ "Porrusalda": [
+  "Porrusalda"
+ ],
+ "Arroz con leche": [
+  "Arroz con leche",
+  "rice pudding cinnamon"
+ ],
+ "Natillas caseras": [
+  "Natillas",
+  "natillas galleta"
+ ],
+ "Flan de huevo": [
+  "Flan de huevo",
+  "crème caramel flan"
+ ],
+ "Torrijas": [
+  "Torrija",
+  "torrijas"
+ ],
+ "Bizcocho de yogur": [
+  "bizcocho de yogur",
+  "yogurt cake"
+ ],
+ "Leche frita": [
+  "Leche frita"
+ ],
+ "Crema catalana": [
+  "Crema catalana"
+ ],
+ "Tarta de Santiago": [
+  "Tarta de Santiago"
+ ],
+ "Espaguetis a la carbonara": [
+  "Spaghetti alla carbonara",
+  "carbonara"
+ ],
+ "Macarrones a la boloñesa": [
+  "macaroni bolognese",
+  "pasta bolognese"
+ ],
+ "Espaguetis al pesto con tomates cherry": [
+  "spaghetti pesto cherry tomatoes",
+  "spaghetti al pesto"
+ ],
+ "Macarrones con atún y tomate": [
+  "macarrones con tomate",
+  "pasta tuna tomato"
+ ],
+ "Tortellini con nata y jamón": [
+  "tortellini panna prosciutto",
+  "tortellini cream"
+ ],
+ "Gnocchi gratinados con tomate y mozzarella": [
+  "gnocchi alla sorrentina",
+  "baked gnocchi mozzarella"
+ ],
+ "Espaguetis con ajo, aceite y guindilla": [
+  "Spaghetti aglio olio e peperoncino",
+  "aglio e olio"
+ ],
+ "Tallarines con gambas y tomates cherry": [
+  "pasta shrimp cherry tomatoes",
+  "linguine gamberi"
+ ],
+ "Tallarines con salmón y espinacas": [
+  "pasta salmon spinach",
+  "tagliatelle salmon"
+ ],
+ "Ensalada de pasta con jamón y mozzarella": [
+  "pasta salad mozzarella",
+  "insalata di pasta"
+ ],
+ "Macarrones con queso": [
+  "Macaroni and cheese",
+  "mac and cheese"
+ ],
+ "Pizza margarita": [
+  "Pizza Margherita"
+ ],
+ "Pizza barbacoa de pollo": [
+  "BBQ chicken pizza",
+  "barbecue chicken pizza"
+ ],
+ "Minipizzas de pan de pita": [
+  "pita pizza",
+  "mini pizza pita bread"
+ ],
+ "Empanada de atún con hojaldre": [
+  "empanada de atún",
+  "empanada gallega"
+ ],
+ "Empanadillas de carne en freidora de aire": [
+  "empanadillas",
+  "empanadas baked"
+ ],
+ "Trenza de hojaldre de jamón y queso": [
+  "ham and cheese puff pastry",
+  "puff pastry braid"
+ ],
+ "Wraps de pollo César": [
+  "chicken caesar wrap",
+  "chicken wrap"
+ ],
+ "Burritos de carne y alubias": [
+  "Burrito",
+  "beef bean burrito"
+ ],
+ "Quesadillas de pollo y queso": [
+  "chicken quesadilla",
+  "quesadilla"
+ ],
+ "Wrap de hummus y verduras": [
+  "hummus wrap",
+  "vegetable wrap"
+ ],
+ "Fajitas de ternera": [
+  "beef fajitas",
+  "fajitas"
+ ],
+ "Hamburguesa clásica casera": [
+  "Hamburger homemade",
+  "cheeseburger"
+ ],
+ "Hamburguesas con cebolla caramelizada y bacon": [
+  "bacon burger caramelized onion",
+  "bacon cheeseburger"
+ ],
+ "Hamburguesa vegetal de garbanzos": [
+  "chickpea burger",
+  "veggie burger"
+ ],
+ "Pollo al curry con leche de coco": [
+  "chicken curry coconut",
+  "chicken curry"
+ ],
+ "Curry de garbanzos y espinacas": [
+  "chana masala spinach",
+  "chickpea curry"
+ ],
+ "Wok de pollo con verduras": [
+  "chicken stir fry vegetables",
+  "stir fry chicken"
+ ],
+ "Arroz tres delicias": [
+  "Yangzhou fried rice",
+  "fried rice"
+ ],
+ "Pad thai de gambas": [
+  "Pad thai shrimp",
+  "Pad thai"
+ ],
+ "Ternera con brócoli": [
+  "Beef and broccoli"
+ ],
+ "Gyozas a la plancha con salsa de soja": [
+  "Gyoza",
+  "potstickers"
+ ],
+ "Poke de salmón": [
+  "salmon poke bowl",
+  "poke bowl"
+ ],
+ "Bowl de quinoa con garbanzos asados": [
+  "quinoa bowl chickpeas",
+  "buddha bowl"
+ ],
+ "Bowl de pollo teriyaki": [
+  "chicken teriyaki rice bowl",
+  "teriyaki chicken"
+ ],
+ "Cuscús con verduras y garbanzos": [
+  "couscous vegetables chickpeas",
+  "vegetable couscous"
+ ],
+ "Ensalada de quinoa con feta": [
+  "quinoa salad feta",
+  "quinoa salad"
+ ],
+ "Alitas de pollo crujientes en freidora de aire": [
+  "chicken wings",
+  "crispy chicken wings"
+ ],
+ "Patatas gajo especiadas en freidora de aire": [
+  "potato wedges",
+  "patatas gajo"
+ ],
+ "Salmón en freidora de aire con limón": [
+  "baked salmon lemon",
+  "salmon fillet lemon"
+ ],
+ "Calabacín crujiente con parmesano en freidora de aire": [
+  "zucchini fries",
+  "zucchini chips parmesan"
+ ],
+ "Nuggets de pollo caseros en freidora de aire": [
+  "chicken nuggets homemade",
+  "chicken nuggets"
+ ],
+ "Coliflor asada con especias y salsa de yogur": [
+  "roasted cauliflower",
+  "roasted cauliflower spices"
+ ],
+ "Ensalada de queso de cabra con nueces y miel": [
+  "goat cheese salad walnuts",
+  "salade de chèvre chaud"
+ ],
+ "Shakshuka": [
+  "Shakshouka",
+  "shakshuka"
+ ],
+ "Ensalada caprese": [
+  "Insalata caprese",
+  "caprese salad"
+ ],
+ "Croque monsieur": [
+  "Croque monsieur"
+ ],
+ "Pita de pollo estilo kebab": [
+  "chicken kebab pita",
+  "chicken shawarma pita"
+ ],
+ "Tacos de merluza con guacamole": [
+  "fish tacos",
+  "fish taco guacamole"
+ ],
+ "Tostadas de aguacate con huevo": [
+  "avocado toast egg",
+  "avocado toast"
+ ],
+ "Tortitas americanas": [
+  "pancakes stack",
+  "American pancakes"
+ ],
+ "Porridge de avena con plátano y canela": [
+  "porridge banana",
+  "oatmeal banana"
+ ],
+ "Huevos revueltos cremosos": [
+  "Scrambled eggs",
+  "scrambled eggs toast"
+ ],
+ "Tortitas de avena y plátano": [
+  "banana oat pancakes",
+  "banana pancakes"
+ ],
+ "Tiramisú": [
+  "Tiramisu"
+ ],
+ "Mug cake de chocolate": [
+  "mug cake",
+  "chocolate mug cake"
+ ],
+ "Tarta de queso al horno": [
+  "baked cheesecake",
+  "tarta de queso"
+ ],
+ "Fresas con nata": [
+  "strawberries and cream",
+  "fresas con nata"
+ ],
+ "Palmeritas de hojaldre": [
+  "Palmier",
+  "palmeritas"
+ ],
+ "Crumble de manzana": [
+  "Apple crumble"
+ ],
+ "Pan con tomate y aceite": [
+  "Pa amb tomàquet",
+  "pan con tomate"
+ ],
+ "Tostada de pavo y queso fresco": [
+  "Tostada con queso fresco",
+  "turkey cheese toast"
+ ],
+ "Tortilla francesa": [
+  "Tortilla francesa",
+  "French omelette"
+ ],
+ "Sándwich mixto": [
+  "Sándwich mixto",
+  "ham and cheese sandwich"
+ ],
+ "Bol de yogur con granola y fruta": [
+  "Yogur con granola",
+  "yogurt granola bowl"
+ ],
+ "Overnight oats de frutos rojos": [
+  "Overnight oats",
+  "overnight oats berries"
+ ],
+ "Pudin de chía con mango": [
+  "chia pudding",
+  "chia seed pudding"
+ ],
+ "Smoothie bowl de frutos rojos": [
+  "Smoothie bowl",
+  "berry smoothie bowl"
+ ],
+ "Batido de plátano y fresa": [
+  "Batido de fresa y plátano",
+  "strawberry banana smoothie"
+ ],
+ "Zumo de naranja y zanahoria": [
+  "Zumo de zanahoria y naranja",
+  "carrot orange juice"
+ ],
+ "Granola casera": [
+  "Granola",
+  "homemade granola"
+ ],
+ "Crepes": [
+  "Crêpe",
+  "crepes"
+ ],
+ "Gofres caseros": [
+  "Gofre",
+  "waffles"
+ ],
+ "Magdalenas caseras": [
+  "Magdalenas",
+  "Spanish magdalena muffin"
+ ],
+ "Churros con chocolate": [
+  "Churros con chocolate",
+  "churros chocolate"
+ ],
+ "Muffins de arándanos": [
+  "Muffin de arándanos",
+  "blueberry muffins"
+ ],
+ "Huevos benedictinos": [
+  "Huevos Benedictinos",
+  "Eggs Benedict"
+ ],
+ "Tostada de salmón ahumado y queso crema": [
+  "Tostada de salmón ahumado",
+  "Smoked salmon toast"
+ ],
+ "Tostada de champiñones con huevo poché": [
+  "Tostada de champiñones",
+  "Mushrooms on toast poached egg"
+ ],
+ "Frittata de verduras": [
+  "Frittata",
+  "Vegetable frittata"
+ ],
+ "Quiche lorraine": [
+  "Quiche lorraine",
+  "Quiche Lorraine"
+ ],
+ "Desayuno inglés": [
+  "Desayuno inglés",
+  "Full English breakfast"
+ ],
+ "Tostas de queso brie con miel y nueces": [
+  "brie honey",
+  "baked brie walnuts"
+ ],
+ "Tortilla de espinacas y queso": [
+  "Tortilla de espinacas",
+  "Spinach omelette"
+ ],
+ "Pan con chocolate": [
+  "Pa amb xocolata",
+  "bread with chocolate bar"
+ ],
+ "Bocadillo de jamón serrano con tomate": [
+  "Bocadillo de jamón",
+  "Jamón serrano sandwich"
+ ],
+ "Bizcocho de chocolate": [
+  "Bizcocho de chocolate",
+  "Chocolate sponge cake"
+ ],
+ "Brownie de chocolate": [
+  "Brownie",
+  "Chocolate brownie"
+ ],
+ "Galletas con pepitas de chocolate": [
+  "Galletas con pepitas de chocolate",
+  "Chocolate chip cookies"
+ ],
+ "Rollitos de canela": [
+  "Rollos de canela",
+  "Cinnamon roll"
+ ],
+ "Bizcocho de zanahoria": [
+  "Tarta de zanahoria",
+  "Carrot cake"
+ ],
+ "Rosquillas de anís": [
+  "Rosquillas caseras",
+  "rosquilla"
+ ],
+ "Brochetas de fruta con chocolate": [
+  "Brochetas de fruta",
+  "Fruit skewers chocolate"
+ ],
+ "Hummus con crudités": [
+  "Hummus",
+  "Hummus crudités"
+ ],
+ "Nachos con queso y guacamole": [
+  "Nachos",
+  "Nachos cheese guacamole"
+ ],
+ "Tortitas de arroz con crema de cacahuete y plátano": [
+  "Tortitas de arroz",
+  "Rice cake peanut butter banana"
+ ],
+ "Croissants de jamón y queso": [
+  "Croissant de jamón y queso",
+  "Ham and cheese croissant"
+ ],
+ "Banana bread": [
+  "Banana bread",
+  "banana bread loaf"
+ ],
+ "Ramen de pollo": [
+  "Ramen",
+  "chicken ramen"
+ ],
+ "Makis de salmón y aguacate": [
+  "Makizushi",
+  "salmon avocado maki"
+ ],
+ "Pollo katsu con curry japonés": [
+  "Katsu curry",
+  "chicken katsu curry"
+ ],
+ "Onigiris de atún": [
+  "Onigiri",
+  "tuna mayo onigiri"
+ ],
+ "Bibimbap": [
+  "Bibimbap",
+  "bibimbap bowl"
+ ],
+ "Arroz frito con kimchi": [
+  "Kimchi bokkeumbap",
+  "kimchi fried rice"
+ ],
+ "Pho de ternera": [
+  "Phở bò",
+  "beef pho"
+ ],
+ "Rollitos vietnamitas de papel de arroz con gambas": [
+  "Gỏi cuốn",
+  "vietnamese spring rolls shrimp"
+ ],
+ "Curry verde tailandés de pollo": [
+  "Gaeng keow wan",
+  "thai green curry chicken"
+ ],
+ "Pollo con anacardos": [
+  "Cashew chicken",
+  "chicken cashew stir fry"
+ ],
+ "Pollo tikka masala": [
+  "Chicken tikka masala",
+  "tikka masala curry"
+ ],
+ "Dal de lentejas rojas": [
+  "Masoor dal",
+  "red lentil dal"
+ ],
+ "Nasi goreng": [
+  "Nasi goreng",
+  "nasi goreng fried egg"
+ ],
+ "Pollo kung pao": [
+  "Kung Pao chicken",
+  "kung pao chicken peanuts"
+ ],
+ "Mapo tofu": [
+  "Mapo tofu",
+  "mapo doufu sichuan"
+ ],
+ "Pollo adobo filipino": [
+  "Chicken adobo",
+  "filipino adobo chicken"
+ ],
+ "Tacos al pastor": [
+  "Tacos al pastor",
+  "al pastor tacos"
+ ],
+ "Chilaquiles rojos con huevo": [
+  "Chilaquiles",
+  "chilaquiles rojos"
+ ],
+ "Ceviche peruano": [
+  "Ceviche",
+  "Peruvian ceviche"
+ ],
+ "Lomo saltado": [
+  "Lomo saltado",
+  "Peruvian beef stir fry"
+ ],
+ "Arepas de reina pepiada": [
+  "Reina pepiada",
+  "arepa reina pepiada"
+ ],
+ "Empanadas argentinas de carne": [
+  "Empanadas argentinas",
+  "Argentine empanadas"
+ ],
+ "Feijoada": [
+  "Feijoada",
+  "Brazilian feijoada"
+ ],
+ "Pão de queijo": [
+  "Pão de queijo",
+  "Brazilian cheese bread"
+ ],
+ "Pollo jerk": [
+  "Jerk chicken",
+  "Jamaican jerk chicken"
+ ],
+ "Tajine de pollo con limón y aceitunas": [
+  "Chicken tagine with preserved lemon",
+  "chicken tajine olives lemon"
+ ],
+ "Harira": [
+  "Harira",
+  "Moroccan harira soup"
+ ],
+ "Mafé de pollo con cacahuete": [
+  "Mafé",
+  "maafe peanut stew"
+ ],
+ "Falafel con salsa de yogur": [
+  "Falafel",
+  "falafel yogurt sauce"
+ ],
+ "Tabulé": [
+  "Tabbouleh",
+  "Lebanese tabbouleh"
+ ],
+ "Musaka griega": [
+  "Moussaka",
+  "Greek moussaka"
+ ],
+ "Menemen": [
+  "Menemen",
+  "Turkish menemen eggs"
+ ],
+ "Kofta de cordero": [
+  "Kofta kebab",
+  "lamb kofta"
+ ],
+ "Baba ganoush": [
+  "Baba ghanoush",
+  "baba ganoush eggplant dip"
+ ],
+ "Inicio Lista": [
+  "Carro de la compra",
+  "shopping cart groceries supermarket",
+  "grocery bag vegetables",
+  "supermarket aisle"
+ ],
+ "Inicio Recetas": [
+  "Cocina doméstica",
+  "paella cooking pan",
+  "fresh vegetables cutting board kitchen",
+  "cooking vegetables frying pan",
+  "tomatoes garlic olive oil kitchen",
+  "homemade food kitchen incategory:Quality_images",
+  "Mediterranean ingredients table"
+ ],
+ "Inicio Menú": [
+  "Spanish lunch table food",
+  "family lunch table Spain",
+  "Mediterranean food table",
+  "tapas table",
+  "lentejas plato",
+  "weekly meal plan food",
+  "home cooked dinner plates table",
+  "food table overhead incategory:Quality_images"
+ ],
+ "Inicio En casa": [
+  "Despensa",
+  "groceries on kitchen counter",
+  "kitchen shelf glass jars legumes",
+  "fruit bowl table",
+  "vegetables kitchen table incategory:Quality_images",
+  "spice jars kitchen shelf",
+  "refrigerator vegetables drawer",
+  "pantry shelf food jars"
+ ],
+ "Inicio Compras": [
+  "Mercadona",
+  "Mercadona supermercado",
+  "supermarket fruit section Spain",
+  "grocery bags vegetables",
+  "supermarket checkout",
+  "Mercado de la Boquería fruta",
+  "supermercado España"
+ ],
+ "Pulpo a la gallega": [
+  "Pulpo a la gallega",
+  "pulpo a feira"
+ ],
+ "Bacalao al pil pil": [
+  "Bacalao al pil pil",
+  "bacalao pil-pil"
+ ],
+ "Bacalao a la vizcaína": [
+  "Bacalao a la vizcaína",
+  "bacalao vizcaina"
+ ],
+ "Fideuá": [
+  "Fideuá",
+  "fideua"
+ ],
+ "Arroz negro": [
+  "Arroz negro",
+  "black rice squid ink paella"
+ ],
+ "Arroz caldoso con bogavante": [
+  "Arroz con bogavante",
+  "lobster rice spanish"
+ ],
+ "Caldo gallego": [
+  "Caldo gallego",
+  "galician broth grelos"
+ ],
+ "Ajoblanco": [
+  "Ajoblanco",
+  "ajo blanco soup"
+ ],
+ "Escalivada": [
+  "Escalivada",
+  "escalivada catalana"
+ ],
+ "Pimientos de padrón": [
+  "Pimientos de Padrón",
+  "padron peppers"
+ ],
+ "Patatas bravas": [
+  "Patatas bravas",
+  "patatas bravas tapas"
+ ],
+ "Croquetas de jamón": [
+  "Croquetas de jamón",
+  "croquetas jamon"
+ ],
+ "Rabo de toro": [
+  "Rabo de toro",
+  "oxtail stew spanish"
+ ],
+ "Carrilleras al vino tinto": [
+  "Carrilleras al vino tinto",
+  "carrilleras ibericas"
+ ],
+ "Conejo al ajillo": [
+  "Conejo al ajillo",
+  "rabbit garlic spanish"
+ ],
+ "Pollo al chilindrón": [
+  "Pollo al chilindrón",
+  "chicken chilindron"
+ ],
+ "Merluza a la gallega": [
+  "Merluza a la gallega",
+  "hake galician"
+ ],
+ "Sardinas a la plancha": [
+  "Sardinas a la plancha",
+  "grilled sardines"
+ ],
+ "Boquerones en vinagre": [
+  "Boquerones en vinagre",
+  "anchovies vinegar"
+ ],
+ "Calamares encebollados": [
+  "Calamares encebollados",
+  "squid onions"
+ ],
+ "Migas extremeñas": [
+  "Migas extremeñas",
+  "migas spanish"
+ ],
+ "Papas arrugadas con mojo picón": [
+  "Papas arrugadas",
+  "papas arrugadas mojo"
+ ],
+ "Pipirrana": [
+  "Pipirrana",
+  "pipirrana jaen"
+ ],
+ "Empanada gallega de atún": [
+  "Empanada gallega",
+  "galician empanada tuna"
+ ],
+ "Bonito con tomate": [
+  "Bonito con tomate",
+  "marmitako bonito tomate"
+ ],
+ "Crema de calabaza": [
+  "Crema de calabaza",
+  "pumpkin soup"
+ ],
+ "Vichyssoise": [
+  "Vichyssoise",
+  "vichyssoise soup"
+ ],
+ "Crema de champiñones": [
+  "Crema de champiñones",
+  "cream of mushroom soup"
+ ],
+ "Sopa de picadillo": [
+  "Sopa de picadillo",
+  "sopa picadillo"
+ ],
+ "Tocino de cielo": [
+  "Tocino de cielo",
+  "tocino de cielo dessert"
+ ],
+ "Quesada pasiega": [
+  "Quesada pasiega",
+  "quesada cantabria"
+ ],
+ "Filloas": [
+  "Filloas",
+  "filloas galicia"
+ ],
+ "Pestiños": [
+  "Pestiños",
+  "pestiños andaluces"
+ ],
+ "Peras al vino": [
+  "Peras al vino",
+  "pears in red wine"
+ ],
+ "Manzanas asadas": [
+  "Manzanas asadas",
+  "baked apples"
+ ],
+ "Tarta de la abuela": [
+  "Tarta de la abuela",
+  "galletas chocolate natillas tarta"
+ ],
+ "Flan de queso": [
+  "Flan de queso",
+  "cheese flan"
+ ],
+ "Mousse de chocolate": [
+  "Mousse de chocolate",
+  "chocolate mousse"
+ ],
+ "Cuajada con miel y nueces": [
+  "Cuajada con miel",
+  "cuajada navarra"
+ ],
+ "Ensalada de garbanzos": [
+  "Ensalada de garbanzos",
+  "chickpea salad"
+ ],
+ "Ensalada de lentejas": [
+  "Ensalada de lentejas",
+  "lentil salad"
+ ],
+ "Ensalada César": [
+  "Ensalada César",
+  "caesar salad"
+ ],
+ "Ensalada de arroz": [
+  "Ensalada de arroz",
+  "rice salad tuna"
+ ],
+ "Ensalada griega": [
+  "Ensalada griega",
+  "greek salad horiatiki"
+ ],
+ "Revuelto de espárragos trigueros": [
+  "Revuelto de espárragos trigueros",
+  "scrambled eggs asparagus"
+ ],
+ "Tortilla de atún": [
+  "Tortilla de atún",
+  "tuna omelette"
+ ],
+ "Pollo al limón": [
+  "Pollo al limón",
+  "lemon chicken"
+ ],
+ "Pollo a la cerveza": [
+  "Pollo a la cerveza",
+  "chicken beer stew"
+ ],
+ "Solomillo de cerdo al whisky": [
+  "Solomillo al whisky",
+  "pork tenderloin whisky sevilla"
+ ],
+ "Albóndigas de pollo en salsa de tomate": [
+  "Albóndigas de pollo",
+  "chicken meatballs tomato"
+ ],
+ "Hamburguesas de lentejas": [
+  "Hamburguesa de lentejas",
+  "lentil burger"
+ ],
+ "Berenjenas a la parmesana": [
+  "Melanzane alla parmigiana",
+  "eggplant parmigiana"
+ ],
+ "Lasaña de carne": [
+  "Lasaña",
+  "lasagna"
+ ],
+ "Lasaña de verduras": [
+  "Lasaña de verduras",
+  "vegetable lasagna"
+ ],
+ "Canelones de carne": [
+  "Canelones",
+  "canelons catalan"
+ ],
+ "Risotto de setas": [
+  "Risotto ai funghi",
+  "mushroom risotto"
+ ],
+ "Espaguetis con almejas": [
+  "Spaghetti alle vongole",
+  "spaghetti clams"
+ ],
+ "Pasta con brócoli y ajo": [
+  "Pasta con brócoli",
+  "orecchiette broccoli"
+ ],
+ "Ñoquis con salsa de setas": [
+  "Ñoquis con setas",
+  "gnocchi mushroom cream"
+ ],
+ "Salmón al horno con verduras": [
+  "Salmón al horno con verduras",
+  "baked salmon vegetables"
+ ],
+ "Merluza al horno con patatas": [
+  "Merluza al horno",
+  "baked hake potatoes"
+ ],
+ "Lubina a la espalda": [
+  "Lubina a la espalda",
+  "sea bass baked spanish"
+ ],
+ "Garbanzos con bacalao": [
+  "Garbanzos con bacalao",
+  "potaje garbanzos bacalao"
+ ],
+ "Alubias rojas con chorizo": [
+  "Alubias rojas con chorizo",
+  "red beans chorizo stew"
+ ],
+ "Curry de lentejas y boniato": [
+  "Curry de lentejas y boniato",
+  "sweet potato lentil curry"
+ ],
+ "Pechuga a la plancha con verduras": [
+  "Pechuga a la plancha con verduras",
+  "grilled chicken vegetables"
+ ],
+ "Tostadas de requesón y tomate": [
+  "Tostada de requesón y tomate",
+  "ricotta tomato toast"
+ ],
+ "Yogur con fruta y avena": [
+  "Yogur con fruta y avena",
+  "yogurt fruit oats bowl"
+ ],
+ "Batido verde": [
+  "Batido verde",
+  "green smoothie"
+ ],
+ "Bizcocho de naranja": [
+  "Bizcocho de naranja",
+  "orange sponge cake"
+ ],
+ "Tarta de manzana": [
+  "Tarta de manzana",
+  "apple tart"
+ ],
+ "Galletas de mantequilla": [
+  "Galletas de mantequilla",
+  "butter cookies"
+ ],
+ "Bacalao a la Brás": [
+  "Bacalhau à Brás",
+  "bacalhau a bras"
+ ],
+ "Pastéis de nata": [
+  "Pastel de nata",
+  "pasteis de nata"
+ ],
+ "Goulash húngaro": [
+  "Gulyás",
+  "hungarian goulash"
+ ],
+ "Escalope a la vienesa": [
+  "Wiener Schnitzel",
+  "wiener schnitzel"
+ ],
+ "Pierogi de patata y queso": [
+  "Pierogi ruskie",
+  "pierogi"
+ ],
+ "Ropa vieja": [
+  "Ropa vieja",
+  "ropa vieja cuban"
+ ],
+ "Patacones": [
+  "Patacón",
+  "patacones tostones"
+ ],
+ "Ajiaco colombiano": [
+  "Ajiaco",
+  "ajiaco santafereño"
+ ],
+ "Pastel de choclo": [
+  "Pastel de choclo",
+  "pastel de choclo chile"
+ ],
+ "Chili con carne": [
+  "Chili con carne",
+  "chili con carne"
+ ],
+ "Shawarma de pollo": [
+  "Shawarma",
+  "chicken shawarma"
+ ],
+ "Pollo tandoori": [
+  "Tandoori chicken",
+  "pollo tandoori"
+ ],
+ "Chana masala": [
+  "Chana masala",
+  "chana masala chickpeas"
+ ],
+ "Biryani de pollo": [
+  "Biryani",
+  "chicken biryani"
+ ],
+ "Salmón teriyaki": [
+  "Teriyaki salmon",
+  "salmon teriyaki"
+ ],
+ "Yakisoba": [
+  "Yakisoba",
+  "yakisoba noodles"
+ ],
+ "Bulgogi de ternera": [
+  "Bulgogi",
+  "bulgogi beef"
+ ],
+ "Pollo agridulce": [
+  "Sweet and sour chicken",
+  "pollo agridulce"
+ ],
+ "Pad krapow": [
+  "Pad kra pao",
+  "pad krapow basil pork"
+ ],
+ "Tom kha gai": [
+  "Tom kha kai",
+  "tom kha gai soup"
+ ],
+ "Souvlaki de cerdo con tzatziki": [
+  "Souvlaki",
+  "pork souvlaki tzatziki"
+ ],
+ "Ratatouille": [
+  "Ratatouille",
+  "ratatouille nicoise"
+ ],
+ "Sopa de cebolla gratinada": [
+  "Soupe à l'oignon",
+  "french onion soup"
+ ],
+ "Bruschetta de tomate": [
+  "Bruschetta",
+  "bruschetta pomodoro"
+ ],
+ "Minestrone": [
+  "Minestrone",
+  "minestrone soup"
+ ],
+ "Panna cotta con frutos rojos": [
+  "Panna cotta",
+  "panna cotta berries"
+ ],
+ "Fish and chips": [
+  "Fish and chips",
+  "fish and chips"
+ ],
+ "Pastel de carne y puré": [
+  "Shepherd's pie",
+  "cottage pie"
+ ],
+ "Mujaddara": [
+  "Mujaddara",
+  "mujadara lentils rice"
+ ],
+ "Fattoush": [
+  "Fattoush",
+  "fattoush salad"
+ ],
+ "Koshari": [
+  "Koshary",
+  "koshari egypt"
+ ],
+ "Enchiladas de pollo": [
+  "Enchiladas",
+  "chicken enchiladas"
+ ],
+ "Huevos rancheros": [
+  "Huevos rancheros",
+  "huevos rancheros"
+ ],
+ "Ají de gallina": [
+  "Ají de gallina",
+  "aji de gallina"
+ ],
+ "Causa limeña": [
+  "Causa limeña",
+  "causa limena"
+ ],
+ "Brigadeiros": [
+  "Brigadeiro",
+  "brigadeiros"
+ ],
+ "Tarta tres leches": [
+  "Pastel de tres leches",
+  "tres leches cake"
+ ]
 }

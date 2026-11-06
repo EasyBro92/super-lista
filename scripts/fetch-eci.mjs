@@ -1,6 +1,6 @@
 // Productos y precios del supermercado de El Corte Inglés, recorriendo las páginas de cada sección
 // (cada página trae 24 productos en un JSON dentro del HTML, de más a menos vendidos).
-import { sleep, catFor, product, writeJSON, titleCase, jsonObjects, getText } from "./lib.mjs";
+import { sleep, catFor, product, writeJSON, titleCase, jsonObjects, getText, rotate, deadline, keepPrevious } from "./lib.mjs";
 import { guess } from "../js/parser.js";
 
 const BASE = "https://www.elcorteingles.es/supermercado/";
@@ -28,10 +28,12 @@ export async function fetchEci() {
   const out = [];
   const seen = new Set();
   let fails = 0;
-  for (const s of SECCIONES) {
-    for (let page = 1; page <= MAX_PAGES; page++) {
+  const late = deadline(16);
+  // Cada noche se empieza por otra sección y se acaba cuando se agota el tiempo.
+  for (const s of rotate(SECCIONES, 3)) {
+    for (let page = 1; page <= MAX_PAGES && !late(); page++) {
       const html = await getText(`${BASE}${s}/${page > 1 ? `${page}/` : ""}`, { headers: HEADERS });
-      if (html == null) { if (++fails > 6) return out; break; }
+      if (html == null) { if (++fails > 6) return keepPrevious("elcorteingles", out); break; }
       fails = 0;
       const items = parsePage(html);
       if (!items.length) break;
@@ -56,10 +58,10 @@ export async function fetchEci() {
         }));
       }
       if (!/"path_next":"/.test(html)) break;
-      await sleep(700);
+      await sleep(500);
     }
   }
-  return out;
+  return keepPrevious("elcorteingles", out);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

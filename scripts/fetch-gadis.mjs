@@ -1,6 +1,6 @@
 // Productos y precios de Gadis (Galicia y Castilla y León) desde las secciones de su tienda online.
 // Cada sección trae en __NEXT_DATA__ sus primeros 50 productos: se recorren las secciones pequeñas para tener casi todo.
-import { sleep, catFor, product, writeJSON, titleCase, getText } from "./lib.mjs";
+import { sleep, catFor, product, writeJSON, titleCase, getText, rotate, deadline, keepPrevious } from "./lib.mjs";
 import { guess } from "../js/parser.js";
 
 const BASE = "https://www.gadisline.com";
@@ -38,9 +38,11 @@ export async function fetchGadis() {
   if (!home) throw new Error("no responde");
   const secs = sectionsOf(home);
   let fails = 0;
-  const all = [...TOP.map((t) => `/${t}`), ...secs].slice(0, Number(process.env.GADIS_MAX) || undefined);
+  const all = rotate([...TOP.map((t) => `/${t}`), ...secs], 90).slice(0, Number(process.env.GADIS_MAX) || undefined);
+  const late = deadline(12);
   console.log(`Gadis: ${all.length} secciones`);
   for (const s of all) {
+    if (late()) break;
     const html = await getText(BASE + s, { headers: HEADERS });
     if (html == null) { if (++fails > 8) break; continue; }
     fails = 0;
@@ -66,9 +68,9 @@ export async function fetchGadis() {
         offerTo: of?.end_date ?? "",
       }));
     }
-    await sleep(600);
+    await sleep(500);
   }
-  return out;
+  return keepPrevious("gadis", out);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
