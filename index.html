@@ -92,9 +92,15 @@
       </div>
     </div>
     <div class="stores" id="stores" role="group" aria-label="Supermercado"></div>
+    <div class="lsearch" role="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <label class="vh" for="lq">Buscar un producto</label>
+      <input id="lq" type="search" placeholder="Buscar un producto…" enterkeyhint="search" autocomplete="off" autocapitalize="off">
+    </div>
     <div class="summary" id="summary" hidden></div>
   </header>
   <main id="list"></main>
+  <section class="ideas lres" id="lres" aria-label="Productos del súper" hidden></section>
   <div class="finish" id="finishWrap" hidden>
     <button class="btn" id="finishBtn" type="button">Terminar compra</button>
   </div>
