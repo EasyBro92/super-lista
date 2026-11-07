@@ -13,6 +13,7 @@ const cm = { tab: "recetas", orden: "nuevas", q: "", rows: [], more: false, from
 export const comReady = () => !!supaCfg();
 try { if (comReady()) me = JSON.parse(localStorage.getItem(ME) || "null"); } catch {}
 export const meNow = () => me;
+export const comCall = (fn, args) => call(fn, args); // con tu sesión (lo usan los envíos, js/enviar.js)
 
 // ---------- Conexión ----------
 async function sb() {
