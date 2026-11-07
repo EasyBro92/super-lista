@@ -14,6 +14,15 @@ const r2 = await sb.rpc("com_recetas", {});
 t("comunidad.sql instalado (com_recetas)", !r2.error && Array.isArray(r2.data), JSON.stringify(r2.error));
 const r5 = await sb.rpc("env_recoger", { p_codigo: "ZZZZZZ" });
 w("envios.sql instalado (pasar datos con un código)", !r5.error, "(falta ejecutar supabase/envios.sql en el SQL Editor)");
+if (!r5.error) {
+  const cc = await sb.rpc("env_crear", { p_tipo: "lista", p_datos: { name: "Prueba", items: [{ id: "a", label: "Leche" }] } });
+  t("crear un código para pasar una lista", !cc.error && /^[A-Z0-9]{6}$/.test(cc.data ?? ""), JSON.stringify(cc.error));
+  const rc = await sb.rpc("env_recoger", { p_codigo: cc.data });
+  t("recoger la lista con ese código", rc.data?.datos?.name === "Prueba", JSON.stringify(rc.error));
+  const bz = await sb.rpc("env_buzon");
+  t("sin cuenta no se ve ningún buzón", !!bz.error || (Array.isArray(bz.data) && !bz.data.length));
+  t("la tabla de envíos no se puede leer directamente", !!(await sb.from("envios").select("*").limit(1)).error);
+}
 const r3 = await sb.from("comentarios").select("*").limit(1);
 t("las tablas no se pueden leer directamente", !!r3.error, JSON.stringify(r3));
 const r4 = await sb.rpc("com_comentar", { p_hilo: "charla", p_texto: "hola" });
