@@ -60,6 +60,16 @@ export function parseCommand(text) {
   return acts;
 }
 
+// Muchos móviles mandan frases «acumuladas» («leche», luego «leche en polvo»): devuelve solo lo nuevo.
+export function voiceDelta(prev, t) {
+  const pw = norm(prev).split(" ").filter(Boolean), tw = t.trim().split(/\s+/).filter(Boolean);
+  if (!pw.length) return t.trim();
+  const tn = tw.map(norm);
+  let k = 0;
+  while (k < pw.length && k < tn.length && tn[k] === pw[k]) k++;
+  return k === pw.length ? tw.slice(k).join(" ") : t.trim();
+}
+
 // ---------- Búsqueda en catálogo ----------
 
 export function indexCatalog(items, store) {
