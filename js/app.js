@@ -7,7 +7,7 @@ import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, cheaperAlts, 
 import { haptic, swipeRows, sheetGestures, pullToRefresh } from "./gestos.js";
 import { avoidSet, conflicts, labelAllergens, ALLER } from "./alergias.js";
 import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL, shareError } from "./sync.js";
-import { initComunidad, openComunidad, openCuenta, comReady, meNow } from "./comunidad.js";
+import { initComunidad, openComunidad, openCuenta, comReady, meNow, avatar } from "./comunidad.js";
 import { initInstalar, showBanner, canInstall, install, later as installLater } from "./instalar.js";
 import { ready as fotosReady, allFotos, replaceFotos } from "./fotos.js";
 import { initEnviar, sendReady, sendHTML, pickupHTML, bindSend, inboxNow, openInbox } from "./enviar.js";
@@ -365,11 +365,18 @@ const HOME_CARDS = [
 if (comReady()) HOME_CARDS.push(["com", "Comunidad", "👥", 100, "Recetas de la gente, estrellas, comentarios con foto y una charla para todos."]);
 let homeHTML = "";
 // Saludo: con tu cuenta, «Hola, Nombre»; sin ella, una invitación a entrar y poner tu nombre.
+// Arriba a la derecha, siempre la cuenta que se está usando (o «Entrar» si no hay sesión).
+const ICO_USER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>`;
 function renderHello() {
   const me = comReady() ? meNow() : null, b = $("homeMe");
   $("homeName").textContent = me?.nombre ? `Hola, ${me.nombre}` : "Super Lista";
-  b.hidden = !comReady() || !!me?.nombre;
-  if (!b.hidden) b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>${me ? "Tu nombre" : "Entrar"}</span>`;
+  b.hidden = !comReady();
+  if (b.hidden) return;
+  const quien = me?.nombre || me?.email || "";
+  b.classList.toggle("on", !!me);
+  b.setAttribute("aria-label", me ? `Tu cuenta: ${quien || "sin nombre"}` : "Entrar en tu cuenta");
+  b.innerHTML = !me ? `${ICO_USER}<span>Entrar</span>`
+    : `${me.nombre ? avatar(me.nombre) : `<span class="avatar">${ICO_USER}</span>`}<span>${esc(me.nombre ? me.nombre.trim().split(/\s+/)[0] : "Tu nombre")}</span>`;
 }
 $("homeMe").onclick = () => { buzz(); openCuenta({ back: null }); };
 $("insGo").onclick = () => { buzz(); install(openSheet); };
