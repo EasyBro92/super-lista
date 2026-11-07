@@ -41,7 +41,8 @@ const MOMENTS = [
 ];
 const ALL = "Todo";
 // País de origen (campo «z») de las recetas de fuera.
-const FLAGS = { "Argentina": "🇦🇷", "Brasil": "🇧🇷", "China": "🇨🇳", "Corea del Sur": "🇰🇷", "Estados Unidos": "🇺🇸", "Filipinas": "🇵🇭",
+const FLAGS = { "Argentina": "🇦🇷", "Austria": "🇦🇹", "Brasil": "🇧🇷", "Chile": "🇨🇱", "China": "🇨🇳", "Colombia": "🇨🇴", "Corea del Sur": "🇰🇷", "Cuba": "🇨🇺",
+  "Egipto": "🇪🇬", "Estados Unidos": "🇺🇸", "Filipinas": "🇵🇭", "Hungría": "🇭🇺", "Polonia": "🇵🇱", "Portugal": "🇵🇹",
   "Francia": "🇫🇷", "Grecia": "🇬🇷", "Hawái": "🌺", "India": "🇮🇳", "Indonesia": "🇮🇩", "Italia": "🇮🇹", "Jamaica": "🇯🇲", "Japón": "🇯🇵",
   "Líbano": "🇱🇧", "Marruecos": "🇲🇦", "México": "🇲🇽", "Perú": "🇵🇪", "Reino Unido": "🇬🇧", "Senegal": "🇸🇳", "Suecia": "🇸🇪",
   "Tailandia": "🇹🇭", "Turquía": "🇹🇷", "Túnez": "🇹🇳", "Venezuela": "🇻🇪", "Vietnam": "🇻🇳" };
