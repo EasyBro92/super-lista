@@ -599,6 +599,11 @@ body.home .wrap{padding-bottom:110px}
 .home-me[hidden]{display:none}
 .home-me svg{width:18px;height:18px}
 .home-me:active{opacity:.85}
+.home-me.on{max-width:42%;background:var(--surface);color:var(--fg);border:1px solid var(--line);padding:4px 14px 4px 4px;box-shadow:0 1px 3px rgb(0 0 0/.08)}
+.home-me.on>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-me.on .avatar{width:34px;height:34px;font-size:.95rem}
+.home-me.on .avatar svg{width:18px;height:18px}
+.home-me.on .avatar:not([style]){background:var(--line);color:var(--muted)}
 .home-ins{display:flex;align-items:center;gap:10px;border-radius:16px;background:var(--accent-soft);padding:10px 8px 10px 12px}
 .home-ins[hidden]{display:none}
 .home-ins img{flex:none;width:44px;height:44px;border-radius:11px}

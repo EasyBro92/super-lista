@@ -128,7 +128,7 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => A.esc(s);
 const fotoURL = (p) => (p ? `${supaCfg().url.replace(/\/+$/, "")}/storage/v1/object/public/fotos/${p.split("/").map(encodeURIComponent).join("/")}` : "");
 const hue = (s) => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
-const avatar = (n) => `<span class="avatar" style="--h:${hue(n)}" aria-hidden="true">${esc(String(n || "?").trim().charAt(0).toUpperCase())}</span>`;
+export const avatar = (n) => `<span class="avatar" style="--h:${hue(n)}" aria-hidden="true">${esc(String(n || "?").trim().charAt(0).toUpperCase())}</span>`;
 function ago(t) {
   const s = (Date.now() - new Date(t)) / 1000;
   if (s < 60) return "ahora";
