@@ -15,6 +15,7 @@ import { initEnviar, sendReady, sendHTML, pickupHTML, bindSend, inboxNow, openIn
 const STORES = [
   ["any", "Cualquiera"], ["mercadona", "Mercadona"], ["carrefour", "Carrefour"], ["lidl", "Lidl"], ["dia", "Dia"],
   ["alcampo", "Alcampo"], ["eroski", "Eroski"], ["aldi", "Aldi"], ["consum", "Consum"], ["elcorteingles", "El Corte Inglés"],
+  ["ahorramas", "Ahorramas"], ["gadis", "Gadis"],
 ];
 const STORE_NAME = Object.fromEntries(STORES);
 // Marcas propias: un producto de estas marcas solo se vende en su súper y lleva su logo en la esquina de la foto.
@@ -24,6 +25,7 @@ const OWN_BRANDS = [
   ["eroski", /\b(eroski|seleqtia)\b/], ["consum", /^consum\b|\bconsum$/], ["elcorteingles", /\b(el corte ingles|aliada|hipercor)\b/],
   ["lidl", /\b(milbona|pikok|combino|freeway|vitasia|chef select|baresa|alesto|solevita|crownfield|snack day|lidl)\b/],
   ["aldi", /\b(milsani|golden seafood|cucina nobile|choceur|lyttos|moser roth|aldi)\b/],
+  ["ahorramas", /\b(alipende|ahorramas)\b/], ["gadis", /\bgadis\b/],
 ];
 function onlyAt(p) {
   if (!p?.n) return null;
@@ -768,7 +770,8 @@ const pricedStores = () => STORES.slice(1).map(([s]) => s).filter((s) => meta?.s
 async function openCompare() {
   const l = list(), items = l.items.filter((i) => !i.done);
   if (!items.length) return;
-  const stores = pricedStores();
+  // Aldi solo tiene precio en las ofertas del folleto: no sirve para comparar la lista entera.
+  const stores = pricedStores().filter((s) => !meta.stores[s].partial);
   openSheet("¿Dónde sale más barata?", `<p class="note">Buscando cada producto en ${stores.map((s) => STORE_NAME[s]).join(", ")}…</p>`);
   const cats = await Promise.all(stores.map(loadStore));
   if (!sheet.open) return;

@@ -59,6 +59,7 @@ export async function readTicket(file, onProgress = () => {}) {
 const STORE_RE = [
   ["mercadona", /mercadona/], ["lidl", /\blidl\b/], ["carrefour", /carrefour/], ["alcampo", /alcampo|auchan/],
   ["eroski", /eroski/], ["aldi", /\baldi\b/], ["consum", /consum/], ["elcorteingles", /corte ingl|hipercor|supercor/],
+  ["ahorramas", /ahorra\s*m[aá]s/], ["gadis", /\bgadis\b/],
   ["dia", /\bdia\b.{0,12}(retail|s\.?a)|supermercados dia|distribuidora internacional/],
 ];
 // Líneas que llevan importe pero no son productos.

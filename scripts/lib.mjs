@@ -85,3 +85,55 @@ export function product({ name, brand = "", format = "", price = null, unit = ""
   if (isNew) o.nw = 1;
   return o;
 }
+
+// Saca los objetos JSON completos que empiezan donde encaja «start» dentro de un HTML (cuenta llaves, respeta comillas).
+export function jsonObjects(text, start) {
+  const out = [];
+  const re = new RegExp(start.source, "g");
+  let m;
+  while ((m = re.exec(text))) {
+    let depth = 0, str = false, esc = false, i = m.index;
+    for (; i < text.length; i++) {
+      const ch = text[i];
+      if (str) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') str = false; continue; }
+      if (ch === '"') str = true;
+      else if (ch === "{") depth++;
+      else if (ch === "}" && --depth === 0) break;
+    }
+    try { out.push(JSON.parse(text.slice(m.index, i + 1))); } catch {}
+    re.lastIndex = i + 1;
+  }
+  return out;
+}
+
+// Página web con reintentos; devuelve null si no se pudo.
+export async function getText(url, { headers = {}, tries = 3 } = {}) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      const r = await fetch(url, { headers, signal: AbortSignal.timeout(40000) });
+      if (r.status === 404) return "";
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.text();
+    } catch { await sleep(5000 * (i + 1)); }
+  }
+  return null;
+}
+
+// Para los súpers que hay que recorrer búsqueda a búsqueda: cada noche se empieza por otro sitio de la lista
+// y se para al acabarse el tiempo; lo de noches anteriores se conserva (ver keepPrevious).
+export function rotate(list, step) {
+  const start = list.length ? (Math.floor(Date.now() / 864e5) * step) % list.length : 0;
+  return [...list.slice(start), ...list.slice(0, start)];
+}
+export const deadline = (min) => { const end = Date.now() + Number(process.env.MAX_MIN || min) * 6e4; return () => Date.now() > end; };
+// Añade al final los productos con precio de la última vez que no han salido hoy.
+export async function keepPrevious(slug, items) {
+  const { readFile } = await import("node:fs/promises");
+  let prev = [];
+  try { prev = JSON.parse(await readFile(`data/stores/${slug}.json`, "utf8")); } catch {}
+  const have = new Set(items.map((p) => p.id ?? p.n));
+  const nuevos = items.length;
+  for (const p of prev) if (p.p != null && !have.has(p.id ?? p.n)) { have.add(p.id ?? p.n); items.push({ ...p, r: items.length }); }
+  console.log(`  ${slug}: ${nuevos} vistos hoy, ${items.length} con los de otros días`);
+  return items;
+}
