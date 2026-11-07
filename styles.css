@@ -1047,3 +1047,23 @@ html{overscroll-behavior-y:contain}
 .chead.snap{transition:transform .36s cubic-bezier(.32,.72,0,1),box-shadow .25s ease}
 .chead.snap .chead-top{transition:transform .36s cubic-bezier(.32,.72,0,1),opacity .3s ease}
 @media (prefers-reduced-motion:reduce){.chead.snap,.chead.snap .chead-top{transition:none}}
+/* Enviar a otro móvil: código, QR y a una persona (js/enviar.js) */
+.home-box{width:100%;border:0;font:inherit;color:inherit;text-align:left;cursor:pointer;padding:12px 14px}
+.home-box .lnk{font-size:1.3rem;padding:0}
+.env{display:flex;flex-direction:column;gap:10px}
+.env-box{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--surface);display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.env .env-box{margin-bottom:0}
+.env-box p{margin:0;line-height:1.45}
+.env-box > .btn{align-self:stretch;text-align:center}
+.env-row{display:flex;gap:8px}
+.env-row input{flex:1;min-width:0;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg)}
+#envCode{font:700 1.15rem ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase}
+.env-row .btn{flex:none}
+.env-code{font:800 2.3rem ui-monospace,Menlo,monospace;letter-spacing:.14em;text-align:center;color:var(--accent);background:var(--accent-soft);border-radius:12px;padding:10px 0;user-select:all}
+.env-qr{width:184px;max-width:60%;margin:0 auto;background:#fff;border-radius:10px;padding:6px}
+.env-qr:empty{display:none}
+.env-qr svg{display:block;width:100%;height:auto}
+.env-inbox{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.env-inbox li{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
+.env-inbox li > span{flex:1;display:flex;flex-direction:column;min-width:0}
+.env-inbox small{color:var(--muted)}

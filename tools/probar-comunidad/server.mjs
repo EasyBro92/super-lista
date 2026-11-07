@@ -53,6 +53,18 @@ http.createServer(async (req, res) => {
         return json(res, 200, { data: r.rows[0].r });
       } catch (e) { return json(res, 200, { error: { code: e.code, message: e.message } }); }
     }
+    // Lo que la app llama sin cuenta con fetch (listas compartidas, envíos con código), como lo responde Supabase.
+    if (u.pathname.startsWith("/rest/v1/rpc/")) {
+      if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "POST" }); return res.end(); }
+      const fn = u.pathname.slice(13);
+      if (!/^[a-z_]+$/.test(fn)) return json(res, 400, {});
+      const a = JSON.parse((await body(req)).toString() || "{}"), ks = Object.keys(a);
+      const vals = ks.map((k) => (a[k] && typeof a[k] === "object" ? JSON.stringify(a[k]) : a[k]));
+      try {
+        const r = await asUser(null, `select public.${fn}(${ks.map((k, i) => `${k} => $${i + 1}`).join(", ")}) as r`, vals);
+        return json(res, 200, r.rows[0].r);
+      } catch (e) { return json(res, e.code === "42883" ? 404 : 400, { code: e.code === "42883" ? "PGRST202" : e.code, message: e.message }); }
+    }
     if (u.pathname.startsWith("/fake/storage/") && req.method === "PUT") {
       const p = decodeURIComponent(u.pathname.slice(14)); // fotos/uid/x.jpg
       const [bucket, folder] = p.split("/");

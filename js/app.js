@@ -10,6 +10,7 @@ import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL, shar
 import { initComunidad, openComunidad, openCuenta, comReady, meNow } from "./comunidad.js";
 import { initInstalar, showBanner, canInstall, install, later as installLater } from "./instalar.js";
 import { ready as fotosReady, allFotos, replaceFotos } from "./fotos.js";
+import { initEnviar, sendReady, sendHTML, pickupHTML, bindSend, inboxNow, openInbox } from "./enviar.js";
 
 const STORES = [
   ["any", "Cualquiera"], ["mercadona", "Mercadona"], ["carrefour", "Carrefour"], ["lidl", "Lidl"], ["dia", "Dia"],
@@ -372,6 +373,7 @@ $("homeMe").onclick = () => { buzz(); openCuenta({ back: null }); };
 $("insGo").onclick = () => { buzz(); install(openSheet); };
 $("insLater").onclick = () => { installLater(); $("homeIns").hidden = true; };
 $("fullGo").onclick = () => openBackup();
+$("homeBox").onclick = () => { buzz(); openInbox(); };
 initInstalar(() => { if (home) renderHome(); });
 addEventListener("superlista:cuenta", () => { if (home) renderHome(); });
 async function renderHome() {
@@ -379,6 +381,9 @@ async function renderHome() {
   $("homeHi").textContent = h >= 6 && h < 14 ? "¡Buenos días!" : h >= 14 && h < 21 ? "¡Buenas tardes!" : "¡Buenas noches!";
   renderHello();
   $("homeIns").hidden = !showBanner();
+  const box = inboxNow(), hb = $("homeBox");
+  hb.hidden = !box.length;
+  if (box.length) hb.querySelector(".hi-t").innerHTML = `<b>📬 ${esc(box[0].de)} te ha enviado ${box[0].tipo === "lista" ? `«${esc(box[0].nombre || "una lista")}»` : "sus datos"}</b><small>${box.length > 1 ? `Y ${box.length - 1} cosa${box.length > 2 ? "s" : ""} más. ` : ""}Toca para verlo.</small>`;
   const info = await homeInfo().catch(() => null);
   const l = list(), left = l.items.filter((i) => !i.done);
   const total = left.reduce((a, i) => a + (itemPrice(i) ?? 0), 0);
@@ -662,13 +667,21 @@ function openLists() {
 }
 
 // ---------- Compartir lista ----------
+// Además de compartirla en directo, se puede mandar una copia (con código, enlace y QR, o a una persona con cuenta).
+const sendCopyBtn = `<p class="note">¿Solo quieres pasar una copia, sin que se cambie en los dos móviles?</p>
+      <div class="row"><button class="btn ghost small" type="button" id="sendCopy">📤 Enviar una copia</button></div>`;
+function openSendList() {
+  openSheet(`Enviar «${list().name}»`, `<p class="note">Le llega una copia de la lista tal como está ahora. Si cambiáis algo después, no se cambia en el otro móvil (para eso, «Compartir esta lista»).</p>
+    ${sendHTML("lista")}${pickupHTML()}`);
+  bindSend(openLists);
+}
 function shareHTML(l) {
   if (!syncReady()) return "";
   return l.sid ? `<div class="share"><p><b>👥 Lista compartida.</b> Quien tenga el enlace ve y cambia «${esc(l.name)}» al momento.</p>
       <div class="row"><button class="btn ghost small" type="button" id="shareSend">Enviar el enlace</button>
-      <button class="btn danger small" type="button" id="shareStop">Dejar de compartir</button></div></div>`
+      <button class="btn danger small" type="button" id="shareStop">Dejar de compartir</button></div>${sendCopyBtn}</div>`
     : `<div class="share"><p>👥 Comparte «${esc(l.name)}» con tu familia: lo que apunte cualquiera se ve al momento en todos los móviles.</p>
-      <div class="row"><button class="btn ghost small" type="button" id="shareStart">Compartir esta lista</button></div></div>`;
+      <div class="row"><button class="btn ghost small" type="button" id="shareStart">Compartir esta lista</button></div>${sendCopyBtn}</div>`;
 }
 async function sendLink(l) {
   const url = shareURL(l);
@@ -687,6 +700,7 @@ function bindShare() {
     else { go.disabled = false; go.textContent = "Compartir esta lista"; setStatus(shareError() ?? "No he podido compartirla. Revisa la conexión y prueba otra vez.", true); }
   };
   const send = $("shareSend"); if (send) send.onclick = () => sendLink(l);
+  const copy = $("sendCopy"); if (copy) copy.onclick = openSendList;
   const stop = $("shareStop");
   if (stop) stop.onclick = () => {
     if (stop.dataset.sure !== "1") { stop.dataset.sure = "1"; stop.textContent = "Toca otra vez: dejarás de ver sus cambios"; return; }
@@ -887,21 +901,39 @@ function ticketReview(t, text) {
 // Todo vive en este móvil: la copia guarda listas, recetas propias, menú, despensa, compras y tarjetas en un archivo.
 function openBackup(note = "") {
   const myR = (st.myR ?? []).length, nl = st.lists.length;
-  openSheet("Copia de seguridad", `<p class="note">Guarda en un archivo todo lo que tienes en la app: ${nl} lista${nl === 1 ? "" : "s"}, ${st.history.length} compra${st.history.length === 1 ? "" : "s"}, ${myR} receta${myR === 1 ? "" : "s"} tuya${myR === 1 ? "" : "s"}, el menú, lo que tienes en casa y tus tarjetas. Guárdalo en Drive o mándatelo por WhatsApp; si cambias de móvil o se borran los datos, lo recuperas aquí.</p>
+  const send = sendReady();
+  openSheet(send ? "Pasar o guardar tus datos" : "Copia de seguridad", `${send ? `<p class="note">Pasa todo lo que tienes en la app a otro móvil, o a la app instalada si ahora la usas en el navegador: ${nl} lista${nl === 1 ? "" : "s"}, ${st.history.length} compra${st.history.length === 1 ? "" : "s"}, ${myR} receta${myR === 1 ? "" : "s"} tuya${myR === 1 ? "" : "s"}, el menú, lo que tienes en casa y tus tarjetas.</p>
+    ${sendHTML("copia")}${pickupHTML()}
+    <h3 class="cgroup">Guardar en un archivo</h3>
+    <p class="note">Una copia de seguridad para guardarla en Drive o en el ordenador. Si se borran los datos, la recuperas aquí.</p>`
+    : `<p class="note">Guarda en un archivo todo lo que tienes en la app: ${nl} lista${nl === 1 ? "" : "s"}, ${st.history.length} compra${st.history.length === 1 ? "" : "s"}, ${myR} receta${myR === 1 ? "" : "s"} tuya${myR === 1 ? "" : "s"}, el menú, lo que tienes en casa y tus tarjetas. Guárdalo en Drive o mándatelo por WhatsApp; si cambias de móvil o se borran los datos, lo recuperas aquí.</p>`}
     ${st.lastBackup ? `<p class="note">Última copia: ${esc(new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }))}.</p>` : ""}
     ${note ? `<p class="bk-msg" role="status">${esc(note)}</p>` : ""}
-    <div class="bk-row"><button class="btn" type="button" id="bkSave">Guardar copia</button>
+    <div class="bk-row"><button class="btn${send ? " ghost" : ""}" type="button" id="bkSave">Guardar copia</button>
     <label class="btn ghost" for="bkFile">Recuperar una copia</label><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
     <div id="bkAsk"></div>`);
   $("bkSave").onclick = saveBackup;
   $("bkFile").onchange = (e) => readBackup(e.target.files?.[0]);
+  bindSend(() => openBackup());
+}
+// Todo lo de la app en un objeto: para el archivo de la copia y para pasarlo con un código.
+async function backupData() {
+  await fotosReady;
+  return { app: "superlista", v: 1, date: new Date().toISOString(), state: st, fotos: allFotos() };
+}
+// Sustituye lo de este móvil por una copia y vuelve a abrir la app. Si no cabe, devuelve el aviso.
+async function restoreBackup(data) {
+  try {
+    await replaceFotos(data.fotos ?? {});
+    localStorage.setItem(KEY, JSON.stringify(data.state));
+  } catch { return "No he podido guardar la copia: el móvil no tiene espacio para la app."; }
+  location.reload();
+  return "";
 }
 async function saveBackup() {
-  await fotosReady;
-  const fotos = allFotos();
-  const now = new Date();
-  const name = `super-lista-${now.toISOString().slice(0, 10)}.json`;
-  const blob = new Blob([JSON.stringify({ app: "superlista", v: 1, date: now.toISOString(), state: st, fotos })], { type: "application/json" });
+  const data = await backupData();
+  const name = `super-lista-${data.date.slice(0, 10)}.json`;
+  const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
   const file = new File([blob], name, { type: "application/json" });
   let done = false;
   if (navigator.canShare?.({ files: [file] })) {
@@ -912,7 +944,7 @@ async function saveBackup() {
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
     document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
-  st.lastBackup = now.getTime(); persist(); buzz(20);
+  st.lastBackup = Date.now(); persist(); buzz(20);
   openBackup(`Copia guardada: ${name}`);
 }
 async function readBackup(f) {
@@ -926,13 +958,7 @@ async function readBackup(f) {
     <span>Tiene ${s2.lists.length} lista${s2.lists.length === 1 ? "" : "s"} y ${(s2.history ?? []).length} compra${(s2.history ?? []).length === 1 ? "" : "s"}. Sustituye lo que hay ahora en la app.</span>
     <div class="bk-row"><button class="btn" type="button" id="bkYes">Sí, recuperar</button><button class="btn ghost" type="button" id="bkNo">Cancelar</button></div></div>`;
   $("bkNo").onclick = () => openBackup();
-  $("bkYes").onclick = async () => {
-    try {
-      await replaceFotos(data.fotos ?? {});
-      localStorage.setItem(KEY, JSON.stringify(s2));
-    } catch { return openBackup("No he podido guardar la copia: el móvil no tiene espacio para la app."); }
-    location.reload();
-  };
+  $("bkYes").onclick = async () => { const err = await restoreBackup(data); if (err) openBackup(err); };
 }
 
 // ---------- Se te acaba (como las sugerencias de Listonic y Bring!) ----------
@@ -1679,6 +1705,8 @@ document.addEventListener("error", (e) => {
 // ---------- Arranque ----------
 initSync({ st, list, persist, render: () => render(), setStatus, uid });
 initComunidad({ st, save, setStatus, buzz, esc, openSheet, sheet, body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
+initEnviar({ st, list, uid, save, setStatus, buzz, esc, openSheet, closeSheet, backupData, restore: restoreBackup,
+  showList: () => { showHome(false); render(); }, inboxChanged: () => { if (home) renderHome(); } });
 render();
 catalogFor(list().store);
 if (st.shop) keepAwake();
