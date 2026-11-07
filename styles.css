@@ -1047,3 +1047,20 @@ html{overscroll-behavior-y:contain}
 .chead.snap{transition:transform .36s cubic-bezier(.32,.72,0,1),box-shadow .25s ease}
 .chead.snap .chead-top{transition:transform .36s cubic-bezier(.32,.72,0,1),opacity .3s ease}
 @media (prefers-reduced-motion:reduce){.chead.snap,.chead.snap .chead-top{transition:none}}
+
+/* Buscador de la lista */
+.lsearch{position:relative;display:flex;align-items:center}
+.lsearch svg{position:absolute;left:14px;width:20px;height:20px;color:var(--muted);pointer-events:none}
+.lsearch input{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px 14px 12px 44px;font:500 1rem var(--body);background:var(--surface);color:var(--fg)}
+.lsearch input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.lres{margin-top:22px;gap:8px}
+body.searching .summary,body.searching .ideas:not(.lres){display:none}
+.lres .ideas-head h2{font-size:1rem}
+.lres .deal{width:104px}
+.lres .deal-ph{width:104px;height:104px}
+.lres .deal-ph .emo{font-size:38px}
+.lres .deal-p b{color:var(--fg)}
+.lres-add{align-self:flex-start}
+body.shop .lres{display:flex}
+body.shop .lres[hidden]{display:none}
+.lnone{color:var(--muted);text-align:center;padding:18px 8px;margin:0}

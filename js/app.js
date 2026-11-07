@@ -1,4 +1,4 @@
-import { parseCommand, search, indexCatalog, guess, norm, capital, tokens } from "./parser.js";
+import { parseCommand, voiceDelta, search, indexCatalog, guess, norm, capital, tokens } from "./parser.js";
 import { BASICS } from "./basics.js";
 import { initCocina, openRecipes, learnPurchase, cookBack, renderIdeas, homeInfo } from "./cocina.js";
 import { barcodeSVG, bestFormat } from "./barcode.js";
@@ -442,6 +442,7 @@ function render() {
   if (home) renderHome();
   renderIdeas($("ideas")).catch(() => {});
   renderDeals().catch(() => {});
+  if (lfilter) renderLres().catch(() => {});
   $("listName").textContent = l.sid ? `${l.name} 👥` : l.name;
   syncCurrent();
   document.body.classList.toggle("shop", !!st.shop);
@@ -451,7 +452,7 @@ function render() {
   renderFavs();
   $("finishWrap").hidden = !l.items.some((i) => i.done);
   const el = $("list");
-  if (!l.items.length) {
+  if (!l.items.length && !lfilter) {
     el.classList.remove("grid");
     el.innerHTML = `<div class="empty"><span class="empty-art" aria-hidden="true">🧺</span><b>La lista está vacía</b><span>Escribe o dicta lo que necesitas, por ejemplo:</span>
       <button class="btn ghost" type="button" data-try="apunta leche, huevos y oreos">«apunta leche, huevos y oreos»</button>
@@ -462,7 +463,15 @@ function render() {
   const grid = (st.view ?? "list") === "grid";
   el.classList.toggle("grid", grid);
   const by = {};
-  const left = l.items.filter((i) => !i.done), cart = l.items.filter((i) => i.done);
+  // Con el buscador escrito solo se ven los productos de la lista que coinciden.
+  const qt = lfilter ? tokens(lfilter) : [];
+  const shown = qt.length ? l.items.filter((i) => { const t = tokens(`${i.label} ${i.prod?.n ?? ""}`); return qt.every((w) => t.some((x) => x.startsWith(w))); }) : l.items;
+  if (lfilter && !shown.length) {
+    el.classList.remove("grid");
+    el.innerHTML = `<p class="lnone">«${esc(lfilter)}» no está en tu lista.${l.items.length ? "" : " La lista está vacía."}</p>`;
+    return;
+  }
+  const left = shown.filter((i) => !i.done), cart = shown.filter((i) => i.done);
   for (const it of left) (by[CATS.includes(it.cat) ? it.cat : "Otros"] ??= []).push(it);
   const one = (it) => grid ? tileHTML(it, l) : rowHTML(it, l);
   const head = (c, n) => { const [e, h] = CAT_LOOK[c] ?? CAT_LOOK.Otros; return `<h2 style="--h:${h}"><span class="cat-ic" aria-hidden="true">${e}</span>${esc(c)}<span class="cat-n">${n}</span></h2>`; };
@@ -474,7 +483,7 @@ function render() {
       <ul class="items">${by[c].sort((a, b) => a.added - b.added).map(one).join("")}</ul></section>`).join(""))
     + (cart.length ? `<section class="cat cart"><h2><span class="cat-ic" aria-hidden="true">✅</span>En el carro<span class="cat-n">${cart.length}</span></h2>
       <ul class="items">${cart.sort((a, b) => a.added - b.added).map(one).join("")}</ul></section>` : "")
-    + (st.gestured ? "" : `<p class="hint">${grid ? "Consejo: toca un producto para meterlo en el carro, deslízalo a la izquierda para quitarlo o mantenlo pulsado para cambiarlo o editarlo."
+    + (st.gestured || lfilter ? "" : `<p class="hint">${grid ? "Consejo: toca un producto para meterlo en el carro, deslízalo a la izquierda para quitarlo o mantenlo pulsado para cambiarlo o editarlo."
       : "Consejo: desliza un producto a la izquierda para borrarlo, a la derecha para marcarlo como comprado, o mantenlo pulsado para ver más opciones."}</p>`);
   fresh.clear();
 }
@@ -514,6 +523,52 @@ function tileHTML(it, l) {
     ${price != null ? `<span class="gt-p">${eur(price)}</span>` : ""}
   </li>`;
 }
+// ---------- Buscador de la lista ----------
+// Filtra la lista mientras escribes y, debajo del cuadro, enseña ese producto en el súper para apuntarlo de un toque.
+let lfilter = "", lresProds = [];
+async function renderLres() {
+  const el = $("lres"), q = lfilter, l = list();
+  if (!q || tokens(q).length === 0) { el.hidden = true; el.innerHTML = ""; return; }
+  const cat = await catalogFor(l.store);
+  if (q !== lfilter || list() !== l) return;
+  const ps = search(cat, q, 12);
+  lresProds = ps;
+  const inL = new Set(l.items.filter((i) => !i.done).map((i) => i.prod && `${i.prod.s}|${i.prod.n}`));
+  el.innerHTML = `<div class="ideas-head"><h2>En ${esc(l.store === "any" ? "los súpers" : STORE_NAME[l.store])}</h2>${ps.length ? '<button type="button" class="lnk" data-lres-all>Ver más</button>' : ""}</div>
+    ${ps.length ? `<div class="ideas-row">${ps.map((p, k) => `<button type="button" class="deal" data-lres="${k}" aria-pressed="${inL.has(`${p.s}|${p.n}`)}">
+      <span class="deal-ph">${photoHTML(p.img, guess(p.n).emoji, p.n, onlyAt(p))}<span class="tck" aria-hidden="true">${CHECK_SVG}</span></span>
+      <span class="deal-n">${esc(p.n)}</span>
+      <span class="deal-p">${p.p != null ? `<b>${eur(p.p)}</b>` : ""}${l.store === "any" ? `${p.p != null ? " · " : ""}${esc(STORE_NAME[p.s])}` : ""}</span></button>`).join("")}</div>`
+      : ""}
+    <button type="button" class="btn ghost lres-add" data-lres-new>+ Apuntar «${esc(capital(q))}»</button>`;
+  el.hidden = false;
+}
+function setFilter(v) {
+  lfilter = v.trim();
+  document.body.classList.toggle("searching", !!lfilter);
+  render(); renderLres().catch(() => {});
+}
+{
+  let tmo;
+  $("lq").addEventListener("input", (e) => { clearTimeout(tmo); tmo = setTimeout(() => setFilter(e.target.value), 160); });
+  $("lq").addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.target.value = ""; setFilter(""); }
+    if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+  });
+  $("lres").addEventListener("click", async (e) => {
+    if (e.target.closest("[data-lres-all]")) return openBrowse(undefined, lfilter);
+    if (e.target.closest("[data-lres-new]")) { const q = lfilter; $("lq").value = ""; lfilter = ""; renderLres(); return handle(q); }
+    const b = e.target.closest("[data-lres]"); if (!b) return;
+    const p = lresProds[+b.dataset.lres]; if (!p) return;
+    buzz();
+    const ex = list().items.find((i) => !i.done && i.prod?.n === p.n && i.prod?.s === p.s);
+    if (ex) { list().items = list().items.filter((i) => i !== ex); b.setAttribute("aria-pressed", "false"); save(); render(); setStatus(`Quitado: ${ex.label}`); return; }
+    b.setAttribute("aria-pressed", "true");
+    const it = await addItem({ query: p.n }, pick(p));
+    save(); render(); flyIn([it.id]); setStatus(`Apuntado: ${it.label}`);
+  });
+}
+
 function renderFavs() {
   const inList = new Set(list().items.filter((i) => !i.done).map((i) => norm(i.label)));
   // Primero lo que se te puede estar acabando (lo compras cada X días y ya toca), luego lo que más compras.
@@ -1116,11 +1171,11 @@ async function renderDeals() {
   if (html !== dealsHTML) { el.innerHTML = html; dealsHTML = html; }
   el.hidden = false;
 }
-async function openBrowse(tab) {
+async function openBrowse(tab, q0 = "") {
   const l = list();
   const freq = Object.values(st.freq).sort((a, b) => b.count - a.count || b.last - a.last).slice(0, 24).map((f) => f.label);
   const tabs = [...(freq.length ? ["Frecuentes"] : []), OFFERS_TAB, DEALS_TAB, ...Object.keys(BASICS)];
-  browse = { tab: tab && tabs.includes(tab) ? tab : tabs[0], q: "", cat: [], tiles: new Map(), added: 0, f: { sort: "rel", diets: new Set() } };
+  browse = { tab: tab && tabs.includes(tab) ? tab : tabs[0], q: q0.trim(), cat: [], tiles: new Map(), added: 0, f: { sort: "rel", diets: new Set() } };
   openSheet("Añadir productos", `
     <label class="vh" for="bq">Buscar producto</label>
     <input id="bq" class="bsearch" type="search" placeholder="Buscar en ${esc(STORE_NAME[l.store])}…" enterkeyhint="search" autocomplete="off">
@@ -1128,6 +1183,7 @@ async function openBrowse(tab) {
     <div id="bfbar" hidden></div>
     <div class="bgrid" id="bgrid"><p class="note">Cargando productos…</p></div>
     <div class="bfoot"><span id="bcount"></span><button class="btn" type="button" id="bdone">Listo</button></div>`, "browsing");
+  if (browse.q) $("bq").value = browse.q;
   browse.cat = await catalogFor(l.store);
   browse.freq = freq;
   if (!sheet.open) return;
@@ -1223,15 +1279,28 @@ document.addEventListener("visibilitychange", keepAwake);
 // ---------- Voz ----------
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;
-// Dictado seguido: cada frase se apunta al momento y se sigue escuchando hasta tocar otra vez el micro
-// o hasta unos segundos de silencio. Así se pueden dictar muchos productos de una vez.
+// Dictado seguido: se sigue escuchando hasta tocar otra vez el micro o unos segundos de silencio.
+// Lo que se dice de seguido es una sola frase («leche en polvo»): se junta y se apunta al hacer una pausa.
+// Dentro de la frase, los productos se separan por «y», «e», comas o «también» (lo hace parseCommand).
+const VOICE_PAUSE = 1300; // ms de silencio que cuentan como «fin de frase»
 let voice = null;
 function startVoice() {
   const mic = $("micBtn");
   if (!SR) return dictHint();
-  voice = { on: true, last: Date.now(), prev: "", count: 0, queue: Promise.resolve() };
+  voice = { on: true, last: Date.now(), prev: "", pend: "", timer: 0, count: 0, queue: Promise.resolve() };
   const v = voice;
-  const stop = () => { v.on = false; try { rec?.stop(); } catch {} };
+  const flush = () => {
+    clearTimeout(v.timer);
+    const frase = v.pend.trim(); v.pend = "";
+    if (!frase) return v.queue;
+    v.queue = v.queue.then(() => handle(frase, { quiet: true })).then((added) => {
+      v.count += added?.length ?? 0;
+      if (v.on) setStatus(`Te escucho… ${v.count} apuntado${v.count === 1 ? "" : "s"}. Toca el micro para terminar.`);
+    });
+    return v.queue;
+  };
+  const later = () => { clearTimeout(v.timer); v.timer = setTimeout(flush, VOICE_PAUSE); };
+  const stop = () => { v.on = false; flush(); try { rec?.stop(); } catch {} };
   v.stop = stop;
   const listen = () => {
     try {
@@ -1243,33 +1312,31 @@ function startVoice() {
         for (let k = e.resultIndex; k < e.results.length; k++) {
           const r = e.results[k], t = r[0].transcript;
           if (!r.isFinal) { interim += t; continue; }
-          // Algunos Android repiten lo ya dicho al principio de cada frase: se quita.
-          let nuevo = t.trim();
-          if (v.prev && norm(nuevo).startsWith(norm(v.prev))) nuevo = nuevo.slice(v.prev.length).trim();
+          const nuevo = voiceDelta(v.prev, t);
           v.prev = t.trim();
-          if (!nuevo) continue;
-          v.queue = v.queue.then(() => handle(nuevo, { quiet: true })).then((added) => {
-            v.count += added?.length ?? 0;
-            if (v.on) setStatus(`Te escucho… ${v.count} apuntado${v.count === 1 ? "" : "s"}. Toca el micro para terminar.`);
-          });
+          if (nuevo) v.pend = `${v.pend} ${nuevo}`.trim();
         }
-        $("q").value = interim;
+        $("q").value = `${v.pend} ${interim}`.trim();
+        // Mientras sigue hablando no se apunta nada; tras una pausa, la frase entera.
+        if (v.pend || interim) later();
       };
       rec.onerror = (e) => {
         if (e.error === "not-allowed" || e.error === "service-not-allowed") { v.on = false; dictHint(); }
       };
       rec.onend = () => {
-        $("q").value = "";
         // Chrome corta tras un silencio: si seguimos en modo dictado, vuelve a escuchar.
         if (v.on && Date.now() - v.last < 12000) { v.prev = ""; return listen(); }
         v.on = false; mic.classList.remove("rec");
-        v.queue.then(() => setStatus(v.count ? `Listo: ${v.count} producto${v.count === 1 ? "" : "s"} apuntado${v.count === 1 ? "" : "s"}.` : "No te he oído. Toca el micro y prueba otra vez."));
+        flush().then(() => {
+          $("q").value = "";
+          setStatus(v.count ? `Listo: ${v.count} producto${v.count === 1 ? "" : "s"} apuntado${v.count === 1 ? "" : "s"}.` : "No te he oído. Toca el micro y prueba otra vez.");
+        });
       };
       rec.start();
     } catch { v.on = false; mic.classList.remove("rec"); dictHint(); }
   };
   mic.classList.add("rec");
-  setStatus("Te escucho… di todos los productos que quieras. Toca el micro para terminar.");
+  setStatus("Te escucho… di los productos separados por «y» o con una pausa. Toca el micro para terminar.");
   listen();
 }
 function dictHint() {
