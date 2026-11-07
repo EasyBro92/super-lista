@@ -1180,5 +1180,641 @@
   "autor": "Shixart1985",
   "licencia": "CC BY 2.0",
   "fuente": "https://commons.wikimedia.org/wiki/File:Person_reaches_for_a_jar_on_a_wooden_shelf_filled_with_various_containers_in_a_kitchen_or_pantry_setting.jpg"
+ },
+ "Pulpo a la gallega": {
+  "img": "img/recetas/pulpo-a-la-gallega.jpg",
+  "autor": "Dylanmonch vigo",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Raci%C3%B3n_de_pulpo_a_feira_en_Vigo.jpg"
+ },
+ "Bacalao al pil pil": {
+  "img": "img/recetas/bacalao-al-pil-pil.jpg",
+  "autor": "Javier Lastras from España/Spain",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Bacalao-pil-pil-02-jlastras.jpg"
+ },
+ "Bacalao a la vizcaína": {
+  "img": "img/recetas/bacalao-a-la-vizcaina.jpg",
+  "autor": "Tamorlan",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Bacalao_Vizcaina_(Marug%C3%A1n).jpg"
+ },
+ "Fideuá": {
+  "img": "img/recetas/fideua.jpg",
+  "autor": "Juan Emilio Prades Bel",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Plato_t%C3%ADpico_de_fideu%C3%A1_de_pescado_y_marisco.jpg"
+ },
+ "Arroz negro": {
+  "img": "img/recetas/arroz-negro.jpg",
+  "autor": "JArribasphoto",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Arroz_negro_con_tinta_de_calamar_y_langostinos_en_paellera.jpg"
+ },
+ "Arroz caldoso con bogavante": {
+  "img": "img/recetas/arroz-caldoso-con-bogavante.jpg",
+  "autor": "Tamorlan",
+  "licencia": "CC BY 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Arroz_con_Bogavante_(Caldoso).JPG"
+ },
+ "Caldo gallego": {
+  "img": "img/recetas/caldo-gallego.jpg",
+  "autor": "Juan Mejuto",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Caldo_gallego_-_juantiagues.jpg"
+ },
+ "Ajoblanco": {
+  "img": "img/recetas/ajoblanco.jpg",
+  "autor": "Popo le Chien",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Ajo_blanco.jpg"
+ },
+ "Escalivada": {
+  "img": "img/recetas/escalivada.jpg",
+  "autor": "Juan Emilio Prades Bel",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Plato_de_escalivada_con_at%C3%BAn.jpg"
+ },
+ "Pimientos de padrón": {
+  "img": "img/recetas/pimientos-de-padron.jpg",
+  "autor": "Cook And Drink",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Pimientos_de_Padron_Valencia_2026.jpg"
+ },
+ "Patatas bravas": {
+  "img": "img/recetas/patatas-bravas.jpg",
+  "autor": "Juan Emilio Prades Bel",
+  "licencia": "CC BY 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Patatas_bravas._Tapa_de_bar_(Espa%C3%B1a).jpg"
+ },
+ "Croquetas de jamón": {
+  "img": "img/recetas/croquetas-de-jamon.jpg",
+  "autor": "deramaenrama",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Croquetas_caseras_de_jam%C3%B3n_en_Salamanca.jpg"
+ },
+ "Rabo de toro": {
+  "img": "img/recetas/rabo-de-toro.jpg",
+  "autor": "Juan Emilio Prades Bel",
+  "licencia": "CC BY 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Rabo_de_toro,_gastronom%C3%ADa_rural,_comarca_Maestrazgo.jpg"
+ },
+ "Carrilleras al vino tinto": {
+  "img": "img/recetas/carrilleras-al-vino-tinto.jpg",
+  "autor": "LWY from Pasadena, USA",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Carrillada_Ib%C3%A9rica_Sevilla.jpg"
+ },
+ "Conejo al ajillo": {
+  "img": "img/recetas/conejo-al-ajillo.jpg",
+  "autor": "Avicentegil",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Conejo_al_ajillo_con_patatas.jpg"
+ },
+ "Pollo al chilindrón": {
+  "img": "img/recetas/pollo-al-chilindron.jpg",
+  "autor": "Tamorlan",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Chilindr%C3%B3n_-_Pollo.jpg"
+ },
+ "Merluza a la gallega": {
+  "img": "img/recetas/merluza-a-la-gallega.jpg",
+  "autor": "sporras from Madrid, Spain",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Plato_de_merluza.jpg"
+ },
+ "Sardinas a la plancha": {
+  "img": "img/recetas/sardinas-a-la-plancha.jpg",
+  "autor": "Tamorlan",
+  "licencia": "CC BY 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Sardinas_a_la_plancha-_C%C3%A1diz_-_2009.jpg"
+ },
+ "Boquerones en vinagre": {
+  "img": "img/recetas/boquerones-en-vinagre.jpg",
+  "autor": "cyclonebill from Copenhagen, Denmark",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Ansjoser_i_eddike_(4253991355).jpg"
+ },
+ "Calamares encebollados": {
+  "img": "img/recetas/calamares-encebollados.jpg",
+  "autor": "Juan Emilio Prades Bel",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Calamares_encebollados.jpg"
+ },
+ "Migas extremeñas": {
+  "img": "img/recetas/migas-extremenas.jpg",
+  "autor": "Juan Emilio Prades Bel",
+  "licencia": "CC BY 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Migas_de_Pastor,_Maestrazgo.jpg"
+ },
+ "Papas arrugadas con mojo picón": {
+  "img": "img/recetas/papas-arrugadas-con-mojo-picon.jpg",
+  "autor": "Fer..",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Papasarrugadas.jpg"
+ },
+ "Pipirrana": {
+  "img": "img/recetas/pipirrana.jpg",
+  "autor": "Avicentegil",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Ensalada_murciana_IMGP4187.JPG"
+ },
+ "Empanada gallega de atún": {
+  "img": "img/recetas/empanada-gallega-de-atun.jpg",
+  "autor": "Yoolian",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Empanada_gallega_de_caballa_(1944px).jpg"
+ },
+ "Crema de calabaza": {
+  "img": "img/recetas/crema-de-calabaza.jpg",
+  "autor": "Laia Gil",
+  "licencia": "CC BY 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Crema_de_calabaza.JPG"
+ },
+ "Vichyssoise": {
+  "img": "img/recetas/vichyssoise.jpg",
+  "autor": "Desconocido",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Vichyssoise_potato_and_leek_cold_soup_bottles_Vikings_Luxury_Dinner_Buffet_26_January_2025_Philippines4.jpg"
+ },
+ "Crema de champiñones": {
+  "img": "img/recetas/crema-de-champinones.jpg",
+  "autor": "Redeemer|Vodesnet",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Cream_Mushroom_soup_2.jpg"
+ },
+ "Tocino de cielo": {
+  "img": "img/recetas/tocino-de-cielo.jpg",
+  "autor": "Venta Aurelio",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Tocino-de-cielo-casero-restaurante-chipiona-venta-aurelio.JPG"
+ },
+ "Quesada pasiega": {
+  "img": "img/recetas/quesada-pasiega.jpg",
+  "autor": "Juan Emilio Prades Bel",
+  "licencia": "CC BY 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Quesada.jpg"
+ },
+ "Filloas": {
+  "img": "img/recetas/filloas.jpg",
+  "autor": "juantiagues",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:As_Filloas_(24631260401).jpg"
+ },
+ "Pestiños": {
+  "img": "img/recetas/pestinos.jpg",
+  "autor": "Ismael Olea",
+  "licencia": "Public domain",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Pesti%C3%B1os_3.jpg"
+ },
+ "Peras al vino": {
+  "img": "img/recetas/peras-al-vino.jpg",
+  "autor": "Juan Emilio Prades Bel",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Pera_al_vino.jpg"
+ },
+ "Manzanas asadas": {
+  "img": "img/recetas/manzanas-asadas.jpg",
+  "autor": "Alabama Extension",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Hot_and_Sweet_Baked_Apples_-_50495420941.jpg"
+ },
+ "Flan de queso": {
+  "img": "img/recetas/flan-de-queso.jpg",
+  "autor": "Jeanne Tiong",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Leche_flan_Filipinas.jpg"
+ },
+ "Mousse de chocolate": {
+  "img": "img/recetas/mousse-de-chocolate.jpg",
+  "autor": "jules / stonesoup",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Chocolate_mousse_-_stonesoup.jpg"
+ },
+ "Cuajada con miel y nueces": {
+  "img": "img/recetas/cuajada-con-miel-y-nueces.jpg",
+  "autor": "Javier Lastras",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Cuajada_Casera_con_Miel.jpg"
+ },
+ "Ensalada de garbanzos": {
+  "img": "img/recetas/ensalada-de-garbanzos.jpg",
+  "autor": "Cajsa Lilliehook from Portland",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Chickpea_Chop_Salad_(9484308160).jpg"
+ },
+ "Ensalada de lentejas": {
+  "img": "img/recetas/ensalada-de-lentejas.jpg",
+  "autor": "Joey Doll",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Lentil_salad_(29308018298).jpg"
+ },
+ "Ensalada César": {
+  "img": "img/recetas/ensalada-cesar.jpg",
+  "autor": "Banej",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Caesar_Salad_from_Tony_Roma_Restaurant-_March_2024_02.jpg"
+ },
+ "Ensalada griega": {
+  "img": "img/recetas/ensalada-griega.jpg",
+  "autor": "https://www.flickr.com/photos/zone41/",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Greek_Salad_Choriatiki.jpg"
+ },
+ "Revuelto de espárragos trigueros": {
+  "img": "img/recetas/revuelto-de-esparragos-trigueros.jpg",
+  "autor": "Juan Emilio Prades Bel",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Revuelto_de_esp%C3%A1rragos.jpg"
+ },
+ "Pollo al limón": {
+  "img": "img/recetas/pollo-al-limon.jpg",
+  "autor": "Willis Lam",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Tenglong_Chinese_Restaurant_Lemon_Chicken_(37577556406).jpg"
+ },
+ "Pollo a la cerveza": {
+  "img": "img/recetas/pollo-a-la-cerveza.jpg",
+  "autor": "Maryte Peralta",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Seco_de_Pollo.jpg"
+ },
+ "Solomillo de cerdo al whisky": {
+  "img": "img/recetas/solomillo-de-cerdo-al-whisky.jpg",
+  "autor": "Miguelbremen",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Solomillo_al_whisky.JPG"
+ },
+ "Albóndigas de pollo en salsa de tomate": {
+  "img": "img/recetas/albondigas-de-pollo-en-salsa-de-tomate.jpg",
+  "autor": "Carmelfak",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Keto_Chicken_Meatballs.png"
+ },
+ "Hamburguesas de lentejas": {
+  "img": "img/recetas/hamburguesas-de-lentejas.jpg",
+  "autor": "Samuel Rengifo",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Deliciosas_hamburguesas_de_lenteja_en_Buga.JPG"
+ },
+ "Berenjenas a la parmesana": {
+  "img": "img/recetas/berenjenas-a-la-parmesana.jpg",
+  "autor": "Schellenberg",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Parmigiana_di_melanzane.jpg"
+ },
+ "Lasaña de carne": {
+  "img": "img/recetas/lasana-de-carne.jpg",
+  "autor": "jules / stonesoup",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Lasagne_-_stonesoup.jpg"
+ },
+ "Lasaña de verduras": {
+  "img": "img/recetas/lasana-de-verduras.jpg",
+  "autor": "jeffreyw",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Lasagna_(1).jpg"
+ },
+ "Risotto de setas": {
+  "img": "img/recetas/risotto-de-setas.jpg",
+  "autor": "Cassinam",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Esno4Wkmana_jul_2014_Cassnam_067.jpg"
+ },
+ "Espaguetis con almejas": {
+  "img": "img/recetas/espaguetis-con-almejas.jpg",
+  "autor": "Alpha from Melbourne, Australia",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Spaghetti_alle_vongole,_Cafe_a_Taglio,_St._Kilda.jpg"
+ },
+ "Pasta con brócoli y ajo": {
+  "img": "img/recetas/pasta-con-brocoli-y-ajo.jpg",
+  "autor": "Federica.tamburini.75",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Orecchiette_broccoli_e_salsiccia.jpg"
+ },
+ "Salmón al horno con verduras": {
+  "img": "img/recetas/salmon-al-horno-con-verduras.jpg",
+  "autor": "Gerda Arendt",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Steckenroth,_salmon_on_baked_vegetables.jpg"
+ },
+ "Merluza al horno con patatas": {
+  "img": "img/recetas/merluza-al-horno-con-patatas.jpg",
+  "autor": "El Pantera",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:MerluzaConBechamel-P1090667.JPG"
+ },
+ "Lubina a la espalda": {
+  "img": "img/recetas/lubina-a-la-espalda.jpg",
+  "autor": "Tamorlan",
+  "licencia": "CC BY 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Lubina_a_la_Espalda-2009.jpg"
+ },
+ "Garbanzos con bacalao": {
+  "img": "img/recetas/garbanzos-con-bacalao.jpg",
+  "autor": "Toniher",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Potaje_de_vigilia.jpg"
+ },
+ "Alubias rojas con chorizo": {
+  "img": "img/recetas/alubias-rojas-con-chorizo.jpg",
+  "autor": "Horacio Cambeiro",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Argentine_Red_Bean_Stew_with_Chorizo_and_Bacon_(94523).jpg"
+ },
+ "Pechuga a la plancha con verduras": {
+  "img": "img/recetas/pechuga-a-la-plancha-con-verduras.jpg",
+  "autor": "HaJunkiyada",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Grilled_Chicken_with_Roasted_Vegetables.jpg"
+ },
+ "Batido verde": {
+  "img": "img/recetas/batido-verde.jpg",
+  "autor": "rawpixel.com",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Kiwi_Smoothie.jpg"
+ },
+ "Bizcocho de naranja": {
+  "img": "img/recetas/bizcocho-de-naranja.jpg",
+  "autor": "Marta Gala (http://menucompleto.blogspot.com])",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Bizcocho_de_naranja_-_Marta_Gala.jpg"
+ },
+ "Tarta de manzana": {
+  "img": "img/recetas/tarta-de-manzana.jpg",
+  "autor": "Manuel FLURY",
+  "licencia": "CC BY 2.5",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Tarte_aux_pommes.jpg"
+ },
+ "Galletas de mantequilla": {
+  "img": "img/recetas/galletas-de-mantequilla.jpg",
+  "autor": "Constantin Barbu",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Danish_butter_cookies_in_container_with_wrappers,_December_2009.jpg"
+ },
+ "Bacalao a la Brás": {
+  "img": "img/recetas/bacalao-a-la-bras.jpg",
+  "autor": "Fpenteado at en.wikipedia",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Bacalhau_a_Bras.jpg"
+ },
+ "Pastéis de nata": {
+  "img": "img/recetas/pasteis-de-nata.jpg",
+  "autor": "Paul Arps from The Netherlands",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Pasteis_de_nata_(Lissabon_2016)_(26069956686).jpg"
+ },
+ "Goulash húngaro": {
+  "img": "img/recetas/goulash-hungaro.jpg",
+  "autor": "Ralf Roletschek",
+  "licencia": "GFDL 1.2",
+  "fuente": "https://commons.wikimedia.org/wiki/File:2009-09-gulasch-p%C3%B6rk%C3%B6lt-paprikas-3.jpg"
+ },
+ "Escalope a la vienesa": {
+  "img": "img/recetas/escalope-a-la-vienesa.jpg",
+  "autor": "Kobako",
+  "licencia": "CC BY-SA 2.5",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Wiener-Schnitzel02.jpg"
+ },
+ "Pierogi de patata y queso": {
+  "img": "img/recetas/pierogi-de-patata-y-queso.jpg",
+  "autor": "Aw58",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Pierogi_z_mas%C5%82em_-_2023.03.31.jpg"
+ },
+ "Ropa vieja": {
+  "img": "img/recetas/ropa-vieja.jpg",
+  "autor": "Rinaldo Wurglitsch from Vienna, Austria",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Ropa_vieja,_Cuba_(9419809373).jpg"
+ },
+ "Patacones": {
+  "img": "img/recetas/patacones.jpg",
+  "autor": "Jdvillalobos",
+  "licencia": "CC BY 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Patacones_-_Barranquilla.jpg"
+ },
+ "Ajiaco colombiano": {
+  "img": "img/recetas/ajiaco-colombiano.jpg",
+  "autor": "ProtoplasmaKid",
+  "licencia": "CC BY 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Ajiaco_santafere%C3%B1o_11.jpg"
+ },
+ "Pastel de choclo": {
+  "img": "img/recetas/pastel-de-choclo.jpg",
+  "autor": "Paloma Baytelman from Santiago, Chile",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Pastel_de_choclo.jpg"
+ },
+ "Chili con carne": {
+  "img": "img/recetas/chili-con-carne.jpg",
+  "autor": "Carstor",
+  "licencia": "CC BY-SA 2.5",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Bowl_of_chili.jpg"
+ },
+ "Shawarma de pollo": {
+  "img": "img/recetas/shawarma-de-pollo.jpg",
+  "autor": "Andy Li",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Chicken_Shawarma_Wrap_-_Lavash_2024-09-11.jpg"
+ },
+ "Pollo tandoori": {
+  "img": "img/recetas/pollo-tandoori.jpg",
+  "autor": "Miansari66",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Tandoori_Chicken_1.JPG"
+ },
+ "Chana masala": {
+  "img": "img/recetas/chana-masala.jpg",
+  "autor": "Simon Law (sfllaw) from Montréal, QC, Canada",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Chana_masala.jpg"
+ },
+ "Biryani de pollo": {
+  "img": "img/recetas/biryani-de-pollo.jpg",
+  "autor": "Jyothis",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Shrimp_Biriyani.JPG"
+ },
+ "Salmón teriyaki": {
+  "img": "img/recetas/salmon-teriyaki.jpg",
+  "autor": "Calvin Marquess",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Salmon_Teriyaki.jpg"
+ },
+ "Yakisoba": {
+  "img": "img/recetas/yakisoba.jpg",
+  "autor": "毒島みるく",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Sauce_fried_noodles_of_Gyoza-no-Manshu.jpg"
+ },
+ "Bulgogi de ternera": {
+  "img": "img/recetas/bulgogi-de-ternera.jpg",
+  "autor": "Desconocido",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Bulgogi_beef_texture2.jpg"
+ },
+ "Pollo agridulce": {
+  "img": "img/recetas/pollo-agridulce.jpg",
+  "autor": "Miansari66",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Sweet_and_Sour_Chicken_Pakora.JPG"
+ },
+ "Pad krapow": {
+  "img": "img/recetas/pad-krapow.jpg",
+  "autor": "Asturio Cantabrio",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Siam_Garden_Phat_kaphrao_ac.jpg"
+ },
+ "Tom kha gai": {
+  "img": "img/recetas/tom-kha-gai.jpg",
+  "autor": "lydiajoy1",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Tom_kha_gai2.jpg"
+ },
+ "Souvlaki de cerdo con tzatziki": {
+  "img": "img/recetas/souvlaki-de-cerdo-con-tzatziki.jpg",
+  "autor": "Miyagawa",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Souvlaki_in_Athens.JPG"
+ },
+ "Ratatouille": {
+  "img": "img/recetas/ratatouille.jpg",
+  "autor": "Marcus Guimarães",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Ratatouille.jpg"
+ },
+ "Sopa de cebolla gratinada": {
+  "img": "img/recetas/sopa-de-cebolla-gratinada.jpg",
+  "autor": "jeffreyw",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Mmm...onion_soup_(5344349906).jpg"
+ },
+ "Bruschetta de tomate": {
+  "img": "img/recetas/bruschetta-de-tomate.jpg",
+  "autor": "Missvain",
+  "licencia": "CC BY 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Bruschetta_at_The_Bar_at_MacArthur_Place_-_Sarah_Stierch.jpg"
+ },
+ "Minestrone": {
+  "img": "img/recetas/minestrone.jpg",
+  "autor": "Katrin Morenz from Aachen, Deutschland",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Minestrone_soup.jpg"
+ },
+ "Panna cotta con frutos rojos": {
+  "img": "img/recetas/panna-cotta-con-frutos-rojos.jpg",
+  "autor": "Kimberly Vardeman",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Panna_Cotta_with_fresh_berries_(detail).jpg"
+ },
+ "Fish and chips": {
+  "img": "img/recetas/fish-and-chips.jpg",
+  "autor": "Grendelkhan",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Fish_and_chips_plate_with_peas.jpg"
+ },
+ "Pastel de carne y puré": {
+  "img": "img/recetas/pastel-de-carne-y-pure.jpg",
+  "autor": "Andy Li",
+  "licencia": "CC0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Shepherds_pie_-_The_Kew_Greenhouse_Cafe_2025-05-14.jpg"
+ },
+ "Mujaddara": {
+  "img": "img/recetas/mujaddara.jpg",
+  "autor": "Bazel",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Mujaddara.jpg"
+ },
+ "Fattoush": {
+  "img": "img/recetas/fattoush.jpg",
+  "autor": "Arousing Appetites",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Fattoush_mixed-salad.jpg"
+ },
+ "Koshari": {
+  "img": "img/recetas/koshari.jpg",
+  "autor": "Dina Said",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Egyptian_food_Koshary.jpg"
+ },
+ "Enchiladas de pollo": {
+  "img": "img/recetas/enchiladas-de-pollo.jpg",
+  "autor": "Dahyana Yasada R. R.",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Enchiladas_con_salsa_roja.jpg"
+ },
+ "Huevos rancheros": {
+  "img": "img/recetas/huevos-rancheros.jpg",
+  "autor": "jeffreyw",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Mmm...huevos_rancheros.jpg"
+ },
+ "Ají de gallina": {
+  "img": "img/recetas/aji-de-gallina.jpg",
+  "autor": "Feralbt",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Aj%C3%AD_de_gallina.jpg"
+ },
+ "Causa limeña": {
+  "img": "img/recetas/causa-limena.jpg",
+  "autor": "F Delventhal from Outside Washington, D.C., US",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Causa_a_la_Lime%C3%B1a_(48836160237).jpg"
+ },
+ "Brigadeiros": {
+  "img": "img/recetas/brigadeiros.jpg",
+  "autor": "User Mayra (Maych) on Flickr",
+  "licencia": "CC BY-SA 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Brigadeiro.jpg"
+ },
+ "Tarta tres leches": {
+  "img": "img/recetas/tarta-tres-leches.jpg",
+  "autor": "Hungry Dudes",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Tres_Leches_Cake_(4).jpg"
+ },
+ "Sopa de picadillo": {
+  "img": "img/recetas/sopa-de-picadillo.jpg",
+  "autor": "Xemenendura",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Sopa_de_pan_cocido_abulense.jpg"
+ },
+ "Tarta de la abuela": {
+  "img": "img/recetas/tarta-de-la-abuela.jpg",
+  "autor": "Emotionalstates",
+  "licencia": "CC BY-SA 3.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Tarta_de_Nutella_con_galletas.jpg"
+ },
+ "Tortilla de atún": {
+  "img": "img/recetas/tortilla-de-atun.jpg",
+  "autor": "Renee Comet (photographer)",
+  "licencia": "Public domain",
+  "fuente": "https://commons.wikimedia.org/wiki/File:FoodOmelete.jpg"
+ },
+ "Canelones de carne": {
+  "img": "img/recetas/canelones-de-carne.jpg",
+  "autor": "Juan Emilio Prades Bel",
+  "licencia": "CC BY-SA 4.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Canelones_de_carne.jpg"
+ },
+ "Ñoquis con salsa de setas": {
+  "img": "img/recetas/noquis-con-salsa-de-setas.jpg",
+  "autor": "Paoletta S.",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Gnocchi_di_ricotta_burro_e_salvia.jpg"
+ },
+ "Tostadas de requesón y tomate": {
+  "img": "img/recetas/tostadas-de-requeson-y-tomate.jpg",
+  "autor": "Lablascovegmenu from London",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Tostadas_con_pasta_de_aguacate_y_tomate_(4562238751).jpg"
+ },
+ "Yogur con fruta y avena": {
+  "img": "img/recetas/yogur-con-fruta-y-avena.jpg",
+  "autor": "T.Tseng",
+  "licencia": "CC BY 2.0",
+  "fuente": "https://commons.wikimedia.org/wiki/File:Yogurt,_fruit,_granola_bowl_(34999358091).jpg"
  }
 }
