@@ -12,6 +12,8 @@ const r1 = await sb.rpc("leer_lista", { p_id: "00000000-0000-4000-8000-000000000
 t("listas.sql instalado (leer_lista)", !r1.error, JSON.stringify(r1.error));
 const r2 = await sb.rpc("com_recetas", {});
 t("comunidad.sql instalado (com_recetas)", !r2.error && Array.isArray(r2.data), JSON.stringify(r2.error));
+const r5 = await sb.rpc("env_recoger", { p_codigo: "ZZZZZZ" });
+w("envios.sql instalado (pasar datos con un código)", !r5.error, "(falta ejecutar supabase/envios.sql en el SQL Editor)");
 const r3 = await sb.from("comentarios").select("*").limit(1);
 t("las tablas no se pueden leer directamente", !!r3.error, JSON.stringify(r3));
 const r4 = await sb.rpc("com_comentar", { p_hilo: "charla", p_texto: "hola" });
