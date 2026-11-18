@@ -1361,11 +1361,16 @@ async function fillCost(r, sv) {
 
 // ---------- Aparatos de cocina ----------
 // Se deducen de los pasos («precalienta el horno», «en una sartén»…). Si un paso dice «horno o freidora», vale uno de los dos.
-const KIT = [["fuego", "🍳", "Fuego o placa"], ["horno", "♨️", "Horno"], ["micro", "⚡", "Microondas"], ["freidora", "💨", "Freidora de aire"], ["batidora", "🌀", "Batidora"]];
+const KIT = [["fuego", "🍳", "Fuego o placa"], ["horno", "♨️", "Horno"], ["micro", "⚡", "Microondas"], ["freidora", "💨", "Freidora de aire"], ["batidora", "🌀", "Batidora"],
+  ["robot", "🤖", "Robot de cocina"], ["tostadora", "🍞", "Tostadora"], ["sandwichera", "🥪", "Sandwichera"], ["wok", "🥘", "Wok"]];
+// Lo que hace las veces de otro: el robot de cocina tritura como la batidora; con fuego se puede usar sartén en vez de wok o sandwichera,
+// y la tostadora se cambia por la sartén o el horno.
+const KIT_ALSO = { batidora: ["robot"], wok: ["fuego"], sandwichera: ["fuego"], tostadora: ["fuego", "horno"] };
 const KIT_N = new Map(KIT.map((k) => [k[0], k]));
 const KIT_RE = {
   horno: /\bhorno\b|hornea|gratin/, micro: /microondas/, freidora: /freidora/, batidora: /batidora|tritura|turmix|robot de cocina|licua/,
-  fuego: /sarten|cazuela|olla|\bcazo\b|\bfuego\b|\bwok\b|plancha|hierv|\bcuece|cocer|sofrie|rehoga|saltea|escalfa|guisa|cuez/,
+  tostadora: /tostadora/, sandwichera: /sandwichera/, wok: /\bwok\b/,
+  fuego: /sarten|cazuela|olla|\bcazo\b|\bfuego\b|plancha|hierv|\bcuece|cocer|sofrie|rehoga|saltea|escalfa|guisa|cuez/,
 };
 const ALT_RE = /\bo (en )?(el |la |un |una )?(horno|freidora|microondas|sarten|cazo|cazuela|plancha|fuego)/;
 function needsOf(r) {
@@ -1381,10 +1386,11 @@ function needsOf(r) {
   // Un «horno o freidora» sobra si el horno ya hace falta en otro paso.
   return groups.filter((g) => g.length === 1 || !g.some((k) => groups.some((x) => x.length === 1 && x[0] === k)));
 }
-const kitOK = (r) => !A.st.kit || (r.kit ?? []).every((g) => g.some((k) => A.st.kit.includes(k)));
+const hasKit = (k) => A.st.kit.includes(k) || (KIT_ALSO[k] ?? []).some((x) => A.st.kit.includes(x));
+const kitOK = (r) => !A.st.kit || (r.kit ?? []).every((g) => g.some(hasKit));
 const kitName = (k) => KIT_N.get(k)[2].replace("Fuego o placa", "fuego");
 const kitText = (r) => (r.kit ?? []).map((g) => g.map((k) => `${KIT_N.get(k)[1]} ${kitName(k).toLowerCase()}`).join(" o ")).join(" · ");
-const kitMissing = () => KIT.filter(([k]) => A.st.kit && !A.st.kit.includes(k));
+const kitMissing = () => KIT.filter(([k]) => A.st.kit && !hasKit(k) && KIT_RE[k]);
 const kitMissingLabel = () => kitMissing().map(([k]) => kitName(k).toLowerCase()).join(" o ");
 const shortKit = () => { const m = kitMissing(); return !A.st.kit || !m.length ? "Todos" : m.length === 1 ? `Sin ${kitName(m[0][0]).toLowerCase()}` : `${KIT.length - m.length} de ${KIT.length}`; };
 function showKit(back = null) {
@@ -1481,34 +1487,46 @@ function showDone(id) {
 }
 
 // ---------- Te pregunto y te digo qué cocinar ----------
-// Unas preguntas con botones (sin escribir) y al final 3 recetas que encajan. Lo de la cocina y las alergias solo se pregunta una vez.
+// Una pregunta por pantalla con cuadrados grandes que se tocan (sin escribir) y al final 3 recetas que encajan.
+// Lo de la cocina y las alergias solo se pregunta la primera vez.
 const GANA_E = { "Dulce": "🍰", "Salado": "🥪", "Saludable": "🥗", "Batidos y zumos": "🥤", "Huevos": "🍳", "Tostadas y bocadillos": "🥪", "Horneados": "🥐",
   "Arroces": "🥘", "Pasta": "🍝", "Legumbres y guisos": "🍲", "Carne": "🥩", "Pescado": "🐟", "Verduras y ensaladas": "🥦", "Internacional": "🌍", "Postres": "🍮",
   "Bizcochos y repostería": "🧁", "Dulce rápido": "🍫", "Fruta y batidos": "🍓", "Ligera": "🥗", "Sopas y cremas": "🥣", "Para picar": "🧀", "Pizza y hamburguesas": "🍕" };
+const PAX_E = ["🙋", "👫", "👨‍👩‍👦", "👨‍👩‍👧‍👦", "👨‍👩‍👧‍👦", "🎉"];
+// Cada pregunta: lo que dice la cocinera, la pregunta, una ayuda, si se pueden elegir varias y los cuadrados [valor, texto, icono, detalle].
 function askQ(id) {
   const a = ui.ask.a;
-  if (id === "kit") return { q: "Antes de nada, ¿qué tienes en tu cocina? Quita lo que no tengas.", multi: true, opts: KIT.map(([k, e, t]) => [k, t, e]) };
-  if (id === "alg") return { q: "¿Alguien en casa tiene alergias o no come algo?", opts: [["no", "No, comemos de todo", "🍽️"], ["si", "Sí, quiero marcarlo", "🛡️"]] };
-  if (id === "mo") return { q: "¡Vamos allá! ¿Para qué momento es?", opts: MOMENTS.map(([m, e]) => [m, m, e]) };
-  if (id === "pax") return { q: "¿Para cuántas personas?", opts: [1, 2, 3, 4, 5, 6].map((n) => [String(n), n === 6 ? "6 o más" : String(n), n === 1 ? "🙋" : "👥"]) };
-  if (id === "t") return { q: "¿Cuánto tiempo tienes para cocinar?", opts: [["15", "15 minutos", "⚡"], ["30", "Media hora", "⏱️"], ["60", "Una hora", "🕐"], ["999", "Sin prisa", "😌"]] };
-  if (id === "gana") return { q: "¿Y qué te apetece?", opts: [...MOMENT.get(a.mo ?? "Comida")[3].filter((t) => t !== "Postres" || a.mo === "Cena").map((t) => [t, t, GANA_E[t] ?? "🍽️"]), ["veggie", "Sin carne ni pescado", "🥕"], ["*", "Me da igual", "🤷"]] };
-  if (id === "casa") return { q: "¿Tiro de lo que tienes en casa?", opts: [["si", "Sí, comprar lo mínimo", "🏠"], ["no", "Me da igual ir a comprar", "🛒"]] };
-  if (id === "eur") return { q: "Última: ¿miro el precio?", opts: [["bar", "Sí, que sea barato", "💶"], ["*", "Me da igual", "👌"]] };
+  if (id === "kit") return { say: "¡Hola! Te hago unas preguntas rápidas y te digo qué cocinar.", q: "¿Qué tienes en tu cocina?", hint: "Toca todo lo que tengas. Solo te lo pregunto esta vez.", multi: true, cols: 3,
+    opts: KIT.map(([k, e, t]) => [k, t, e]) };
+  if (id === "alg") return { say: "Así no te enseño nada que no podáis comer.", q: "¿Alguien tiene alergias o no come algo?", cols: 2,
+    opts: [["no", "Comemos de todo", "🍽️"], ["si", "Sí, quiero marcarlo", "🛡️"]] };
+  if (id === "mo") return { say: "¡Vamos allá!", q: "¿Para qué momento es?", cols: 3, opts: MOMENTS.map(([m, e]) => [m, m, e]) };
+  if (id === "pax") return { say: "Así te calculo las cantidades.", q: "¿Para cuántas personas?", cols: 3,
+    opts: [1, 2, 3, 4, 5, 6].map((n) => [String(n), n === 6 ? "6 o más" : n === 1 ? "Solo yo" : `${n} personas`, PAX_E[n - 1]]) };
+  if (id === "t") return { say: "Sin agobios.", q: "¿Cuánto tiempo tienes?", cols: 2,
+    opts: [["15", "Rapidito", "⚡", "15 minutos"], ["30", "Media hora", "⏱️", "30 minutos"], ["60", "Una hora", "🕐", "60 minutos"], ["999", "Sin prisa", "😌", "Lo que haga falta"]] };
+  if (id === "gana") return { say: "Lo mejor de todo…", q: "¿Qué te apetece?", hint: "Puedes tocar varias.", multi: true, cols: 3,
+    opts: [...MOMENT.get(a.mo ?? "Comida")[3].filter((t) => t !== "Postres" || a.mo === "Cena").map((t) => [t, t, GANA_E[t] ?? "🍽️"]), ["veggie", "Sin carne ni pescado", "🥕"], ["*", "Me da igual", "🤷"]] };
+  if (id === "casa") return { say: "Para no gastar de más.", q: "¿Tiro de lo que tienes en casa?", cols: 2,
+    opts: [["si", "Sí, comprar lo mínimo", "🏠"], ["no", "Me da igual ir a comprar", "🛒"]] };
+  if (id === "eur") return { say: "Última pregunta.", q: "¿Miro el precio?", cols: 2,
+    opts: [["bar", "Que sea barato", "💶"], ["*", "Me da igual", "👌"]] };
 }
 function startAsk() {
   const d = diet();
   const qs = [...(A.st.kit ? [] : ["kit"]), ...(d.asked || d.evita.length || d.tipo ? [] : ["alg"]), "mo", "pax", "t", "gana", "casa", "eur"];
-  ui.ask = { qs, i: 0, a: {}, labels: {}, seed: Date.now() % 100000, shown: [], kit: A.st.kit ? [...A.st.kit] : ["fuego", "horno", "micro"] };
+  ui.ask = { qs, i: 0, a: {}, labels: {}, seed: Date.now() % 100000, shown: [], sel: {}, kit: A.st.kit ? [...A.st.kit] : ["fuego", "horno", "micro"] };
   keepScroll();
   showAsk();
 }
 function answer(id, v, label) {
   const k = ui.ask;
-  k.a[id] = v; k.labels[id] = label; k.i = k.qs.indexOf(id) + 1; k.res = null;
-  if (id === "mo" && k.a.gana) { delete k.a.gana; delete k.labels.gana; }
+  k.a[id] = v; k.labels[id] = label; k.res = null;
+  if (id === "mo") { delete k.a.gana; delete k.labels.gana; delete k.sel.gana; }
   if (id === "alg") { diet().asked = true; A.save(); }
-  A.buzz();
+  // Sigue por la siguiente sin contestar; si ya estaban todas (se cambió una desde el final), al resultado.
+  const at = k.qs.indexOf(id), next = k.qs.findIndex((q, j) => j > at && k.a[q] == null);
+  k.i = next < 0 ? k.qs.length : next;
   if (id === "alg" && v === "si") { ui.dietBack = showAsk; return showDiet(); }
   showAsk();
 }
@@ -1517,7 +1535,8 @@ function askPick() {
   const all = recipes.filter((r) => !r.com && allowed(r) && r.m?.[a.mo]);
   // «Me da igual» en comida o cena: un plato, no un postre.
   const dish = (r) => !(/Comida|Cena/.test(a.mo) && r.m[a.mo].every((x) => x === "Postres"));
-  const want = (r) => a.gana === "*" || !a.gana ? dish(r) : a.gana === "veggie" ? r.filters.includes("Vegetariana") : r.m[a.mo].includes(a.gana);
+  const g = [].concat(a.gana ?? "*");
+  const want = (r) => g.includes("*") ? dish(r) : g.some((x) => x === "veggie" ? r.filters.includes("Vegetariana") : r.m[a.mo].includes(x));
   let pool = all.filter((r) => r.t <= t && want(r)), relaxed = "";
   if (pool.length < 3) { pool = all.filter(want); relaxed = "tiempo"; }
   if (pool.length < 3) { pool = all.filter((r) => r.t <= t); relaxed = "gana"; }
@@ -1533,76 +1552,100 @@ function askPick() {
     if (r.foto) s += 0.5;
     return { r, s: s + rand() * 2, miss };
   }).sort((x, y) => y.s - x.s);
-  const fresh = rows.filter((x) => !k.shown.includes(x.r.n));
-  return { list: (fresh.length >= 3 ? fresh : rows).slice(0, 3), relaxed };
+  const fresh = rows.filter((x) => !k.shown.includes(x.r.n)), src = fresh.length >= 3 ? fresh : rows;
+  // Si has tocado varias (pasta y pescado), una de cada antes de repetir.
+  const kinds = g.filter((x) => x !== "*"), out = [];
+  if (kinds.length > 1 && !relaxed) {
+    for (let j = 0; out.length < 3 && j < 6; j++) {
+      const x = kinds[j % kinds.length];
+      const hit = src.find((y) => !out.includes(y) && (x === "veggie" ? y.r.filters.includes("Vegetariana") : y.r.m[a.mo].includes(x)));
+      if (hit) out.push(hit);
+    }
+  }
+  for (const y of src) if (out.length < 3 && !out.includes(y)) out.push(y);
+  return { list: out, relaxed };
 }
+const tileHTML = (q, [v, l, e, sub], k, on) => `<button type="button" class="aq-t" data-v="${A.esc(v)}" data-l="${A.esc(l)}" aria-pressed="${on}" style="--h:${(k * 47 + 140) % 360}">
+  <span class="aq-ck" aria-hidden="true">✓</span><span class="aq-ic" aria-hidden="true">${e}</span><b>${A.esc(l)}</b>${sub ? `<small>${A.esc(sub)}</small>` : ""}</button>`;
 async function showAsk() {
   const k = ui.ask; if (!k) return startAsk();
   setView("ask");
   A.setTitle("Te ayudo a elegir", true);
   // Si se volvió de marcar alergias, esa pregunta ya está contestada.
   if (k.qs[k.i] === "alg" && diet().asked && k.a.alg == null) { k.a.alg = "si"; k.labels.alg = "Sí, quiero marcarlo"; k.i++; }
-  const bot = (t, cls = "") => `<div class="bub bot${cls}"><span class="bub-av" aria-hidden="true">👩‍🍳</span><p>${t}</p></div>`;
-  const me = (t) => `<div class="bub me"><p>${A.esc(t)}</p></div>`;
-  const past = k.qs.slice(0, k.i).map((id) => bot(A.esc(askQ(id).q)) + me(k.labels[id] ?? "")).join("");
-  const cur = k.qs[k.i];
-  let now = "";
+  const cur = k.qs[k.i], n = k.qs.length;
+  const bar = `<div class="aq-top"><span class="aq-bar"><span style="width:${Math.round((Math.min(k.i, n) / n) * 100)}%"></span></span><span class="aq-n">${cur ? `${k.i + 1} de ${n}` : "¡Listo!"}</span></div>`;
   if (cur) {
     const q = askQ(cur);
-    const pressed = (v) => q.multi ? k.kit.includes(v) : false;
-    now = bot(A.esc(q.q), " new") + `<div class="ask-opts${q.multi ? " multi" : ""}" id="askopts">${q.opts.map(([v, l, e]) =>
-      `<button type="button" class="ask-o" data-v="${A.esc(v)}" data-l="${A.esc(l)}"${q.multi ? ` aria-pressed="${pressed(v)}"` : ""}><span aria-hidden="true">${e}</span>${A.esc(l)}</button>`).join("")}
-      ${q.multi ? `<button type="button" class="btn ask-ok" id="askok">Listo</button>` : ""}</div>`;
+    // En las de elegir varias se recuerda lo marcado; la de aparatos empieza con lo más normal.
+    const sel = q.multi ? (cur === "kit" ? k.kit : (k.sel[cur] ??= [].concat(k.a[cur] ?? []))) : null;
+    const on = (v) => q.multi ? sel.includes(v) : k.a[cur] === v;
+    A.body().innerHTML = `
+      <button type="button" class="back" id="cback">‹ Recetas</button>
+      <div class="aq" id="aq">${bar}
+        <div class="aq-chef"><span class="aq-av" aria-hidden="true">👩‍🍳</span><p>${A.esc(q.say)}</p></div>
+        <h2 class="aq-q">${A.esc(q.q)}</h2>${q.hint ? `<p class="aq-hint">${A.esc(q.hint)}</p>` : ""}
+        <div class="aq-grid c${q.cols}" id="aqgrid" role="group" aria-label="${A.esc(q.q)}">${q.opts.map((o, j) => tileHTML(q, o, j, on(o[0]))).join("")}</div>
+      </div>
+      <div class="bfoot"><button type="button" class="btn ghost" id="aqprev"${k.i ? "" : " disabled"}>‹ Atrás</button>
+        ${q.multi ? `<button type="button" class="btn" id="aqnext"${sel.length ? "" : " disabled"}>Siguiente ›</button>` : `<span>Toca una opción</span>`}</div>`;
+    $$("cback").onclick = () => cookBack();
+    $$("aqprev").onclick = () => { if (!k.i) return; k.i--; k.res = null; A.buzz(); showAsk(); };
+    $$("aqgrid").onclick = (e) => {
+      const b = e.target.closest("[data-v]"); if (!b) return;
+      const v = b.dataset.v;
+      A.buzz();
+      if (!q.multi) {
+        for (const x of $$("aqgrid").children) x.setAttribute("aria-pressed", String(x === b));
+        $$("aqgrid").classList.add("chosen");
+        setTimeout(() => answer(cur, v, b.dataset.l), 260);
+        return;
+      }
+      // «Me da igual» quita lo demás, y al revés.
+      if (v === "*") sel.splice(0, sel.length, "*");
+      else { const z = sel.indexOf("*"); if (z >= 0) sel.splice(z, 1); const i = sel.indexOf(v); if (i >= 0) sel.splice(i, 1); else sel.push(v); }
+      for (const x of $$("aqgrid").children) x.setAttribute("aria-pressed", String(sel.includes(x.dataset.v)));
+      $$("aqnext").disabled = !sel.length;
+    };
+    if ($$("aqnext")) $$("aqnext").onclick = () => {
+      if (!sel.length) return;
+      A.buzz();
+      const names = q.opts.filter((o) => sel.includes(o[0])).map((o) => o[1]);
+      if (cur === "kit") { A.st.kit = [...sel]; A.save(); return answer("kit", "ok", sel.length === KIT.length ? "Tengo de todo" : names.join(", ")); }
+      answer(cur, [...sel], names.join(", "));
+    };
+    return;
   }
+  // Resultado: lo que has contestado (se toca para cambiarlo) y 3 recetas.
   A.body().innerHTML = `
     <button type="button" class="back" id="cback">‹ Recetas</button>
-    <div class="ask" id="ask"><div class="ask-chat" id="askchat">
-      ${past}${now}<div id="askres"></div></div>
-      <div class="ask-foot">${k.i > 0 ? `<button type="button" class="lnk" id="askprev">‹ Cambiar la anterior</button>` : "<span></span>"}
-        <span class="ask-n">${cur ? `${k.i + 1} de ${k.qs.length}` : ""}</span></div></div>`;
+    <div class="aq" id="aq">${bar}
+      <div class="aq-chef"><span class="aq-av" aria-hidden="true">👩‍🍳</span><p>Un momento, que lo miro…</p></div></div>`;
   $$("cback").onclick = () => cookBack();
-  if ($$("askprev")) $$("askprev").onclick = () => { k.i = Math.max(0, k.i - 1); k.shown = []; k.res = null; A.buzz(); showAsk(); };
-  const chat = $$("askchat");
-  const toEnd = () => requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
-  if (cur) {
-    $$("askopts").onclick = (e) => {
-      const b = e.target.closest("[data-v]");
-      if (b && askQ(cur).multi) {
-        const v = b.dataset.v, i = k.kit.indexOf(v);
-        if (i >= 0) k.kit.splice(i, 1); else k.kit.push(v);
-        b.setAttribute("aria-pressed", String(i < 0)); A.buzz(); return;
-      }
-      if (b) return answer(cur, b.dataset.v, b.dataset.l);
-      if (e.target.closest("#askok")) {
-        A.st.kit = [...k.kit]; A.save();
-        answer("kit", "ok", k.kit.length === KIT.length ? "Tengo de todo" : k.kit.length ? KIT.filter(([x]) => k.kit.includes(x)).map(([, , t]) => t).join(", ") : "Nada de eso");
-      }
-    };
-    toEnd(); return;
-  }
-  // Resultado.
-  $$("askres").innerHTML = bot("Un momento, que lo miro…", " new");
-  toEnd();
   if (k.a.eur === "bar" && costStore()) await P().load(costStore());
-  if (ui.view !== "ask" || !$$("askres")) return;
+  if (ui.view !== "ask" || !$$("aq")) return;
   if (!k.res) { const got = askPick(); k.res = { names: got.list.map((x) => x.r.n), relaxed: got.relaxed }; k.shown.push(...k.res.names); }
-  const relaxed = k.res.relaxed, list = k.res.names.map((n) => recipes.find((r) => r.n === n)).filter(Boolean).map((r) => ({ r, miss: check(r).missing.length }));
+  const relaxed = k.res.relaxed, list = k.res.names.map((nm) => recipes.find((r) => r.n === nm)).filter(Boolean).map((r) => ({ r, miss: check(r).missing.length }));
   const pax = +k.a.pax;
   const why = (r, miss) => {
     const c = costOf(r, costStore(), pax), me = cooked()[r.n];
     return [`⏱ ${mins(r.t)}`, miss ? `🛒 Faltan ${miss}` : "✓ Lo tienes todo", c?.ok ? `💶 ${P().eur(c.per)}/ración` : "", isFav(r) ? "❤️ Favorita" : "", me?.stars ? `★ ${me.stars}` : ""].filter(Boolean);
   };
-  const note = { tiempo: "No hay tantas recetas tan rápidas de eso, así que te pongo las más rápidas que encajan.", gana: "De eso no tengo tantas con ese tiempo; te pongo otras que sí te dan tiempo.", todo: "Con todo lo que me has dicho hay pocas; mira estas." }[relaxed];
-  $$("askres").innerHTML = bot(list.length ? `¡Listo! Para ${plural(pax, "persona", "personas")}, te propongo estas ${list.length}:${note ? ` <small>${note}</small>` : ""}` : "Vaya, con eso no encuentro ninguna receta. Prueba a cambiar alguna respuesta.", " new")
-    + `<div class="ask-res">${list.map(({ r, miss }) => `<button type="button" class="ask-card" data-r="${r.id}">
+  const note = { tiempo: "No hay tantas tan rápidas de eso: te pongo las más rápidas que encajan.", gana: "De eso no hay tantas con ese tiempo: te pongo otras que sí te dan tiempo.", todo: "Con todo lo que me has dicho hay pocas: mira estas." }[relaxed];
+  const chips = k.qs.filter((id) => id !== "kit" && id !== "alg").map((id) => `<button type="button" class="aq-chip" data-go="${id}">${A.esc(k.labels[id] ?? "")}</button>`).join("");
+  $$("aq").innerHTML = `${bar}
+    <div class="aq-chef"><span class="aq-av" aria-hidden="true">👩‍🍳</span><p>${list.length ? `¡Listo! Para ${plural(pax, "persona", "personas")}, te propongo estas ${list.length}.` : "Vaya, con eso no encuentro ninguna receta. Toca una respuesta para cambiarla."}${note ? ` <small>${note}</small>` : ""}</p></div>
+    <div class="aq-chips" aria-label="Tus respuestas (toca para cambiar)">${chips}</div>
+    <div class="ask-res">${list.map(({ r, miss }) => `<button type="button" class="ask-card" data-r="${r.id}">
         <span class="ask-ph${r.foto ? "" : " noph"}" style="${r.foto ? `background-image:url('${A.esc(r.foto.img)}')` : `--h:${hue(r.n)}`}">${r.foto ? "" : A.esc(r.e)}</span>
         <span class="ask-in"><b>${A.esc(r.n)}</b><span class="ask-why">${why(r, miss).map((w) => `<span>${A.esc(w)}</span>`).join("")}</span></span></button>`).join("")}</div>
-      <div class="ask-more"><button type="button" class="btn ghost" id="askagain">🔄 Otras 3</button><button type="button" class="btn ghost" id="askreset">Empezar de nuevo</button></div>`;
-  $$("askres").onclick = (e) => {
+    <div class="ask-more"><button type="button" class="btn ghost" id="askagain">🔄 Otras 3</button><button type="button" class="btn ghost" id="askreset">Empezar de nuevo</button></div>`;
+  $$("aq").onclick = (e) => {
     const b = e.target.closest("[data-r]");
     if (b) { const r = recipes[+b.dataset.r]; ui.from = "ask"; setServ(r, pax); return showRecipe(r.id); }
+    const g = e.target.closest("[data-go]");
+    if (g) { A.buzz(); k.i = k.qs.indexOf(g.dataset.go); k.res = null; return showAsk(); }
     if (e.target.closest("#askagain")) { A.buzz(); k.seed++; k.res = null; return showAsk(); }
     if (e.target.closest("#askreset")) { A.buzz(); return startAsk(); }
   };
-  toEnd();
 }
