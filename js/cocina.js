@@ -4,6 +4,7 @@ import { nutrition, NUT } from "./nutricion.js";
 import { ALLERGENS, ALLER, allergensOf, avoidSet, substitute } from "./alergias.js";
 import { mountSocial, openComunidad, comReady } from "./comunidad.js";
 import { ready as fotosReady, getFoto, allFotos, setFoto } from "./fotos.js";
+import { recipeCost } from "./coste.js";
 
 // Sección de cada ingrediente, para ordenar «Lo que tengo en casa» como en el súper.
 const SECTIONS = {
@@ -30,7 +31,7 @@ const sectionOf = (n) => SECTION_OF.get(key(n)) ?? (ORDER.includes(guess(n).cat)
 // Lo que casi todo el mundo tiene; se puede quitar en «En casa».
 const STAPLES = ["Sal", "Aceite de oliva", "Pimienta negra", "Azúcar", "Harina"];
 const FILTERS = ["Todas", "Favoritas", "Mis recetas", "Del mundo", "Rápidas", "Española", "Vegetariana", "Pasta y arroz", "Legumbres", "Carne", "Pescado", "Ensaladas",
-  "Sopas y cremas", "Cenas ligeras", "Desayunos", "Postres", "Internacional", "Para niños", "Freidora de aire", "Con productos del súper"];
+  "Sopas y cremas", "Cenas ligeras", "Desayunos", "Postres", "Internacional", "Para niños", "Más baratas", "Ya hechas", "Sin fuego", "Al horno", "Microondas", "Freidora de aire", "Con productos del súper"];
 // Momentos del día y, dentro de cada uno, sus tipos (campo «m» de cada receta). Una receta puede estar en varios.
 const MOMENTS = [
   ["Desayuno", "☕", "Para desayunar", ["Dulce", "Salado", "Saludable", "Batidos y zumos"]],
@@ -49,7 +50,7 @@ const FLAGS = { "Argentina": "🇦🇷", "Austria": "🇦🇹", "Brasil": "🇧�
 const origin = (r) => r.z ? `${FLAGS[r.z] ?? "🌍"} ${r.z}` : "";
 const MOMENT = new Map(MOMENTS.map((m) => [m[0], m]));
 // Filtros de siempre que siguen a mano dentro de cada momento.
-const EXTRA = ["Favoritas", "Mis recetas", "Del mundo", "Rápidas", "Vegetariana", "Para niños", "Española", "Internacional", "Freidora de aire", "Con productos del súper"];
+const EXTRA = ["Favoritas", "Mis recetas", "Más baratas", "Ya hechas", "Del mundo", "Rápidas", "Vegetariana", "Para niños", "Española", "Internacional", "Sin fuego", "Al horno", "Microondas", "Freidora de aire", "Con productos del súper"];
 // El momento según la hora: lo primero que ves es lo que toca ahora.
 function nowMoment(d = new Date()) {
   const h = d.getHours() + d.getMinutes() / 60, finde = d.getDay() === 0 || d.getDay() === 6;
@@ -65,6 +66,8 @@ function matches(r) {
   if (ui.tag === "Todas") return true;
   if (ui.moment !== ALL && MOMENT.get(ui.moment)[3].includes(ui.tag)) return r.m[ui.moment].includes(ui.tag);
   if (ui.tag === "Favoritas") return isFav(r);
+  if (ui.tag === "Ya hechas") return !!cooked()[r.n];
+  if (ui.tag === "Más baratas") return true;
   return r.filters.includes(ui.tag);
 }
 
@@ -142,6 +145,12 @@ function prep(r, idx) {
   r.toks = new Set(tokens(`${r.n} ${r.z ?? ""} ${r.i.map((x) => x[0]).join(" ")}`));
   r.filters = [...r.tags, ...(r.t <= 20 ? ["Rápidas"] : []), ...(r.tags.includes("Vegana") ? ["Vegetariana"] : []), ...(r.z ? ["Del mundo"] : [])];
   r.lleva = allergens(r);
+  r.kit = needsOf(r);
+  const heat = r.kit.flat().filter((k) => k !== "batidora");
+  if (!heat.length) r.filters.push("Sin fuego");
+  if (r.kit.some((g) => g.includes("horno"))) r.filters.push("Al horno");
+  if (r.kit.some((g) => g.includes("micro"))) r.filters.push("Microondas");
+  if (r.kit.some((g) => g.includes("freidora")) && !r.filters.includes("Freidora de aire")) r.filters.push("Freidora de aire");
   const nu = nutrition(r, nutFind);
   r.nut = nu.kcal ? nu : null;
   return r;
@@ -209,7 +218,8 @@ function adapt(r) {
 const ingsOf = (r) => adapt(r).ings;
 // Para la lista de la compra, sin la explicación entre paréntesis: «Tamari (salsa de soja sin gluten)» → «Tamari».
 const shopName = (n) => n.replace(/\s*\(.*\)\s*$/, "");
-function allowed(r) {
+function allowed(r) { return allowedDiet(r) && kitOK(r); }
+function allowedDiet(r) {
   const d = diet();
   if (d.tipo === "vegana" && !r.tags.includes("Vegana")) return false;
   if (d.tipo === "vegetariana" && !r.filters.includes("Vegetariana")) return false;
@@ -279,7 +289,7 @@ function showDiet() {
     A.buzz(); A.save(); count();
   };
   $$("cback").onclick = () => cookBack();
-  $$("ddone").onclick = () => showList();
+  $$("ddone").onclick = () => { const b = ui.dietBack; ui.dietBack = null; b ? b() : showList(); };
 }
 
 function pantry() {
@@ -320,7 +330,10 @@ export async function openRecipes(id, moment, view) {
 
 // Botón de cerrar, gesto de atrás o deslizar hacia abajo: un paso atrás (paso a paso → receta → recetas o menú).
 export function cookBack() {
-  if (ui.view === "cook") { showRecipe(ui.id); return true; }
+  if (ui.view === "cook" || ui.view === "done") { showRecipe(ui.id); return true; }
+  if (ui.view === "recipe" && ui.from === "ask") { showAsk(); return true; }
+  if (ui.view === "diet" && ui.dietBack) { const b = ui.dietBack; ui.dietBack = null; b(); return true; }
+  if (ui.view === "kit" && ui.kitBack) { const b = ui.kitBack; ui.kitBack = null; b(); return true; }
   // Comunidad y cuenta: cada pantalla dice adónde vuelve; sin destino, se cierra.
   if (ui.view === "com") { if (ui.viewBack) { ui.viewBack(); return true; } return false; }
   if (ui.view === "recipe" && ui.from === "com") { (ui.comBack ?? showList)(); return true; }
@@ -328,7 +341,7 @@ export function cookBack() {
   if (ui.view === "gen") { showPlan(); return true; }
   if ((ui.view === "recipe" && ui.from === "plan") || (ui.view === "list" && ui.pickDay)) { showPlan(); return true; }
   if (ui.view === "edit" && ui.editId != null) { showRecipe(ui.editId); return true; }
-  if (["recipe", "pantry", "plan", "diet", "edit"].includes(ui.view)) { showList(true); return true; }
+  if (["recipe", "pantry", "plan", "diet", "edit", "kit", "ask"].includes(ui.view)) { showList(true); return true; }
   return false;
 }
 
@@ -388,7 +401,9 @@ function showList(restore = false) {
     ${ui.pickDay ? `<div class="pickbar"><span>📅 Toca una receta para el menú <b>${A.esc(delDay(ui.pickDay))}</b></span><button type="button" class="lnk" id="cpickx">Cancelar</button></div>`
     : `<div class="cbtns"><button type="button" class="pantry-btn" id="cpantry"><span>🏠 En casa</span><b>${plural(n, "ingrediente", "ingredientes")}</b></button>
       <button type="button" class="pantry-btn" id="cplan"><span>📅 Menú</span><b>${np ? plural(np, "receta", "recetas") : "Planificar"}</b></button>
-      <button type="button" class="pantry-btn${diet().evita.length || diet().tipo ? " on" : ""}" id="cdiet"><span>🛡️ Alergias</span><b>${A.esc(shortDiet())}</b></button></div>
+      <button type="button" class="pantry-btn${diet().evita.length || diet().tipo ? " on" : ""}" id="cdiet"><span>🛡️ Alergias</span><b>${A.esc(shortDiet())}</b></button>
+      <button type="button" class="pantry-btn${A.st.kit ? " on" : ""}" id="ckit"><span>🍳 Aparatos</span><b>${A.esc(shortKit())}</b></button></div>
+      <button type="button" class="askgo" id="cask"><span class="askgo-av" aria-hidden="true">👩‍🍳</span><span><b>¿No sabes qué hacer?</b><small>Te hago unas preguntas y te digo 3 recetas</small></span><span class="askgo-b">Empezar</span></button>
       ${diet().asked || diet().evita.length || diet().tipo ? "" : `<div class="dask" id="dask"><span aria-hidden="true">🛡️</span><span><b>¿Tienes alguna alergia o intolerancia?</b>
         Márcala y adapto las recetas: gluten, lactosa, huevo, frutos secos, marisco…</span>
         <span class="dask-b"><button type="button" class="btn small" data-diet>Marcar</button><button type="button" class="btn ghost small" id="dno">No tengo</button></span></div>`}
@@ -427,7 +442,8 @@ function showList(restore = false) {
   $$("cq").oninput = (e) => { clearTimeout(tmo); tmo = setTimeout(() => { ui.q = e.target.value.trim(); fillList(); }, 160); };
   if (ui.pickDay) $$("cpickx").onclick = showPlan;
   else {
-    $$("cpantry").onclick = showPantry; $$("cplan").onclick = showPlan; $$("cdiet").onclick = showDiet;
+    $$("cpantry").onclick = showPantry; $$("cplan").onclick = showPlan; $$("cdiet").onclick = showDiet; $$("ckit").onclick = () => showKit();
+    $$("cask").onclick = () => startAsk();
     $$("dask")?.addEventListener("click", (e) => {
       if (e.target.closest("[data-diet]")) return showDiet();
       if (e.target.closest("#dno")) { diet().asked = true; A.save(); $$("dask").remove(); A.setStatus("Vale. Si algún día lo necesitas, está en 🛡️ Alergias."); }
@@ -445,7 +461,9 @@ function showList(restore = false) {
     if (e.target.closest("[data-all]")) { ui.mode = "todas"; showList(); }
     if (e.target.closest("[data-new]")) showEdit(null);
     if (e.target.closest("[data-diet]")) showDiet();
+    if (e.target.closest("[data-kit]")) showKit();
   };
+  ensurePrices();
 }
 const $$ = (id) => document.getElementById(id);
 // Tipos del momento elegido (Dulce, Salado…) y, tras una raya, los filtros de siempre.
@@ -488,8 +506,10 @@ function card(r, c) {
   const miss = c.missing.map((i) => i.n);
   const line = !miss.length ? `<span class="rh ok">✓ Tienes todo lo necesario</span>`
     : `<span class="rh">${miss.length === 1 ? "Te falta" : `Te faltan ${miss.length}`}: ${A.esc(miss.slice(0, 4).join(", "))}${miss.length > 4 ? "…" : ""}</span>`;
-  return `<div class="rcw"><button type="button" class="rc" data-r="${r.id}">${pic(r)}
-    <span class="ri"><span class="rn">${A.esc(r.n)}</span><span class="rm">${A.esc(meta(r))}${r.nut ? ` · ${kcal(r.nut.kcal)}` : ""}</span>${adaptTag(r)}${line}</span></button>${heart(r)}</div>`;
+  const co = costOf(r), done = cooked()[r.n];
+  const extra = (co?.ok ? `<span class="rprice">≈ ${A.esc(P().eur(co.per))}/ración</span>` : "") + (done ? `<span class="rdone">✓ ${done.n === 1 ? "Hecha 1 vez" : `Hecha ${done.n} veces`}${done.stars ? ` · ${"★".repeat(done.stars)}` : ""}</span>` : "");
+  return `<div class="rcw"><button type="button" class="rc" data-r="${r.id}">${pic(r)}${co?.ok ? `<span class="rprice-pill">${A.esc(P().eur(co.per))}</span>` : ""}
+    <span class="ri"><span class="rn">${A.esc(r.n)}</span><span class="rm">${A.esc(meta(r))}${r.nut ? ` · ${kcal(r.nut.kcal)}` : ""}</span>${adaptTag(r)}${extra ? `<span class="rx">${extra}</span>` : ""}${line}</span></button>${heart(r)}</div>`;
 }
 
 function fillList() {
@@ -497,9 +517,10 @@ function fillList() {
   // Al buscar se busca en todas, sin importar el momento elegido.
   let rs = recipes.filter((r) => (qt.length || matches(r))
     && qt.every((w) => [...r.toks].some((t) => t.startsWith(w))));
-  const hidden = rs.filter((r) => !allowed(r) && !r.mine).length;
+  const hidden = rs.filter((r) => !allowedDiet(r) && !r.mine).length, hiddenKit = rs.filter((r) => allowedDiet(r) && !kitOK(r) && !r.mine).length;
   rs = rs.filter((r) => allowed(r) || r.mine);
-  const hideNote = hidden ? `<button type="button" class="dnote" data-diet>🛡️ ${plural(hidden, "receta oculta", "recetas ocultas")} porque llevan algo que no tomas (${A.esc(dietLabel().toLowerCase())}) · Cambiar</button>` : "";
+  const hideNote = (hidden ? `<button type="button" class="dnote" data-diet>🛡️ ${plural(hidden, "receta oculta", "recetas ocultas")} porque llevan algo que no tomas (${A.esc(dietLabel().toLowerCase())}) · Cambiar</button>` : "")
+    + (hiddenKit ? `<button type="button" class="dnote" data-kit>🍳 ${plural(hiddenKit, "receta oculta", "recetas ocultas")} porque necesitan ${A.esc(kitMissingLabel())} · Cambiar</button>` : "");
   const rows = rs.map((r) => ({ r, c: check(r) }));
   const el = $$("clist");
   if (ui.mode === "todas" && ui.tag === "Del mundo" && !qt.length) {
@@ -526,6 +547,22 @@ function fillList() {
     return;
   }
   // Favoritas y Mis recetas salen siempre todas, tengas o no los ingredientes.
+  if (ui.tag === "Más baratas" || ui.tag === "Ya hechas") {
+    if (ui.tag === "Ya hechas" && !rows.length && !qt.length) {
+      el.innerHTML = `<div class="empty"><span class="empty-art" aria-hidden="true">👩‍🍳</span><b>Aún no has marcado ninguna</b>
+        <span>Cuando termines de cocinar una receta paso a paso, o toques «La he hecho», saldrá aquí con tus estrellas y tu nota.</span></div>`;
+      return;
+    }
+    if (ui.tag === "Más baratas" && !costStore()) { el.innerHTML = `<p class="note">Aún no tengo los precios. Prueba en un momento.</p>`; return; }
+    if (ui.tag === "Más baratas" && !finder(costStore())) { el.innerHTML = `<p class="note">💶 Mirando precios en ${A.esc(P().name[costStore()])}…</p>`; ensurePrices(); return; }
+    const per = (r) => { const c = costOf(r); return c?.ok ? c.per : Infinity; };
+    if (ui.tag === "Más baratas") rows.sort((a, b) => per(a.r) - per(b.r));
+    else rows.sort((a, b) => cooked()[b.r.n].n - cooked()[a.r.n].n || (cooked()[b.r.n].last ?? "").localeCompare(cooked()[a.r.n].last ?? ""));
+    el.innerHTML = hideNote + (ui.tag === "Más baratas" ? `<p class="note cgroup-note">💶 Precio por ración en ${A.esc(P().name[costStore()])}, contando solo lo que gastas de cada ingrediente.</p>` : "")
+      + rows.map(({ r, c }) => card(r, c)).join("");
+    lazyBg(el);
+    return;
+  }
   if (ui.mode === "todas" || ui.tag === "Favoritas" || ui.tag === "Mis recetas") {
     rows.sort((a, b) => a.c.missing.length - b.c.missing.length || a.r.n.localeCompare(b.r.n, "es"));
     el.innerHTML = hideNote + (rows.length ? rows.map(({ r, c }) => card(r, c)).join("") : `<p class="note">No hay recetas con eso. Prueba con otra palabra.</p>`);
@@ -631,12 +668,13 @@ function showRecipe(id) {
     : `<p class="ready">Ya tienes en la lista todo lo que falta.</p>`;
   const days = nextDays(), inPlan = new Set(plan().filter((e) => e.n === r.n).map((e) => e.d));
   A.body().innerHTML = `
-    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : ui.from === "gen" ? "Menú propuesto" : ui.from === "com" ? "Comunidad" : "Recetas"}</button>
+    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : ui.from === "gen" ? "Menú propuesto" : ui.from === "com" ? "Comunidad" : ui.from === "ask" ? "Tus 3 ideas" : "Recetas"}</button>
     <div class="cdetail">
       ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>${heart(r)}</figure>` : ""}
       <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>${heart(r)}`}
         <div><p class="rm">${A.esc(meta(r, sv))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p>
           ${r.nut ? `<p class="rnut"><b>≈ ${kcal(r.nut.kcal)}</b> por ración · ${r.nut.p} g proteína · ${r.nut.h} g hidratos · ${r.nut.g} g grasa</p>` : ""}
+          ${r.kit?.length ? `<p class="rkit">Necesitas: ${A.esc(kitText(r))}</p>` : ""}
           ${r.lleva.length ? `<p class="rlleva">Lleva${ad.changes.length ? " (la original)" : ""}: ${r.lleva.filter((a) => a !== "leche").map((a) => `${ALLER.get(a)[1]} ${algName(a)}`).join(" · ")}</p>` : ""}
           ${r.m ? `<p class="rmo">${Object.keys(r.m).filter((m) => MOMENT.has(m)).map((m) => `<button type="button" class="mo-tag" data-go-moment="${m}">${MOMENT.get(m)[1]} ${m}</button>`).join("")}</p>` : ""}</div></div>
       <div class="rtools">
@@ -649,6 +687,8 @@ function showRecipe(id) {
         <button type="button" class="btn danger small" id="cdel">Borrar</button></div>` : ""}
       <div class="pdays" id="pdays" hidden><span>¿Qué día la haces?</span><div>${days.map((d) =>
         `<button type="button" class="chip" data-day="${d}" aria-pressed="${inPlan.has(d)}">${A.esc(dayShort(d))}</button>`).join("")}</div></div>
+      ${cooked()[r.n]?.note ? `<p class="rnote-top">📝 <b>Tu nota:</b> ${A.esc(cooked()[r.n].note)}</p>` : ""}
+      ${costStore() ? `<div class="rcost" id="rcost"><p class="note">💶 Calculando lo que cuesta…</p></div>` : ""}
       ${adaptBox}
       <h3 class="cgroup">Ingredientes <span>toca para marcar lo que tienes</span></h3>
       <ul class="ings">${ings}</ul>
@@ -656,6 +696,7 @@ function showRecipe(id) {
       <h3 class="cgroup">Preparación</h3>
       <button class="btn cookgo" type="button" id="ccook">👩‍🍳 Cocinar paso a paso</button>
       <ol class="steps">${r.p.map((s) => `<li>${A.esc(s)}</li>`).join("")}</ol>
+      <section class="rdone-box" id="rdonebox" aria-label="La he hecho">${doneBoxHTML(r)}</section>
       <section class="social" id="csocial" aria-label="Opiniones"></section>
     </div>`;
   $$("cback").onclick = () => cookBack();
@@ -685,6 +726,8 @@ function showRecipe(id) {
     $$("cplanadd").textContent = `📅 ${plan().some((x) => x.n === r.n) ? "En tu menú" : "Al menú"}`;
   };
   $$("ccook").onclick = () => showCook(id, 0);
+  wireDoneBox(r, $$("rdonebox"));
+  fillCost(r, sv);
   if (r.mine) {
     $$("cedit").onclick = () => showEdit(id);
     $$("cdel").onclick = (e) => {
@@ -795,7 +838,7 @@ function paintTimers() {
 }
 function stepTo(k) {
   const r = recipes[ui.id]; if (!r) return;
-  if (k >= r.p.length) { A.setStatus(`¡Que aproveche! ${r.n} terminada.`); A.buzz(30); return showRecipe(ui.id); }
+  if (k >= r.p.length) { markCooked(r); A.buzz(30); return showDone(ui.id); }
   if (k >= 0) showCook(ui.id, k);
 }
 function showCook(id, step) {
@@ -1249,4 +1292,317 @@ function showPantry() {
   $$("pclear").onclick = () => { A.st.pantry = {}; A.st.exp = {}; A.save(); fill(); };
   $$("cback").onclick = () => showList(true);
   $$("pdone").onclick = () => { ui.mode = "tengo"; showList(); };
+}
+
+
+// ---------- Precio de cada receta ----------
+// Con los precios del súper de tu lista (si no tiene precios, Mercadona): lo que gastas de cada ingrediente,
+// no el paquete entero. Aparte, lo que pagarías por comprar lo que te falta.
+const P = () => A.prices;
+function costStore() {
+  const all = P()?.stores() ?? [];
+  if (!all.length) return null;
+  const s = A.list().store;
+  return all.includes(s) ? s : all.includes("mercadona") ? "mercadona" : all[0];
+}
+const prodMemo = new Map(); // súper -> (ingrediente -> producto)
+function finder(store) {
+  const cat = store && P().cat(store); if (!cat) return null;
+  if (!prodMemo.has(store)) prodMemo.set(store, new Map());
+  const m = prodMemo.get(store);
+  return (n) => {
+    const q = shopName(n), k = key(q);
+    if (!m.has(k)) m.set(k, P().mem(q, store) ?? P().best(cat, q));
+    return m.get(k);
+  };
+}
+const costMemo = new Map();
+function costOf(r, store = costStore(), sv = servOf(r)) {
+  const find = finder(store); if (!find) return null;
+  const k = `${store}|${r.n}|${r.i.length}|${sv}|${dietSig()}`;
+  if (!costMemo.has(k)) {
+    const c = recipeCost(ingsOf(r).filter((i) => !i.gone && !i.opt), sv / r.r, find);
+    c.per = c.total / sv; c.ok = c.need > 0 && c.found / c.need >= 0.6 && c.total > 0;
+    costMemo.set(k, c);
+  }
+  return costMemo.get(k);
+}
+let pricing = null;
+function ensurePrices() {
+  const s = costStore(); if (!s || P().cat(s) || pricing === s) return;
+  pricing = s;
+  P().load(s).then(() => { pricing = null; if (ui.view === "list" && $$("clist")) fillList(); });
+}
+async function fillCost(r, sv) {
+  const s = costStore(); if (!s || !$$("rcost")) return;
+  await P().load(s);
+  const el = $$("rcost"); if (!el || ui.view !== "recipe" || ui.id !== r.id) return;
+  const c = costOf(r, s, sv), name = P().name[s], eur = P().eur;
+  if (!c?.found) { el.innerHTML = `<p class="note">💶 No encuentro precios de esta receta en ${A.esc(name)}.</p>`; return; }
+  const find = finder(s), miss = check(r).missing.filter((i) => !i.gone);
+  const buy = miss.reduce((a, i) => a + (find(i.n)?.p ?? 0), 0);
+  el.innerHTML = `<div class="rc-top"><span class="rc-logo" style="background-image:url('img/logos/${s}.png')" aria-hidden="true"></span>
+      <span class="rc-txt"><b>${c.ok ? "≈ " : ""}${eur(c.total)}</b> en ${A.esc(name)}<small>${eur(c.per)} por ración · lo que gastas de cada ingrediente</small></span></div>
+    ${miss.length ? `<p class="rc-buy">🛒 Comprar lo que te falta (${miss.length}): <b>${eur(buy)}</b> <small>con paquetes enteros</small></p>`
+      : `<p class="rc-buy ok">✓ Lo tienes todo en casa: no tienes que comprar nada.</p>`}
+    <details class="rc-more"><summary>Ver lo que cuesta cada ingrediente</summary><ul>${c.rows.map((x) => `<li><span>${A.esc(x.i.n)}<small>${x.prod ? A.esc(x.prod.n) : x.need ? "No lo encuentro" : "Al gusto: no se cuenta"}</small></span><b>${x.cost == null ? "—" : !x.need ? "" : x.cost < 0.01 ? "< 0,01 €" : eur(x.cost)}</b></li>`).join("")}</ul></details>
+    ${P().stores().length > 1 ? `<button type="button" class="btn ghost small" id="rcmp">⚖️ ¿En qué súper sale más barata?</button><div id="rcmpout"></div>` : ""}`;
+  if ($$("rcmp")) $$("rcmp").onclick = async (e) => {
+    const b = e.currentTarget; b.disabled = true; b.textContent = "Mirando todos los súpers…";
+    const all = P().stores(); await Promise.all(all.map((x) => P().load(x)));
+    if (!$$("rcmpout")) return;
+    const res = all.map((x) => ({ s: x, c: costOf(r, x, sv) })).filter((x) => x.c?.ok).sort((a, b) => a.c.total - b.c.total);
+    b.remove();
+    $$("rcmpout").innerHTML = res.length ? `<ul class="rc-cmp">${res.map((x, k) => `<li class="${k ? "" : "best"}${x.s === s ? " cur" : ""}"><span class="rc-logo" style="background-image:url('img/logos/${x.s}.png')" aria-hidden="true"></span>
+      <span>${A.esc(P().name[x.s])}${k ? "" : ` <em>Más barata</em>`}</span><b>${eur(x.c.total)}<small>${eur(x.c.per)}/ración</small></b></li>`).join("")}</ul>
+      <p class="note">Precio aproximado con el producto que más se parece en cada súper.</p>` : `<p class="note">No encuentro bastantes precios para comparar.</p>`;
+  };
+}
+
+// ---------- Aparatos de cocina ----------
+// Se deducen de los pasos («precalienta el horno», «en una sartén»…). Si un paso dice «horno o freidora», vale uno de los dos.
+const KIT = [["fuego", "🍳", "Fuego o placa"], ["horno", "♨️", "Horno"], ["micro", "⚡", "Microondas"], ["freidora", "💨", "Freidora de aire"], ["batidora", "🌀", "Batidora"]];
+const KIT_N = new Map(KIT.map((k) => [k[0], k]));
+const KIT_RE = {
+  horno: /\bhorno\b|hornea|gratin/, micro: /microondas/, freidora: /freidora/, batidora: /batidora|tritura|turmix|robot de cocina|licua/,
+  fuego: /sarten|cazuela|olla|\bcazo\b|\bfuego\b|\bwok\b|plancha|hierv|\bcuece|cocer|sofrie|rehoga|saltea|escalfa|guisa|cuez/,
+};
+const ALT_RE = /\bo (en )?(el |la |un |una )?(horno|freidora|microondas|sarten|cazo|cazuela|plancha|fuego)/;
+function needsOf(r) {
+  const groups = [];
+  const add = (g) => { const k = [...g].sort().join("|"); if (!groups.some((x) => x.join("|") === k)) groups.push([...g].sort()); };
+  for (const p of r.p ?? []) {
+    const t = norm(p), hit = Object.keys(KIT_RE).filter((k) => KIT_RE[k].test(t));
+    const heat = hit.filter((k) => k !== "batidora");
+    if (heat.length > 1 && ALT_RE.test(t)) { add(heat); if (hit.includes("batidora")) add(["batidora"]); }
+    else hit.forEach((k) => add([k]));
+  }
+  if (r.tags?.includes("Freidora de aire") && !groups.some((g) => g.includes("freidora"))) add(["freidora"]);
+  // Un «horno o freidora» sobra si el horno ya hace falta en otro paso.
+  return groups.filter((g) => g.length === 1 || !g.some((k) => groups.some((x) => x.length === 1 && x[0] === k)));
+}
+const kitOK = (r) => !A.st.kit || (r.kit ?? []).every((g) => g.some((k) => A.st.kit.includes(k)));
+const kitName = (k) => KIT_N.get(k)[2].replace("Fuego o placa", "fuego");
+const kitText = (r) => (r.kit ?? []).map((g) => g.map((k) => `${KIT_N.get(k)[1]} ${kitName(k).toLowerCase()}`).join(" o ")).join(" · ");
+const kitMissing = () => KIT.filter(([k]) => A.st.kit && !A.st.kit.includes(k));
+const kitMissingLabel = () => kitMissing().map(([k]) => kitName(k).toLowerCase()).join(" o ");
+const shortKit = () => { const m = kitMissing(); return !A.st.kit || !m.length ? "Todos" : m.length === 1 ? `Sin ${kitName(m[0][0]).toLowerCase()}` : `${KIT.length - m.length} de ${KIT.length}`; };
+function showKit(back = null) {
+  keepScroll();
+  setView("kit"); ui.kitBack = back;
+  A.setTitle("Tu cocina", true);
+  const on = (k) => !A.st.kit || A.st.kit.includes(k);
+  A.body().innerHTML = `
+    <button type="button" class="back" id="cback">‹ ${back ? "Volver" : "Recetas"}</button>
+    <div class="plan diet">
+      <h3 class="cgroup">¿Qué tienes en tu cocina? <span>quita lo que no tengas</span></h3>
+      <div class="dgrid" id="kgrid">${KIT.map(([k, e, t]) => `<button type="button" class="dbtn" data-k="${k}" aria-pressed="${on(k)}"><span aria-hidden="true">${e}</span>${A.esc(t)}</button>`).join("")}</div>
+      <p class="note">Las recetas que necesitan algo que no tienes no saldrán. Si una se puede hacer en el horno o en la freidora, sale con tener uno de los dos.</p>
+    </div>
+    <div class="bfoot"><span id="kcount"></span><button class="btn" type="button" id="kdone">${back ? "Seguir" : "Ver recetas"}</button></div>`;
+  const count = () => { const n = recipes.filter((r) => allowed(r)).length; $$("kcount").innerHTML = `<b>${n}</b> de ${recipes.length} recetas para ti`; };
+  count();
+  $$("kgrid").onclick = (e) => {
+    const b = e.target.closest("[data-k]"); if (!b) return;
+    A.st.kit ??= KIT.map((k) => k[0]);
+    const k = b.dataset.k, i = A.st.kit.indexOf(k);
+    if (i >= 0) A.st.kit.splice(i, 1); else A.st.kit.push(k);
+    b.setAttribute("aria-pressed", String(i < 0));
+    A.buzz(); A.save(); count();
+  };
+  $$("cback").onclick = () => cookBack();
+  $$("kdone").onclick = () => { A.st.kit ??= KIT.map((k) => k[0]); A.save(); if (back) { ui.kitBack = null; back(); } else showList(); };
+}
+
+// ---------- «La he hecho»: veces, estrellas y tu nota ----------
+// st.cooked = { nombre: { n: veces, last: "2026-11-18", stars: 1-5, note: "menos sal" } }
+const cooked = () => (A.st.cooked ??= {});
+const doneOf = (r) => { const c = cooked()[r.n]; return c?.n ? c : null; };
+function markCooked(r) { const c = (cooked()[r.n] ??= { n: 0 }); c.n++; c.last = ymd(); A.save(); }
+const dayTxt = (d) => d === ymd() ? "hoy" : new Date(`${d}T12:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" });
+const starsHTML = (v, big) => `<div class="stars${big ? " big" : ""}" role="group" aria-label="Tus estrellas">${[1, 2, 3, 4, 5].map((k) =>
+  `<button type="button" data-star="${k}" aria-pressed="${k <= (v ?? 0)}" aria-label="${k} ${k === 1 ? "estrella" : "estrellas"}">★</button>`).join("")}</div>`;
+function doneBoxHTML(r) {
+  const c = cooked()[r.n], d = doneOf(r);
+  return `<h3 class="cgroup">¿La has hecho?</h3><div class="rdone-in">
+    <p class="rdone-t">${d ? `✓ La has hecho <b>${plural(d.n, "vez", "veces")}</b> · la última ${dayTxt(d.last)}` : "Márcala y apunta cómo te ha salido para la próxima vez."}</p>
+    ${starsHTML(c?.stars)}
+    <label class="vh" for="rnote">Tu nota</label><textarea id="rnote" class="rnote" rows="2" placeholder="Tu nota: menos sal, 5 minutos más de horno…">${A.esc(c?.note ?? "")}</textarea>
+    <div class="row"><button type="button" class="btn ghost small" data-did>✓ La he hecho hoy</button>${d ? `<button type="button" class="lnk" data-undid>Quitar una vez</button>` : ""}</div></div>`;
+}
+function wireDoneBox(r, box, after) {
+  if (!box) return;
+  const repaint = () => { box.innerHTML = doneBoxHTML(r); };
+  box.onclick = (e) => {
+    const s = e.target.closest("[data-star]");
+    if (s) {
+      const c = (cooked()[r.n] ??= { n: 0 }), v = +s.dataset.star;
+      c.stars = c.stars === v ? v - 1 : v;
+      if (!c.n) { c.n = 1; c.last = ymd(); }
+      A.buzz(); A.save(); after ? after() : repaint(); return;
+    }
+    if (e.target.closest("[data-did]")) { markCooked(r); A.buzz(20); A.setStatus(`👩‍🍳 Apuntado: has hecho ${r.n}.`); repaint(); return; }
+    if (e.target.closest("[data-undid]")) { const c = cooked()[r.n]; c.n = Math.max(0, c.n - 1); A.save(); repaint(); }
+  };
+  let t;
+  box.oninput = (e) => {
+    if (!e.target.matches(".rnote")) return;
+    clearTimeout(t);
+    t = setTimeout(() => { const c = (cooked()[r.n] ??= { n: 0 }); c.note = e.target.value.trim().slice(0, 300); A.save(); }, 400);
+  };
+}
+// Al terminar el paso a paso: «¡Que aproveche!» y qué tal ha salido.
+function showDone(id) {
+  const r = recipes[id]; if (!r) return;
+  setView("done"); ui.id = id;
+  A.setTitle(r.n, true);
+  const c = cooked()[r.n];
+  A.body().innerHTML = `
+    <button type="button" class="back" id="cback">‹ Receta</button>
+    <div class="donescr" id="donescr">
+      ${r.foto ? `<span class="done-ph" style="background-image:url('${A.esc(r.foto.img)}')" aria-hidden="true"></span>` : `<span class="done-art" aria-hidden="true">${A.esc(r.e)}</span>`}
+      <h2>¡Que aproveche! 🎉</h2>
+      <p class="done-sub">${c.n === 1 ? "Es la primera vez que haces esta receta." : `Ya la has hecho ${c.n} veces.`}</p>
+      <p class="done-q">¿Qué tal te ha salido?</p>
+      ${starsHTML(c.stars, true)}
+      <label class="vh" for="dnote">Tu nota</label>
+      <textarea id="dnote" class="rnote" rows="3" placeholder="Apunta algo para la próxima: menos sal, 5 minutos más de horno…">${A.esc(c.note ?? "")}</textarea>
+    </div>
+    <div class="bfoot"><button type="button" class="btn ghost" id="dskip">Ahora no</button><button type="button" class="btn" id="dsave">Guardar</button></div>`;
+  $$("donescr").onclick = (e) => {
+    const s = e.target.closest("[data-star]"); if (!s) return;
+    const v = +s.dataset.star; c.stars = c.stars === v ? v - 1 : v; A.buzz(); A.save();
+    for (const b of $$("donescr").querySelectorAll("[data-star]")) b.setAttribute("aria-pressed", String(+b.dataset.star <= c.stars));
+  };
+  const save = () => { c.note = $$("dnote").value.trim().slice(0, 300); A.save(); };
+  $$("cback").onclick = () => { save(); cookBack(); };
+  $$("dskip").onclick = () => showRecipe(id);
+  $$("dsave").onclick = () => { save(); A.setStatus(`¡Que aproveche! Guardado en «Ya hechas».`); showRecipe(id); };
+}
+
+// ---------- Te pregunto y te digo qué cocinar ----------
+// Unas preguntas con botones (sin escribir) y al final 3 recetas que encajan. Lo de la cocina y las alergias solo se pregunta una vez.
+const GANA_E = { "Dulce": "🍰", "Salado": "🥪", "Saludable": "🥗", "Batidos y zumos": "🥤", "Huevos": "🍳", "Tostadas y bocadillos": "🥪", "Horneados": "🥐",
+  "Arroces": "🥘", "Pasta": "🍝", "Legumbres y guisos": "🍲", "Carne": "🥩", "Pescado": "🐟", "Verduras y ensaladas": "🥦", "Internacional": "🌍", "Postres": "🍮",
+  "Bizcochos y repostería": "🧁", "Dulce rápido": "🍫", "Fruta y batidos": "🍓", "Ligera": "🥗", "Sopas y cremas": "🥣", "Para picar": "🧀", "Pizza y hamburguesas": "🍕" };
+function askQ(id) {
+  const a = ui.ask.a;
+  if (id === "kit") return { q: "Antes de nada, ¿qué tienes en tu cocina? Quita lo que no tengas.", multi: true, opts: KIT.map(([k, e, t]) => [k, t, e]) };
+  if (id === "alg") return { q: "¿Alguien en casa tiene alergias o no come algo?", opts: [["no", "No, comemos de todo", "🍽️"], ["si", "Sí, quiero marcarlo", "🛡️"]] };
+  if (id === "mo") return { q: "¡Vamos allá! ¿Para qué momento es?", opts: MOMENTS.map(([m, e]) => [m, m, e]) };
+  if (id === "pax") return { q: "¿Para cuántas personas?", opts: [1, 2, 3, 4, 5, 6].map((n) => [String(n), n === 6 ? "6 o más" : String(n), n === 1 ? "🙋" : "👥"]) };
+  if (id === "t") return { q: "¿Cuánto tiempo tienes para cocinar?", opts: [["15", "15 minutos", "⚡"], ["30", "Media hora", "⏱️"], ["60", "Una hora", "🕐"], ["999", "Sin prisa", "😌"]] };
+  if (id === "gana") return { q: "¿Y qué te apetece?", opts: [...MOMENT.get(a.mo ?? "Comida")[3].filter((t) => t !== "Postres" || a.mo === "Cena").map((t) => [t, t, GANA_E[t] ?? "🍽️"]), ["veggie", "Sin carne ni pescado", "🥕"], ["*", "Me da igual", "🤷"]] };
+  if (id === "casa") return { q: "¿Tiro de lo que tienes en casa?", opts: [["si", "Sí, comprar lo mínimo", "🏠"], ["no", "Me da igual ir a comprar", "🛒"]] };
+  if (id === "eur") return { q: "Última: ¿miro el precio?", opts: [["bar", "Sí, que sea barato", "💶"], ["*", "Me da igual", "👌"]] };
+}
+function startAsk() {
+  const d = diet();
+  const qs = [...(A.st.kit ? [] : ["kit"]), ...(d.asked || d.evita.length || d.tipo ? [] : ["alg"]), "mo", "pax", "t", "gana", "casa", "eur"];
+  ui.ask = { qs, i: 0, a: {}, labels: {}, seed: Date.now() % 100000, shown: [], kit: A.st.kit ? [...A.st.kit] : ["fuego", "horno", "micro"] };
+  keepScroll();
+  showAsk();
+}
+function answer(id, v, label) {
+  const k = ui.ask;
+  k.a[id] = v; k.labels[id] = label; k.i = k.qs.indexOf(id) + 1; k.res = null;
+  if (id === "mo" && k.a.gana) { delete k.a.gana; delete k.labels.gana; }
+  if (id === "alg") { diet().asked = true; A.save(); }
+  A.buzz();
+  if (id === "alg" && v === "si") { ui.dietBack = showAsk; return showDiet(); }
+  showAsk();
+}
+function askPick() {
+  const k = ui.ask, a = k.a, t = +a.t, pax = +a.pax, store = costStore();
+  const all = recipes.filter((r) => !r.com && allowed(r) && r.m?.[a.mo]);
+  // «Me da igual» en comida o cena: un plato, no un postre.
+  const dish = (r) => !(/Comida|Cena/.test(a.mo) && r.m[a.mo].every((x) => x === "Postres"));
+  const want = (r) => a.gana === "*" || !a.gana ? dish(r) : a.gana === "veggie" ? r.filters.includes("Vegetariana") : r.m[a.mo].includes(a.gana);
+  let pool = all.filter((r) => r.t <= t && want(r)), relaxed = "";
+  if (pool.length < 3) { pool = all.filter(want); relaxed = "tiempo"; }
+  if (pool.length < 3) { pool = all.filter((r) => r.t <= t); relaxed = "gana"; }
+  if (pool.length < 3) { pool = all; relaxed = "todo"; }
+  const rand = rng(k.seed * 7919 + k.shown.length * 31);
+  const rows = pool.map((r) => {
+    const miss = check(r).missing.length, c = a.eur === "bar" ? costOf(r, store, pax) : null, me = cooked()[r.n];
+    let s = a.casa === "si" ? -miss * 2.5 : -miss * 0.3;
+    if (a.eur === "bar") s -= c?.ok ? c.per * 2.2 : 3;
+    if (isFav(r)) s += 1.5;
+    if (me?.stars) s += me.stars - 3;
+    if (me?.last && (Date.now() - new Date(me.last)) / 864e5 < 7) s -= 2;
+    if (r.foto) s += 0.5;
+    return { r, s: s + rand() * 2, miss };
+  }).sort((x, y) => y.s - x.s);
+  const fresh = rows.filter((x) => !k.shown.includes(x.r.n));
+  return { list: (fresh.length >= 3 ? fresh : rows).slice(0, 3), relaxed };
+}
+async function showAsk() {
+  const k = ui.ask; if (!k) return startAsk();
+  setView("ask");
+  A.setTitle("Te ayudo a elegir", true);
+  // Si se volvió de marcar alergias, esa pregunta ya está contestada.
+  if (k.qs[k.i] === "alg" && diet().asked && k.a.alg == null) { k.a.alg = "si"; k.labels.alg = "Sí, quiero marcarlo"; k.i++; }
+  const bot = (t, cls = "") => `<div class="bub bot${cls}"><span class="bub-av" aria-hidden="true">👩‍🍳</span><p>${t}</p></div>`;
+  const me = (t) => `<div class="bub me"><p>${A.esc(t)}</p></div>`;
+  const past = k.qs.slice(0, k.i).map((id) => bot(A.esc(askQ(id).q)) + me(k.labels[id] ?? "")).join("");
+  const cur = k.qs[k.i];
+  let now = "";
+  if (cur) {
+    const q = askQ(cur);
+    const pressed = (v) => q.multi ? k.kit.includes(v) : false;
+    now = bot(A.esc(q.q), " new") + `<div class="ask-opts${q.multi ? " multi" : ""}" id="askopts">${q.opts.map(([v, l, e]) =>
+      `<button type="button" class="ask-o" data-v="${A.esc(v)}" data-l="${A.esc(l)}"${q.multi ? ` aria-pressed="${pressed(v)}"` : ""}><span aria-hidden="true">${e}</span>${A.esc(l)}</button>`).join("")}
+      ${q.multi ? `<button type="button" class="btn ask-ok" id="askok">Listo</button>` : ""}</div>`;
+  }
+  A.body().innerHTML = `
+    <button type="button" class="back" id="cback">‹ Recetas</button>
+    <div class="ask" id="ask"><div class="ask-chat" id="askchat">
+      ${past}${now}<div id="askres"></div></div>
+      <div class="ask-foot">${k.i > 0 ? `<button type="button" class="lnk" id="askprev">‹ Cambiar la anterior</button>` : "<span></span>"}
+        <span class="ask-n">${cur ? `${k.i + 1} de ${k.qs.length}` : ""}</span></div></div>`;
+  $$("cback").onclick = () => cookBack();
+  if ($$("askprev")) $$("askprev").onclick = () => { k.i = Math.max(0, k.i - 1); k.shown = []; k.res = null; A.buzz(); showAsk(); };
+  const chat = $$("askchat");
+  const toEnd = () => requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
+  if (cur) {
+    $$("askopts").onclick = (e) => {
+      const b = e.target.closest("[data-v]");
+      if (b && askQ(cur).multi) {
+        const v = b.dataset.v, i = k.kit.indexOf(v);
+        if (i >= 0) k.kit.splice(i, 1); else k.kit.push(v);
+        b.setAttribute("aria-pressed", String(i < 0)); A.buzz(); return;
+      }
+      if (b) return answer(cur, b.dataset.v, b.dataset.l);
+      if (e.target.closest("#askok")) {
+        A.st.kit = [...k.kit]; A.save();
+        answer("kit", "ok", k.kit.length === KIT.length ? "Tengo de todo" : k.kit.length ? KIT.filter(([x]) => k.kit.includes(x)).map(([, , t]) => t).join(", ") : "Nada de eso");
+      }
+    };
+    toEnd(); return;
+  }
+  // Resultado.
+  $$("askres").innerHTML = bot("Un momento, que lo miro…", " new");
+  toEnd();
+  if (k.a.eur === "bar" && costStore()) await P().load(costStore());
+  if (ui.view !== "ask" || !$$("askres")) return;
+  if (!k.res) { const got = askPick(); k.res = { names: got.list.map((x) => x.r.n), relaxed: got.relaxed }; k.shown.push(...k.res.names); }
+  const relaxed = k.res.relaxed, list = k.res.names.map((n) => recipes.find((r) => r.n === n)).filter(Boolean).map((r) => ({ r, miss: check(r).missing.length }));
+  const pax = +k.a.pax;
+  const why = (r, miss) => {
+    const c = costOf(r, costStore(), pax), me = cooked()[r.n];
+    return [`⏱ ${mins(r.t)}`, miss ? `🛒 Faltan ${miss}` : "✓ Lo tienes todo", c?.ok ? `💶 ${P().eur(c.per)}/ración` : "", isFav(r) ? "❤️ Favorita" : "", me?.stars ? `★ ${me.stars}` : ""].filter(Boolean);
+  };
+  const note = { tiempo: "No hay tantas recetas tan rápidas de eso, así que te pongo las más rápidas que encajan.", gana: "De eso no tengo tantas con ese tiempo; te pongo otras que sí te dan tiempo.", todo: "Con todo lo que me has dicho hay pocas; mira estas." }[relaxed];
+  $$("askres").innerHTML = bot(list.length ? `¡Listo! Para ${plural(pax, "persona", "personas")}, te propongo estas ${list.length}:${note ? ` <small>${note}</small>` : ""}` : "Vaya, con eso no encuentro ninguna receta. Prueba a cambiar alguna respuesta.", " new")
+    + `<div class="ask-res">${list.map(({ r, miss }) => `<button type="button" class="ask-card" data-r="${r.id}">
+        <span class="ask-ph${r.foto ? "" : " noph"}" style="${r.foto ? `background-image:url('${A.esc(r.foto.img)}')` : `--h:${hue(r.n)}`}">${r.foto ? "" : A.esc(r.e)}</span>
+        <span class="ask-in"><b>${A.esc(r.n)}</b><span class="ask-why">${why(r, miss).map((w) => `<span>${A.esc(w)}</span>`).join("")}</span></span></button>`).join("")}</div>
+      <div class="ask-more"><button type="button" class="btn ghost" id="askagain">🔄 Otras 3</button><button type="button" class="btn ghost" id="askreset">Empezar de nuevo</button></div>`;
+  $$("askres").onclick = (e) => {
+    const b = e.target.closest("[data-r]");
+    if (b) { const r = recipes[+b.dataset.r]; ui.from = "ask"; setServ(r, pax); return showRecipe(r.id); }
+    if (e.target.closest("#askagain")) { A.buzz(); k.seed++; k.res = null; return showAsk(); }
+    if (e.target.closest("#askreset")) { A.buzz(); return startAsk(); }
+  };
+  toEnd();
 }

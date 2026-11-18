@@ -1084,3 +1084,120 @@ body.searching .summary,body.searching .ideas:not(.lres){display:none}
 body.shop .lres{display:flex}
 body.shop .lres[hidden]{display:none}
 .lnone{color:var(--muted);text-align:center;padding:18px 8px;margin:0}
+
+/* Recetas: precio, aparatos, «la he hecho» y el asistente que pregunta (2026-11-18) */
+.cbtns{grid-template-columns:1fr 1fr;gap:6px}
+.cbtns .pantry-btn{padding:7px 12px;font-size:.88rem;flex-direction:row;align-items:center;justify-content:space-between}
+.cbtns .pantry-btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cbtns .pantry-btn b{font-size:.74rem}
+.askgo{display:flex;align-items:center;gap:12px;width:100%;border:0;border-radius:18px;padding:12px 14px;cursor:pointer;text-align:left;color:#fff;
+  background:linear-gradient(135deg,#1f7a4d 0%,#2a9a63 100%);box-shadow:0 6px 18px rgb(31 122 77 / .28)}
+.askgo b{display:block;font:800 1rem/1.2 var(--display)}
+.askgo small{display:block;font-size:.8rem;opacity:.9;margin-top:2px}
+.askgo-av{flex:none;width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:26px}
+.askgo>span:nth-child(2){flex:1;min-width:0}
+.askgo-b{flex:none;background:#bfe8cf;color:#14422b;font:800 .82rem var(--body);border-radius:999px;padding:7px 12px}
+@media (prefers-color-scheme: dark){.askgo{box-shadow:none}}
+
+.rcw .rprice-pill{position:absolute;left:8px;top:8px;z-index:1;background:rgb(255 255 255 / .94);color:#14422b;font:800 .76rem var(--body);
+  border-radius:999px;padding:4px 9px;box-shadow:0 1px 4px rgb(0 0 0 / .18);pointer-events:none;font-variant-numeric:tabular-nums}
+.rc .rprice-pill{display:none}
+.clist .rc .rprice-pill{display:block}
+.rx{display:flex;flex-wrap:wrap;gap:4px}
+.rx .rprice{display:none}
+.rx .rdone{font-size:.72rem;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 7px}
+.cgroup-note{margin:0}
+
+.rkit{margin:4px 0 0;font-size:.82rem;color:var(--muted)}
+.rnote-top{margin:0;border-radius:12px;background:#fff7e0;color:#5b4300;padding:9px 12px;font-size:.9rem}
+@media (prefers-color-scheme: dark){.rnote-top{background:#3a3016;color:#f3dfa4}}
+.rcost{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.rcost .note{margin:0}
+.rc-top{display:flex;align-items:center;gap:10px}
+.rc-logo{flex:none;width:36px;height:36px;border-radius:10px;background:#fff center/contain no-repeat;border:1px solid var(--line)}
+.rc-txt{display:flex;flex-direction:column;font-size:.92rem}
+.rc-txt b{font:800 1.25rem var(--display);color:var(--accent);font-variant-numeric:tabular-nums}
+.rc-txt small{color:var(--muted);font-size:.78rem}
+.rc-buy{margin:0;font-size:.88rem}
+.rc-buy small{color:var(--muted)}
+.rc-buy.ok{color:var(--accent);font-weight:700}
+.rc-more summary{cursor:pointer;font-size:.85rem;font-weight:700;color:var(--accent)}
+.rc-more ul,.rc-cmp{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rc-more li{display:flex;justify-content:space-between;gap:10px;font-size:.85rem}
+.rc-more li span{display:flex;flex-direction:column;min-width:0}
+.rc-more li small{color:var(--muted);font-size:.74rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc-more li b{flex:none;font-variant-numeric:tabular-nums}
+.rc-cmp li{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:.9rem}
+.rc-cmp li span:nth-child(2){flex:1}
+.rc-cmp li em{font-style:normal;font-size:.72rem;font-weight:800;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:2px 7px;margin-left:4px}
+.rc-cmp li b{display:flex;flex-direction:column;align-items:flex-end;font-variant-numeric:tabular-nums}
+.rc-cmp li b small{font-weight:500;color:var(--muted);font-size:.72rem}
+.rc-cmp li.best{border-color:var(--accent);background:var(--accent-soft)}
+.rc-cmp .rc-logo{width:28px;height:28px;border-radius:8px}
+#rcmp{align-self:flex-start}
+
+.rdone-box{display:flex;flex-direction:column;gap:8px}
+.rdone-in{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.rdone-t{margin:0;font-size:.9rem}
+.stars{display:flex;gap:4px}
+.stars button{border:0;background:none;padding:0 2px;font-size:28px;line-height:1;color:var(--line);cursor:pointer;transition:transform .15s}
+.stars button[aria-pressed="true"]{color:#f2b01e}
+.stars button:active{transform:scale(.85)}
+.stars.big{justify-content:center;gap:8px}
+.stars.big button{font-size:42px}
+.rnote{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:.92rem;padding:10px 12px;resize:vertical}
+.donescr{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:8px 0 16px}
+.done-ph{width:180px;height:180px;border-radius:50%;background:center/cover no-repeat;box-shadow:0 8px 24px rgb(0 0 0 / .18);border:5px solid var(--surface)}
+.done-art{font-size:90px;line-height:1}
+.donescr h2{margin:6px 0 0;font:800 1.7rem var(--display)}
+.done-sub{margin:0;color:var(--muted)}
+.done-q{margin:10px 0 0;font-weight:800}
+
+/* Asistente: conversación con botones */
+.ask{flex:1;min-height:0;display:flex;flex-direction:column}
+.ask-chat{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 0 16px;-webkit-overflow-scrolling:touch}
+.bub{display:flex;gap:8px;align-items:flex-end;max-width:88%}
+.bub p{margin:0;padding:10px 14px;border-radius:18px;font-size:.95rem;line-height:1.35}
+.bub p small{display:block;color:var(--muted);font-size:.82rem;margin-top:4px}
+.bub.bot p{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:6px}
+.bub-av{flex:none;width:32px;height:32px;border-radius:50%;background:#bfe8cf;display:grid;place-items:center;font-size:18px}
+.bub.me{align-self:flex-end}
+.bub.me p{background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:6px;font-weight:600}
+.bub.new{animation:bubIn .35s cubic-bezier(.32,.72,0,1) both}
+@keyframes bubIn{from{opacity:0;transform:translateY(10px) scale(.97)}}
+.ask-opts{display:flex;flex-wrap:wrap;gap:8px;padding-left:40px;animation:bubIn .35s .12s cubic-bezier(.32,.72,0,1) both}
+.ask-o{display:inline-flex;align-items:center;gap:7px;border:2px solid var(--accent);background:var(--surface);color:var(--fg);border-radius:999px;
+  padding:9px 14px;font:700 .9rem var(--body);cursor:pointer;transition:transform .15s,background-color .2s}
+.ask-o span{font-size:1.15rem;line-height:1}
+.ask-o:active{transform:scale(.95)}
+.ask-o[aria-pressed="true"]{background:var(--accent-soft)}
+.ask-o[aria-pressed="false"]{border-color:var(--line);opacity:.7}
+.ask-ok{width:100%;margin-top:4px}
+.ask-foot{flex:none;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding:10px 0 calc(8px + env(safe-area-inset-bottom,0px));font-size:.85rem;color:var(--muted)}
+.ask-res{display:flex;flex-direction:column;gap:10px;padding-left:40px;animation:bubIn .4s .15s cubic-bezier(.32,.72,0,1) both}
+.ask-card{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:8px;cursor:pointer;text-align:left;color:var(--fg);box-shadow:0 2px 10px rgb(0 0 0 / .06)}
+.ask-card:active{transform:scale(.98)}
+.ask-ph{flex:none;width:92px;height:92px;border-radius:14px;background:center/cover no-repeat}
+.ask-ph.noph{display:grid;place-items:center;font-size:44px;background:hsl(var(--h) 70% 90%)}
+.ask-in{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ask-in b{font:800 1rem/1.2 var(--display)}
+.ask-why{display:flex;flex-wrap:wrap;gap:4px}
+.ask-why span{font-size:.74rem;font-weight:700;background:var(--accent-soft);color:var(--fg);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.ask-more{display:flex;gap:8px;padding-left:40px}
+.ask-more .btn{flex:1}
+.sheet.cooking #sheetBody>.ask{flex:1;min-height:0}
+
+/* Estilo B de las tarjetas de recetas: foto entera con el nombre encima (elegido, 2026-11-18) */
+.sheet .clist{gap:12px}
+.sheet .clist .rc{position:relative;border:0;border-radius:22px;aspect-ratio:3/4;box-shadow:0 6px 18px rgb(0 0 0 / .12);background:#1d2a22}
+.sheet .clist .re{position:absolute;inset:0;height:100%;aspect-ratio:auto}
+.sheet .clist .ri{position:absolute;left:0;right:0;bottom:0;padding:40px 12px 12px;color:#fff;
+  background:linear-gradient(to top,rgb(10 20 14 / .88) 0%,rgb(10 20 14 / .6) 55%,transparent 100%)}
+.sheet .clist .rn{font:800 1rem/1.15 var(--display);color:#fff;text-shadow:0 1px 3px rgb(0 0 0 / .4)}
+.sheet .clist .rm{color:rgb(255 255 255 / .85)}
+.sheet .clist .rh{color:#ffd9c2}
+.sheet .clist .rh.ok{color:#bfe8cf}
+.sheet .clist .radapt{background:rgb(255 255 255 / .2);color:#fff}
+.sheet .clist .rx .rdone{background:#bfe8cf;color:#14422b}
+.sheet .rcw .rprice-pill{top:auto;bottom:auto;top:10px;left:10px;background:#bfe8cf}
+.sheet .clist .re:not(.has-foto){place-items:start center;padding-top:16%;font-size:64px}

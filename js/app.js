@@ -1445,6 +1445,9 @@ $("ideas").addEventListener("click", (e) => {
   if (e.target.closest("[data-cook-all]")) openRecipes(null, "Todo");
 });
 initCocina({ st, list, addItem, markGeneric, save, render, setStatus, buzz, esc, openSheet, sheet, CHECK_SVG, swipeDel: SWIPE_DEL, TRASH_SVG,
+  // Precios para saber lo que cuesta cada receta (Aldi solo tiene el folleto: no vale para esto).
+  prices: { stores: () => (meta ? pricedStores().filter((s) => !meta.stores[s].partial) : []), cat: (s) => catalogs.get(s) ?? null, load: loadStore,
+    best: bestProd, mem: (q, s) => st.memory[memKey(q, s)] ?? null, name: STORE_NAME, eur },
   body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
 $("finishBtn").addEventListener("click", finishShopping);
 $("shopBtn").addEventListener("click", () => {
