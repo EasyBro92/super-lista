@@ -1187,17 +1187,17 @@ body.shop .lres[hidden]{display:none}
 .ask-more .btn{flex:1}
 .sheet.cooking #sheetBody>.ask{flex:1;min-height:0}
 
-/* Estilo B de las tarjetas de recetas: foto entera con el nombre encima (a prueba, 2026-11-18) */
-.look-b .clist{gap:12px}
-.look-b .clist .rc{position:relative;border:0;border-radius:22px;aspect-ratio:3/4;box-shadow:0 6px 18px rgb(0 0 0 / .12);background:#1d2a22}
-.look-b .clist .re{position:absolute;inset:0;height:100%;aspect-ratio:auto}
-.look-b .clist .ri{position:absolute;left:0;right:0;bottom:0;padding:40px 12px 12px;color:#fff;
+/* Estilo B de las tarjetas de recetas: foto entera con el nombre encima (elegido, 2026-11-18) */
+.sheet .clist{gap:12px}
+.sheet .clist .rc{position:relative;border:0;border-radius:22px;aspect-ratio:3/4;box-shadow:0 6px 18px rgb(0 0 0 / .12);background:#1d2a22}
+.sheet .clist .re{position:absolute;inset:0;height:100%;aspect-ratio:auto}
+.sheet .clist .ri{position:absolute;left:0;right:0;bottom:0;padding:40px 12px 12px;color:#fff;
   background:linear-gradient(to top,rgb(10 20 14 / .88) 0%,rgb(10 20 14 / .6) 55%,transparent 100%)}
-.look-b .clist .rn{font:800 1rem/1.15 var(--display);color:#fff;text-shadow:0 1px 3px rgb(0 0 0 / .4)}
-.look-b .clist .rm{color:rgb(255 255 255 / .85)}
-.look-b .clist .rh{color:#ffd9c2}
-.look-b .clist .rh.ok{color:#bfe8cf}
-.look-b .clist .radapt{background:rgb(255 255 255 / .2);color:#fff}
-.look-b .clist .rx .rdone{background:#bfe8cf;color:#14422b}
-.look-b .rcw .rprice-pill{top:auto;bottom:auto;top:10px;left:10px;background:#bfe8cf}
-.look-b .clist .re:not(.has-foto){place-items:start center;padding-top:16%;font-size:64px}
+.sheet .clist .rn{font:800 1rem/1.15 var(--display);color:#fff;text-shadow:0 1px 3px rgb(0 0 0 / .4)}
+.sheet .clist .rm{color:rgb(255 255 255 / .85)}
+.sheet .clist .rh{color:#ffd9c2}
+.sheet .clist .rh.ok{color:#bfe8cf}
+.sheet .clist .radapt{background:rgb(255 255 255 / .2);color:#fff}
+.sheet .clist .rx .rdone{background:#bfe8cf;color:#14422b}
+.sheet .rcw .rprice-pill{top:auto;bottom:auto;top:10px;left:10px;background:#bfe8cf}
+.sheet .clist .re:not(.has-foto){place-items:start center;padding-top:16%;font-size:64px}
