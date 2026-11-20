@@ -75,20 +75,15 @@
   </section>
   <header>
     <div class="top">
+      <button class="homego" id="homeGo" type="button" aria-label="Inicio" title="Inicio"><img src="icons/icon-192.png" alt="" width="36" height="36"></button>
       <button class="listname" id="listBtn" type="button" aria-haspopup="dialog">
         <span id="listName">Mi lista</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div class="tools">
-        <button class="icon pill" id="cookBtn" type="button" title="Recetas con lo que tienes">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18M5 11v6a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-6M2 11h1M21 11h1M9 7c0-1.5 1-2 1-3.5M13 7c0-1.5 1-2 1-3.5"/></svg>
-          <span>Recetas</span>
-        </button>
-        <button class="icon" id="shopBtn" type="button" aria-pressed="false" title="Modo tienda">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>
-        </button>
-        <button class="icon" id="histBtn" type="button" title="Historial de compras">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
+        <button class="pill shopgo" id="shopBtn" type="button" aria-pressed="false" title="Modo súper: letra grande y la pantalla no se apaga">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>
+          <span>Estoy en el súper</span>
         </button>
       </div>
     </div>
@@ -115,7 +110,7 @@
     <div class="toast" id="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Deshacer</button></div>
     <div class="favs" id="favs" aria-label="Lo que compras a menudo"></div>
     <div class="full-warn" id="fullWarn" role="alert" hidden><span>⚠️ No se han podido guardar tus últimos cambios: el móvil no tiene sitio. Guarda una copia por si acaso.</span><button type="button" class="btn small" id="fullGo">Guardar copia</button></div>
-    <div class="status" id="status" aria-live="polite">Escribe o dicta: «apunta leche, huevos y oreos»</div>
+    <div class="status" id="status" aria-live="polite"></div>
     <form class="bar" id="bar" autocomplete="off">
       <label class="vh" for="q">Qué quieres apuntar</label>
       <input type="text" id="q" placeholder="Apunta leche y huevos…" enterkeyhint="send" autocapitalize="off">
@@ -131,10 +126,8 @@
     </form>
   </div>
   <nav class="tabbar" id="tabbar" aria-label="Secciones">
-    <button type="button" data-tab="home" aria-current="page"><span aria-hidden="true">✨</span>Inicio</button>
     <button type="button" data-tab="list"><span aria-hidden="true">🛒</span>Lista</button>
     <button type="button" data-tab="recipes"><span aria-hidden="true">🍳</span>Recetas</button>
-    <button type="button" data-tab="plan"><span aria-hidden="true">📅</span>Menú</button>
     <button type="button" data-tab="pantry"><span aria-hidden="true">🏠</span>En casa</button>
     <button type="button" data-tab="history"><span aria-hidden="true">🧾</span>Compras</button>
   </nav>

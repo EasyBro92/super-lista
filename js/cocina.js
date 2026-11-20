@@ -73,7 +73,7 @@ function matches(r) {
 
 let A; // funciones de la app (lista, guardar, pintar…)
 let recipes = null, loading = null;
-const ui = { view: "list", mode: "tengo", moment: null, tag: "Todas", q: "", id: null, pq: "", scroll: 0, serv: {}, step: 0, from: null, pickDay: null };
+const ui = { view: "list", mode: "todas", moment: null, tag: "Todas", q: "", id: null, pq: "", scroll: 0, serv: {}, step: 0, from: null, pickDay: null };
 
 export function initCocina(api) {
   A = api;
@@ -322,7 +322,7 @@ export async function openRecipes(id, moment, view) {
   if (view === "plan") return showPlan();
   if (view === "diet") return showDiet();
   if (view === "pantry") return showPantry();
-  if (view === "tengo") { ui.mode = "tengo"; ui.q = ""; return showList(); }
+  if (view === "tengo") return showTengo();
   if (view?.startsWith("use:")) { ui.q = view.slice(4); ui.mode = "todas"; ui.moment = ALL; ui.tag = "Todas"; return showList(); }
   if (id != null && recipes[id]) { ui.view = "list"; return showRecipe(id); }
   showList(true);
@@ -332,6 +332,7 @@ export async function openRecipes(id, moment, view) {
 export function cookBack() {
   if (ui.view === "cook" || ui.view === "done") { showRecipe(ui.id); return true; }
   if (ui.view === "recipe" && ui.from === "ask") { showAsk(); return true; }
+  if ((ui.view === "recipe" && ui.from === "tengo") || (ui.view === "list" && ui.mode === "tengo") || (ui.view === "pantry" && ui.pantryBack)) { ui.mode = "todas"; ui.pantryBack = false; showTengo(); return true; }
   if (ui.view === "diet" && ui.dietBack) { const b = ui.dietBack; ui.dietBack = null; b(); return true; }
   if (ui.view === "kit" && ui.kitBack) { const b = ui.kitBack; ui.kitBack = null; b(); return true; }
   // Comunidad y cuenta: cada pantalla dice adónde vuelve; sin destino, se cierra.
@@ -394,20 +395,14 @@ function showList(restore = false) {
       <span class="mo-e" aria-hidden="true">${emo}</span><span class="mo-n">${mo}</span></button>`).join("");
   A.body().innerHTML = `<div class="cwrap"><div class="chead" id="chead"><div class="chead-top" id="cheadTop">
     <div class="moments" id="cmoment" role="group" aria-label="Momento del día">${tabs}</div>
-    <div class="seg" id="cmode" role="group" aria-label="Qué recetas ver">
-      <button type="button" data-mode="tengo" aria-pressed="${ui.mode === "tengo"}">Con lo que tengo</button>
-      <button type="button" data-mode="todas" aria-pressed="${ui.mode === "todas"}">Todas</button>
-    </div>
     ${ui.pickDay ? `<div class="pickbar"><span>📅 Toca una receta para el menú <b>${A.esc(delDay(ui.pickDay))}</b></span><button type="button" class="lnk" id="cpickx">Cancelar</button></div>`
-    : `<div class="cbtns"><button type="button" class="pantry-btn" id="cpantry"><span>🏠 En casa</span><b>${plural(n, "ingrediente", "ingredientes")}</b></button>
-      <button type="button" class="pantry-btn" id="cplan"><span>📅 Menú</span><b>${np ? plural(np, "receta", "recetas") : "Planificar"}</b></button>
-      <button type="button" class="pantry-btn${diet().evita.length || diet().tipo ? " on" : ""}" id="cdiet"><span>🛡️ Alergias</span><b>${A.esc(shortDiet())}</b></button>
-      <button type="button" class="pantry-btn${A.st.kit ? " on" : ""}" id="ckit"><span>🍳 Aparatos</span><b>${A.esc(shortKit())}</b></button></div>
-      <button type="button" class="askgo" id="cask"><span class="askgo-av" aria-hidden="true">👩‍🍳</span><span><b>¿No sabes qué hacer?</b><small>Te hago unas preguntas y te digo 3 recetas</small></span><span class="askgo-b">Empezar</span></button>
-      ${diet().asked || diet().evita.length || diet().tipo ? "" : `<div class="dask" id="dask"><span aria-hidden="true">🛡️</span><span><b>¿Tienes alguna alergia o intolerancia?</b>
-        Márcala y adapto las recetas: gluten, lactosa, huevo, frutos secos, marisco…</span>
-        <span class="dask-b"><button type="button" class="btn small" data-diet>Marcar</button><button type="button" class="btn ghost small" id="dno">No tengo</button></span></div>`}
-      ${comReady() ? `<button type="button" class="pantry-btn com-go" id="ccom"><span><b>👥 Comunidad</b><small>Recetas de la gente, estrellas y la charla</small></span><span class="lnk">›</span></button>` : ""}`}
+    : ui.mode === "tengo" ? `<div class="pickbar tg-bar"><span>🏠 Con lo que tienes en casa</span><button type="button" class="lnk" id="ctgx">Ver todas</button></div>`
+    : `<div class="cacts" id="cacts">
+      <button type="button" class="cact main" id="cask">👩‍🍳 Ayúdame a elegir</button>
+      <button type="button" class="cact" id="cplan">📅 Menú${np ? ` <b>${np}</b>` : ""}</button>
+      <button type="button" class="cact${diet().evita.length || diet().tipo ? " on" : ""}" id="cdiet">🛡️ ${diet().evita.length || diet().tipo ? A.esc(shortDiet()) : "Alergias"}${diet().asked || diet().evita.length || diet().tipo ? "" : `<i class="cdot" aria-label="sin marcar"></i>`}</button>
+      <button type="button" class="cact${A.st.kit ? " on" : ""}" id="ckit">🍳 Aparatos</button>
+      ${comReady() ? `<button type="button" class="cact" id="ccom">👥 Comunidad</button>` : ""}</div>`}
     </div>
     <div class="srow"><label class="vh" for="cq">Buscar receta o ingrediente</label>
     <input id="cq" class="bsearch" type="search" placeholder="Busca una receta o un ingrediente…" value="${A.esc(ui.q)}" enterkeyhint="search" autocomplete="off">
@@ -419,12 +414,7 @@ function showList(restore = false) {
   const on = $$("ctags").querySelector('[aria-pressed="true"]');
   if (on && on.dataset.tag !== "Todas") $$("ctags").scrollLeft = on.offsetLeft - $$("ctags").offsetLeft - 16;
   if (restore) { const l = $$("clist"), y = ui.scroll; l.scrollTop = y; requestAnimationFrame(() => { l.scrollTop = y; }); }
-  $$("cmode").onclick = (e) => {
-    const b = e.target.closest("[data-mode]"); if (!b) return;
-    ui.mode = b.dataset.mode;
-    for (const c of $$("cmode").children) c.setAttribute("aria-pressed", String(c === b));
-    fillList();
-  };
+  if ($$("ctgx")) $$("ctgx").onclick = () => { ui.mode = "todas"; showList(); };
   $$("cmoment").onclick = (e) => {
     const b = e.target.closest("[data-moment]"); if (!b || b.dataset.moment === ui.moment) return;
     ui.moment = b.dataset.moment; ui.tag = "Todas";
@@ -441,13 +431,9 @@ function showList(restore = false) {
   let tmo;
   $$("cq").oninput = (e) => { clearTimeout(tmo); tmo = setTimeout(() => { ui.q = e.target.value.trim(); fillList(); }, 160); };
   if (ui.pickDay) $$("cpickx").onclick = showPlan;
-  else {
-    $$("cpantry").onclick = showPantry; $$("cplan").onclick = showPlan; $$("cdiet").onclick = showDiet; $$("ckit").onclick = () => showKit();
+  else if ($$("cacts")) {
+    $$("cplan").onclick = showPlan; $$("cdiet").onclick = () => { diet().asked = true; A.save(); showDiet(); }; $$("ckit").onclick = () => showKit();
     $$("cask").onclick = () => startAsk();
-    $$("dask")?.addEventListener("click", (e) => {
-      if (e.target.closest("[data-diet]")) return showDiet();
-      if (e.target.closest("#dno")) { diet().asked = true; A.save(); $$("dask").remove(); A.setStatus("Vale. Si algún día lo necesitas, está en 🛡️ Alergias."); }
-    });
   }
   if ($$("ccom")) $$("ccom").onclick = () => { keepScroll(); openComunidad({ from: "recipes" }); };
   $$("cnew").onclick = () => showEdit(null);
@@ -456,8 +442,8 @@ function showList(restore = false) {
     if (h) { const on = toggleFav(recipes[+h.dataset.favR]); h.setAttribute("aria-pressed", String(on)); h.textContent = on ? "❤️" : "🤍"; if (ui.tag === "Favoritas") fillList(); return; }
     const b = e.target.closest("[data-r]");
     if (b && ui.pickDay) { addToPlan(+b.dataset.r, ui.pickDay); return showPlan(); }
-    if (b) { ui.from = null; return showRecipe(+b.dataset.r); }
-    if (e.target.closest("[data-gopantry]")) showPantry();
+    if (b) { ui.from = ui.mode === "tengo" ? "tengo" : null; return showRecipe(+b.dataset.r); }
+    if (e.target.closest("[data-gopantry]")) showTengo();
     if (e.target.closest("[data-all]")) { ui.mode = "todas"; showList(); }
     if (e.target.closest("[data-new]")) showEdit(null);
     if (e.target.closest("[data-diet]")) showDiet();
@@ -668,7 +654,7 @@ function showRecipe(id) {
     : `<p class="ready">Ya tienes en la lista todo lo que falta.</p>`;
   const days = nextDays(), inPlan = new Set(plan().filter((e) => e.n === r.n).map((e) => e.d));
   A.body().innerHTML = `
-    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : ui.from === "gen" ? "Menú propuesto" : ui.from === "com" ? "Comunidad" : ui.from === "ask" ? "Tus 3 ideas" : "Recetas"}</button>
+    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : ui.from === "gen" ? "Menú propuesto" : ui.from === "com" ? "Comunidad" : ui.from === "ask" ? "Tus 3 ideas" : ui.from === "tengo" ? "Con lo que tengo" : "Recetas"}</button>
     <div class="cdetail">
       ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>${heart(r)}</figure>` : ""}
       <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>${heart(r)}`}
@@ -1221,7 +1207,7 @@ function showPantry() {
   for (const [k, n] of Object.entries(pantry())) if (!all.has(k)) all.set(k, n);
   const last = A.st.history.at(-1);
   A.body().innerHTML = `
-    <button type="button" class="back" id="cback">‹ Recetas</button>
+    <button type="button" class="back" id="cback">‹ ${ui.pantryBack ? "Con lo que tengo" : "Recetas"}</button>
     <div class="seg" id="pmode" role="group" aria-label="Qué hacer">
       <button type="button" data-pm="have" aria-pressed="${ui.pmode === "have"}">🏠 Lo que tengo</button>
       <button type="button" data-pm="exp" aria-pressed="${ui.pmode === "exp"}">⏰ Caducidades</button></div>
@@ -1290,10 +1276,91 @@ function showPantry() {
   const pl = $$("plast");
   if (pl) pl.onclick = () => { learnPurchase(last.items); A.save(); fill(); A.buzz(); };
   $$("pclear").onclick = () => { A.st.pantry = {}; A.st.exp = {}; A.save(); fill(); };
-  $$("cback").onclick = () => showList(true);
-  $$("pdone").onclick = () => { ui.mode = "tengo"; showList(); };
+  $$("cback").onclick = () => { if (!cookBack()) showList(true); };
+  $$("pdone").onclick = () => { ui.pantryBack = false; showTengo(); };
 }
 
+
+// ---------- «Con lo que tengo»: una pantalla visual ----------
+// Arriba, las recetas que salen con lo que tienes (se actualizan al momento); debajo, cuadros grandes
+// con dibujo para tocar lo que hay en casa. Primero lo más usado en las recetas; el resto, al buscar o con «Ver más».
+let tgMore = false;
+function tgPool() {
+  const staples = new Set(STAPLES.map(key)), uses = new Map(), names = new Map();
+  for (const r of recipes) if (!r.mine && !r.com) for (const i of r.ings) if (!i.opt && !staples.has(i.k)) { uses.set(i.k, (uses.get(i.k) ?? 0) + 1); names.set(i.k, i.n); }
+  for (const [k, n] of Object.entries(pantry())) if (!names.has(k) && !staples.has(k)) { names.set(k, n); uses.set(k, 0); }
+  return { uses, names, staples };
+}
+function tgResults() {
+  const staples = new Set(STAPLES.map(key));
+  const rows = recipes.filter((r) => allowed(r) && !r.com).map((r) => ({ r, c: check(r) }))
+    .filter(({ r, c }) => c.missing.length <= 2 && ingsOf(r).some((i) => !i.opt && !staples.has(i.k) && has(i.k)));
+  rows.sort((a, b) => a.c.missing.length - b.c.missing.length || b.c.have - a.c.have || !!b.r.foto - !!a.r.foto);
+  return rows;
+}
+function showTengo() {
+  keepScroll();
+  setView("tengo");
+  ui.mode = "todas";
+  A.setTitle("Con lo que tengo", false);
+  A.body().innerHTML = `<div class="tg">
+    <div class="tg-res" id="tgres"></div>
+    <div class="tg-tools"><label class="vh" for="tgq">Buscar ingrediente</label>
+      <input id="tgq" class="bsearch" type="search" placeholder="🔍 ¿Qué más tienes? Pollo, arroz…" autocomplete="off" enterkeyhint="search"></div>
+    <p class="tg-hint">Toca lo que tienes en casa</p>
+    <div id="tggrid"></div>
+    <div class="tg-foot">
+      ${A.st.history.at(-1) ? `<button type="button" class="cact" id="tglast">🧾 Lo de mi última compra</button>` : ""}
+      <button type="button" class="cact" id="tgexp">⏰ Caducidades</button>
+      <button type="button" class="cact" id="tgclear">↺ Empezar de cero</button></div></div>`;
+  const res = () => {
+    const rows = tgResults(), ready = rows.filter((x) => !x.c.missing.length).length;
+    const n = Object.keys(pantry()).length - STAPLES.filter((x) => has(key(x))).length;
+    $$("tgres").innerHTML = !n ? `<div class="tg-empty"><span aria-hidden="true">🧺</span><b>¿Qué hay en tu nevera?</b><span>Toca abajo lo que tienes y te enseño qué puedes cocinar.</span></div>`
+      : !rows.length ? `<div class="tg-empty"><span aria-hidden="true">🤔</span><b>Aún no sale ninguna receta</b><span>Toca alguna cosa más: un huevo, pasta, arroz, una verdura…</span></div>`
+      : `<div class="tg-head"><b>${ready ? `🎉 Puedes hacer ${plural(ready, "receta", "recetas")}` : `Te falta poco para ${plural(rows.length, "receta", "recetas")}`}</b>
+          <button type="button" class="lnk" id="tgall">Ver ${rows.length} ›</button></div>
+        <div class="tg-row">${rows.slice(0, 12).map(({ r, c }) => `<button type="button" class="tg-card" data-r="${r.id}">
+          <span class="tg-ph" style="--h:${hue(r.n)}${r.foto ? `;background-image:url('${A.esc(r.foto.img)}')` : ""}">${r.foto ? "" : A.esc(r.e)}
+            <span class="tg-badge${c.missing.length ? "" : " ok"}">${c.missing.length ? `Falta ${c.missing.length}` : "✓ Lo tienes"}</span></span>
+          <span class="tg-n">${A.esc(r.n)}</span>
+          <span class="tg-m">${c.missing.length ? c.missing.map((i) => `<span title="${A.esc(i.n)}">${A.esc(guess(i.n).emoji)}</span>`).join("") + ` <small>${A.esc(c.missing.map((i) => i.n).join(", "))}</small>` : `<small>${mins(r.t)}</small>`}</span></button>`).join("")}</div>`;
+  };
+  const grid = () => {
+    const { uses, names } = tgPool(), qt = tokens($$("tgq").value);
+    let ks = [...names.keys()].filter((k) => qt.every((w) => k.split(" ").some((t) => t.startsWith(w))));
+    ks.sort((a, b) => has(b) - has(a) || uses.get(b) - uses.get(a));
+    const limit = qt.length || tgMore ? ks.length : 48;
+    const shown = ks.slice(0, limit);
+    const by = {};
+    for (const k of shown) (by[sectionOf(names.get(k))] ??= []).push(k);
+    $$("tggrid").innerHTML = (ORDER.filter((x) => by[x]).map((x) => `<h3 class="tg-sec">${A.esc(x)}</h3><div class="tg-grid">${by[x].map((k) => {
+      const n = names.get(k);
+      return `<button type="button" class="tg-it" data-k="${A.esc(k)}" data-n="${A.esc(n)}" aria-pressed="${has(k)}"><span class="tg-e" aria-hidden="true">${A.esc(guess(n).emoji)}</span><span class="tg-l">${A.esc(n)}</span></button>`;
+    }).join("")}</div>`).join("") || `<p class="note">No encuentro «${A.esc($$("tgq").value)}».</p>`)
+      + (ks.length > limit ? `<button type="button" class="btn ghost tg-more" id="tgmore">Ver más ingredientes (${ks.length - limit})</button>` : "");
+  };
+  res(); grid();
+  let tmo;
+  $$("tgq").oninput = () => { clearTimeout(tmo); tmo = setTimeout(grid, 140); };
+  $$("tggrid").onclick = (e) => {
+    if (e.target.closest("#tgmore")) { tgMore = true; return grid(); }
+    const b = e.target.closest("[data-k]"); if (!b) return;
+    const p = pantry(), k = b.dataset.k;
+    if (k in p) { delete p[k]; delete exps()[k]; } else p[k] = b.dataset.n;
+    b.setAttribute("aria-pressed", String(k in p));
+    A.buzz(); A.save(); res();
+  };
+  $$("tgres").onclick = (e) => {
+    if (e.target.closest("#tgall")) { ui.mode = "tengo"; ui.moment = ALL; ui.tag = "Todas"; ui.q = ""; ui.scroll = 0; return showList(); }
+    const c = e.target.closest("[data-r]"); if (c) { ui.from = "tengo"; showRecipe(+c.dataset.r); }
+  };
+  const last = $$("tglast");
+  if (last) last.onclick = () => { learnPurchase(A.st.history.at(-1).items); A.save(); A.buzz(); res(); grid(); A.setStatus("Marcado lo de tu última compra."); };
+  $$("tgexp").onclick = () => { ui.pantryBack = true; ui.pmode = "exp"; showPantry(); };
+  $$("tgclear").onclick = () => { const p = A.st.pantry; A.st.pantry = null; pantry(); A.st.exp = {}; A.save(); res(); grid();
+    A.setStatus(`Desmarcado: ${plural(Object.keys(p ?? {}).length, "ingrediente", "ingredientes")}.`); };
+}
 
 // ---------- Precio de cada receta ----------
 // Con los precios del súper de tu lista (si no tiene precios, Mercadona): lo que gastas de cada ingrediente,

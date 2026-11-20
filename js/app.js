@@ -119,15 +119,20 @@ const ALIAS = {
   "leche de avena": "bebida de avena", "leche de soja": "bebida de soja", "leche de almendras": "bebida de almendras", "leche de arroz": "bebida de arroz",
 };
 markGeneric(Object.values(ALIAS).filter(Boolean));
+const VARIANT = new Set(["humedo", "humedos", "sorpresa", "cocidos", "codorniz", "cabra", "lactosa", "infantil", "bebe", "mini"]);
 function bestProd(cat, query) {
   const alias = ALIAS[norm(query)];
   if (alias === "") return null;
   if (alias) { const p = bestProd(cat, alias); if (p) return p; }
-  const r = search(cat, query, 6);
+  const r = search(cat, query, 12);
   // Si la primera palabra aparece al final del nombre («leche» en unas galletas con leche), mejor uno que empiece por ella.
-  if (!BASIC_SET.has(norm(query)) && !alias) { const q0 = tokens(query)[0]; return pick(r.find((p) => p._t.indexOf(q0) <= 1 && p._t.includes(q0)) ?? r[0]); }
+  // Y el formato de siempre, no el pack grande: «leche» es un brik, no 6 litros.
+  const bulk = (p) => /(?<![\d.])([3-9]|\d\d+)(\.\d+)? ?l\b/i.test(p.f ?? "");
+  const qs = new Set(tokens(query)), plain = (p) => !p._t.some((t) => VARIANT.has(t) && !qs.has(t)) && !bulk(p);
+  if (!BASIC_SET.has(norm(query)) && !alias) { const q0 = tokens(query)[0], ok = (p) => p._t.indexOf(q0) <= 1 && p._t.includes(q0); return pick(r.find((p) => ok(p) && plain(p)) ?? r.find(ok) ?? r[0]); }
   const q0 = tokens(query)[0], c = guess(query).cat;
-  return pick(r.find((p) => p._t.indexOf(q0) === 0) ?? r.find((p) => p._t.indexOf(q0) === 1 && (c === "Otros" || p.c === c || tokens(query).length > 1)));
+  // Mejor el producto normal que una variante que no has pedido («papel higiénico» no es el húmedo).
+  return pick(r.find((p) => p._t.indexOf(q0) === 0 && plain(p)) ?? r.find((p) => p._t.indexOf(q0) === 0) ?? r.find((p) => p._t.indexOf(q0) === 1 && (c === "Otros" || p.c === c || tokens(query).length > 1)));
 }
 function pick(prod) {
   if (!prod) return null;
@@ -205,6 +210,11 @@ let flyQueue = Promise.resolve();
 const incoming = new Set(); // productos que aún están «volando» hacia la lista
 function flyIn(ids) {
   if (!Element.prototype.animate) return;
+  // Con varios productos a la vez, la animación de uno en uno tarda demasiado: se ven ya en su sitio, resaltados.
+  if (ids.length > 2) {
+    for (const id of ids) { const el = document.querySelector(`li.item[data-id="${id}"]`); if (el) { el.classList.add("landed"); setTimeout(() => el.classList.remove("landed"), 900); } }
+    buzz(15); return;
+  }
   for (const id of ids) {
     incoming.add(id);
     document.querySelector(`li.item[data-id="${id}"]`)?.classList.add("incoming");
@@ -285,7 +295,13 @@ function toggleItem(id) {
   it.done = !it.done; save(); render(); buzz();
 }
 
-function setStatus(t, err) { const s = $("status"); s.textContent = t; s.classList.toggle("err", !!err); }
+// Los avisos de abajo se borran solos a los pocos segundos para no ocupar sitio.
+let statusTmo;
+function setStatus(t, err) {
+  const s = $("status"); s.textContent = t ?? ""; s.classList.toggle("err", !!err);
+  clearTimeout(statusTmo);
+  if (t && !/…$/.test(t)) statusTmo = setTimeout(() => { s.textContent = ""; }, err ? 7000 : 4500);
+}
 
 // ---------- Pintar ----------
 // Las fotos se pintan como fondo (no como <img>) para que Chrome no muestre su menú de «Descargar imagen»
@@ -319,18 +335,22 @@ function renderSummary() {
   const total = priced.reduce((s, i) => s + itemPrice(i), 0);
   const pct = Math.round((inCart / l.items.length) * 100);
   const view = st.view ?? "list";
+  const k = (st.cards ?? []).findIndex((c) => c.store === l.store);
+  const acts = [
+    left.length && pricedStores().length > 1 ? `<button type="button" class="sum-chip" data-compare>⚖️ Comparar súpers</button>` : "",
+    new Set(left.map((i) => i.cat)).size > 1 ? `<button type="button" class="sum-chip" data-aisles>🧭 ${st.aisles?.[l.store] ? "Orden de pasillos" : "Ordenar pasillos"}</button>` : "",
+    k >= 0 ? `<button type="button" class="sum-chip card" data-showcard="${k}">💳 Tarjeta ${esc(st.cards[k].name)}</button>` : "",
+  ].filter(Boolean).join("");
   el.innerHTML = `<div class="sum-top">
       <div class="sum-ring" style="--p:${pct}" role="img" aria-label="${inCart} de ${l.items.length} en el carro"><span>${inCart}/${l.items.length}</span></div>
       <div class="sum-txt"><b>${left.length ? `${left.length} por comprar` : "¡Todo en el carro!"}</b>
-        <span>${priced.length ? `Total aprox. <b class="sum-eur">${eur(total)}</b>${left.length > priced.length ? ` · ${left.length - priced.length} sin precio` : ""}` : inCart ? `${inCart} en el carro` : "Sin precios en este súper"}</span></div>
+        <span>${priced.length ? `≈ <b class="sum-eur">${eur(total)}</b>${left.length > priced.length ? ` · ${left.length - priced.length} sin precio` : ""}` : inCart ? `${inCart} en el carro` : "Sin precios en este súper"}</span></div>
+      <div class="seg mini views" role="group" aria-label="Cómo ver la lista">
+        <button type="button" data-view="grid" aria-pressed="${view === "grid"}" aria-label="En cuadros" title="En cuadros"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></button>
+        <button type="button" data-view="list" aria-pressed="${view === "list"}" aria-label="Uno debajo de otro" title="Uno debajo de otro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
     </div>
-    <div class="seg views" role="group" aria-label="Cómo ver la lista">
-      <button type="button" data-view="grid" aria-pressed="${view === "grid"}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>En cuadros</button>
-      <button type="button" data-view="list" aria-pressed="${view === "list"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Uno debajo de otro</button></div>
-    ${(() => { const k = (st.cards ?? []).findIndex((c) => c.store === l.store); return k < 0 ? "" : `<button type="button" class="sum-cmp card" data-showcard="${k}"><span aria-hidden="true">💳</span> Tarjeta ${esc(st.cards[k].name)} <b>Enseñar en caja ›</b></button>`; })()}
-    ${left.length && pricedStores().length > 1 ? `<button type="button" class="sum-cmp" data-compare><span aria-hidden="true">⚖️</span> ¿Dónde sale más barata? <b>Comparar súpers ›</b></button>` : ""}
-    ${budgetLine(total)}
-    ${new Set(left.map((i) => i.cat)).size > 1 ? `<button type="button" class="sum-cmp aisle" data-aisles><span aria-hidden="true">🧭</span> Pasillos en el orden de ${l.store === "any" ? "tu súper" : esc(STORE_NAME[l.store] ?? "tu súper")} <b>${st.aisles?.[l.store] ? "Cambiar ›" : "Ordenar ›"}</b></button>` : ""}`;
+    ${acts ? `<div class="sum-acts">${acts}</div>` : ""}
+    ${budgetLine(total)}`;
 }
 // Aviso del tope de gasto del mes (como el presupuesto de Listonic).
 function budgetLine(total) {
@@ -419,7 +439,7 @@ async function renderHome() {
 $("sheetTabs").innerHTML = $("tabbar").innerHTML;
 function markSheetTab(k) {
   sheet.dataset.sec = k;
-  const cur = k === "tengo" ? "pantry" : k;
+  const cur = k === "tengo" ? "pantry" : k === "plan" ? "recipes" : k;
   for (const b of $("sheetTabs").children) { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); }
 }
 $("sheetTabs").addEventListener("click", (e) => { const t = e.target.closest("[data-tab]")?.dataset.tab; if (t) goSection(t); });
@@ -429,7 +449,8 @@ function goSection(k) {
   if (k === "home") { closeSheet(); return showHome(true); }
   if (k === "list") { closeSheet(); return showHome(false); }
   if (k === "recipes") openRecipes();
-  else if (k === "plan" || k === "pantry" || k === "tengo") openRecipes(null, null, k);
+  else if (k === "pantry" || k === "tengo") openRecipes(null, null, "tengo");
+  else if (k === "plan") openRecipes(null, null, "plan");
   else if (k === "history") openHistory();
   else if (k === "com") openComunidad({ from: null });
 }
@@ -445,7 +466,8 @@ function render() {
   document.body.classList.toggle("home", home);
   $("home").hidden = !home;
   for (const b of $("tabbar").children) b.toggleAttribute("aria-current", false);
-  $("tabbar").querySelector(`[data-tab="${home ? "home" : "list"}"]`)?.setAttribute("aria-current", "page");
+  if (!home) $("tabbar").querySelector('[data-tab="list"]')?.setAttribute("aria-current", "page");
+  document.body.classList.toggle("has-items", l.items.some((i) => !i.done));
   if (home) renderHome();
   renderIdeas($("ideas")).catch(() => {});
   renderDeals().catch(() => {});
@@ -1430,8 +1452,7 @@ $("bar").addEventListener("submit", (e) => {
 $("micBtn").addEventListener("click", () => { if (voice?.on) { voice.stop(); return; } startVoice(); });
 $("scanBtn").addEventListener("click", () => openScan());
 $("listBtn").addEventListener("click", openLists);
-$("histBtn").addEventListener("click", openHistory);
-$("cookBtn").addEventListener("click", () => openRecipes());
+$("homeGo").addEventListener("click", () => { buzz(); showHome(true); });
 $("tabbar").addEventListener("click", (e) => {
   const t = e.target.closest("[data-tab]")?.dataset.tab; if (!t) return;
   if (t === "list" && !home && !sheet.open) { buzz(); return scrollTo({ top: 0, behavior: "smooth" }); }
@@ -1453,16 +1474,30 @@ $("finishBtn").addEventListener("click", finishShopping);
 $("shopBtn").addEventListener("click", () => {
   st.shop = !st.shop; save(); render();
   if (st.shop) keepAwake(); else { wakeLock?.release?.(); wakeLock = null; }
-  setStatus(st.shop ? "Modo tienda: letra grande y la pantalla no se apaga." : "Modo tienda desactivado.");
+  setStatus(st.shop ? "Modo súper: letra grande, la pantalla no se apaga y toca un producto para meterlo en el carro." : "Has salido del modo súper.");
 });
-$("stores").addEventListener("click", (e) => {
+$("stores").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-s]"); if (!b) return;
-  list().store = b.dataset.s; save(); render();
-  catalogFor(b.dataset.s);
-  const m = meta?.stores?.[b.dataset.s];
-  setStatus(b.dataset.s === "any" ? "Buscaré en todos los supermercados." :
-    m && !m.count ? `Todavía no tengo el catálogo de ${STORE_NAME[b.dataset.s]}.` :
-    `Lo nuevo se buscará en ${STORE_NAME[b.dataset.s]}${m && !m.prices ? " (sin precios)" : ""}.`);
+  const l = list(), s = b.dataset.s;
+  if (s === l.store) return;
+  const m = meta?.stores?.[s], name = STORE_NAME[s];
+  const left = l.items.filter((i) => !i.done);
+  // Al cambiar de súper, lo que ya está apuntado se busca también allí (antes seguía con los productos y precios del otro).
+  if (s === "any" || !left.length || (m && !m.count)) {
+    l.store = s; save(); render(); catalogFor(s);
+    return setStatus(s === "any" ? "Buscaré en todos los supermercados." : m && !m.count ? `Todavía no tengo el catálogo de ${name}.` : `Lo nuevo se buscará en ${name}${m && !m.prices ? " (sin precios)" : ""}.`);
+  }
+  setStatus(`Buscando tu lista en ${name}…`);
+  const cat = await catalogFor(s);
+  if (list() !== l) return;
+  const found = left.map((it) => [it, st.memory[memKey(it.label, s)] ?? bestProd(cat, it.label)]);
+  const n = found.filter(([, p]) => p).length;
+  withUndo(`Lista pasada a ${name}: ${n} de ${left.length} encontrados`, () => {
+    for (const [it, p] of found) { it.prod = p ?? null; if (p?.c) it.cat = p.c; }
+    l.store = s;
+  });
+  setStatus(m && !m.prices ? `${name} no publica precios: verás los productos sin precio.` : "");
+  buzz(20);
 });
 $("list").addEventListener("click", (e) => {
   if (Date.now() < suppressClickUntil) { e.preventDefault(); e.stopPropagation(); return; }
