@@ -34,7 +34,7 @@ jobs:
           git config user.name "super-lista-bot"
           git config user.email "super-lista-bot@users.noreply.github.com"
           git checkout --orphan capturas
-          git rm -rq --cached . && git clean -fdq
+          git rm -rq --cached . && git clean -fdxq
           cp /tmp/cap/*.jpg .
           git add -A
           git commit -qm "Capturas de ${GITHUB_REF_NAME}"

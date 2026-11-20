@@ -551,7 +551,7 @@ function fillList() {
     return;
   }
   if (ui.mode === "todas" || ui.tag === "Favoritas" || ui.tag === "Mis recetas") {
-    rows.sort((a, b) => a.c.missing.length - b.c.missing.length || a.r.n.localeCompare(b.r.n, "es"));
+    rows.sort((a, b) => a.c.missing.length - b.c.missing.length || !!b.r.foto - !!a.r.foto || a.r.n.localeCompare(b.r.n, "es"));
     el.innerHTML = hideNote + (rows.length ? rows.map(({ r, c }) => card(r, c)).join("") : `<p class="note">No hay recetas con eso. Prueba con otra palabra.</p>`);
     lazyBg(el);
     return;
@@ -1305,7 +1305,8 @@ function tgResults() {
 // Foto real del ingrediente: la del producto del súper (Mercadona si está, que tiene las fotos más claras).
 function photoStore() { const all = P()?.stores() ?? []; return all.includes("mercadona") ? "mercadona" : costStore(); }
 function ingPhoto(n) { const s = photoStore(), f = s && finder(s); return f ? f(n)?.img ?? null : null; }
-const ingPic = (n, cls) => { const u = ingPhoto(n); return u ? `<span class="${cls} ph" style="background-image:url('${A.esc(u)}')"></span>` : `<span class="${cls}" aria-hidden="true">${A.esc(guess(n).emoji)}</span>`; };
+// El dibujo queda debajo por si la foto no carga (sin cobertura).
+const ingPic = (n, cls) => { const u = ingPhoto(n); return `<span class="${cls}${u ? " ph" : ""}" aria-hidden="true">${A.esc(guess(n).emoji)}${u ? `<span class="ph-img" style="background-image:url('${A.esc(u)}')"></span>` : ""}</span>`; };
 function showTengo() {
   keepScroll();
   setView("tengo");

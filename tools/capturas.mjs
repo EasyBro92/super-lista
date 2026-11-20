@@ -23,6 +23,6 @@ await shot("5-tengo-vacio");
 for (const n of ["Huevos", "Patatas", "Tomates", "Cebollas", "Pechuga de pollo", "Arroz", "Leche"]) {
   const l = p.locator(`.tg-it[data-n="${n}"]`); if (await l.count()) { await l.first().scrollIntoViewIfNeeded(); await l.first().click(); } await p.waitForTimeout(200);
 }
-await p.locator("#tggrid").evaluate((e) => e.closest(".tg").scrollTo(0, 0)); await p.waitForTimeout(3000);
+await p.locator("#tggrid").evaluate((e) => e.closest(".tg").scrollTo(0, 0)); await p.waitForLoadState("networkidle").catch(() => {}); await p.waitForTimeout(4000);
 await shot("6-tengo");
 await b.close();
