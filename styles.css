@@ -1312,3 +1312,10 @@ body.has-items #ideas, body.shop #deals, body.shop #ideas{display:none!important
 @media (max-width:350px){ .tg-grid{grid-template-columns:repeat(3,1fr)} }
 .sheet.browsing #sheetBody>.tg{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-inline:-16px;padding-inline:16px}
 .tg-res{top:0}
+/* Fotos reales de los ingredientes */
+.tg-it{padding:5px 5px 7px}
+.tg-e.ph{display:block;width:100%;aspect-ratio:1;border-radius:11px;background:#fff center/contain no-repeat;filter:none}
+.tg-it .tg-e:not(.ph){display:grid;place-items:center;width:100%;aspect-ratio:1;font-size:2.2rem}
+.tg-grid{grid-template-columns:repeat(3,1fr);gap:10px}
+.tg-l{font-size:.8rem}
+.tg-it[aria-pressed="true"]::after{width:24px;height:24px;font-size:.85rem;line-height:24px;top:8px;right:8px}

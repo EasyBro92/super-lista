@@ -1302,6 +1302,10 @@ function tgResults() {
   rows.sort((a, b) => a.c.missing.length - b.c.missing.length || b.c.have - a.c.have || !!b.r.foto - !!a.r.foto);
   return rows;
 }
+// Foto real del ingrediente: la del producto del súper (Mercadona si está, que tiene las fotos más claras).
+function photoStore() { const all = P()?.stores() ?? []; return all.includes("mercadona") ? "mercadona" : costStore(); }
+function ingPhoto(n) { const s = photoStore(), f = s && finder(s); return f ? f(n)?.img ?? null : null; }
+const ingPic = (n, cls) => { const u = ingPhoto(n); return u ? `<span class="${cls} ph" style="background-image:url('${A.esc(u)}')"></span>` : `<span class="${cls}" aria-hidden="true">${A.esc(guess(n).emoji)}</span>`; };
 function showTengo() {
   keepScroll();
   setView("tengo");
@@ -1328,7 +1332,7 @@ function showTengo() {
           <span class="tg-ph" style="--h:${hue(r.n)}${r.foto ? `;background-image:url('${A.esc(r.foto.img)}')` : ""}">${r.foto ? "" : A.esc(r.e)}
             <span class="tg-badge${c.missing.length ? "" : " ok"}">${c.missing.length ? `Falta ${c.missing.length}` : "✓ Lo tienes"}</span></span>
           <span class="tg-n">${A.esc(r.n)}</span>
-          <span class="tg-m">${c.missing.length ? c.missing.map((i) => `<span title="${A.esc(i.n)}">${A.esc(guess(i.n).emoji)}</span>`).join("") + ` <small>${A.esc(c.missing.map((i) => i.n).join(", "))}</small>` : `<small>${mins(r.t)}</small>`}</span></button>`).join("")}</div>`;
+          <span class="tg-m">${c.missing.length ? `<small>Falta: ${A.esc(c.missing.map((i) => i.n).join(", "))}</small>` : `<small>${mins(r.t)}</small>`}</span></button>`).join("")}</div>`;
   };
   const grid = () => {
     const { uses, names } = tgPool(), qt = tokens($$("tgq").value);
@@ -1342,11 +1346,14 @@ function showTengo() {
     for (const k of shown) (by[sectionOf(names.get(k))] ??= []).push(k);
     $$("tggrid").innerHTML = (ORDER.filter((x) => by[x]).map((x) => `<h3 class="tg-sec">${A.esc(x)}</h3><div class="tg-grid">${by[x].map((k) => {
       const n = names.get(k);
-      return `<button type="button" class="tg-it" data-k="${A.esc(k)}" data-n="${A.esc(n)}" aria-pressed="${has(k)}"><span class="tg-e" aria-hidden="true">${A.esc(guess(n).emoji)}</span><span class="tg-l">${A.esc(n)}</span></button>`;
+      return `<button type="button" class="tg-it" data-k="${A.esc(k)}" data-n="${A.esc(n)}" aria-pressed="${has(k)}">${ingPic(n, "tg-e")}<span class="tg-l">${A.esc(n)}</span></button>`;
     }).join("")}</div>`).join("") || `<p class="note">No encuentro «${A.esc($$("tgq").value)}».</p>`)
       + (ks.length > limit ? `<button type="button" class="btn ghost tg-more" id="tgmore">Ver más ingredientes (${ks.length - limit})</button>` : "");
   };
   res(); grid();
+  // Las fotos salen en cuanto se carga el catálogo del súper.
+  const ps = photoStore();
+  if (ps && !P().cat(ps)) P().load(ps).then(() => { if (ui.view === "tengo" && $$("tggrid")) { grid(); } }).catch(() => {});
   let tmo;
   $$("tgq").oninput = () => { clearTimeout(tmo); tmo = setTimeout(grid, 140); };
   $$("tggrid").onclick = (e) => {
