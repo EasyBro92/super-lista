@@ -2,6 +2,13 @@ name: Capturas
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["claude/**"]
+    paths: ["js/**", "styles.css", "index.html", "tools/capturas.mjs"]
+
+concurrency:
+  group: capturas
+  cancel-in-progress: true
 
 permissions:
   contents: write
