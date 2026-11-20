@@ -1323,3 +1323,4 @@ body.has-items #ideas, body.shop #deals, body.shop #ideas{display:none!important
 .tg-ph{overflow:hidden}
 .tg-ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;-webkit-touch-callout:none;pointer-events:none}
 .tg-badge{z-index:1}
+.tg-ph{flex:none;min-height:96px}
