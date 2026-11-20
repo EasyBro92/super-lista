@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: ["claude/**"]
-    paths: ["js/**", "styles.css", "index.html", "tools/capturas.mjs"]
+    paths: ["js/**", "styles.css", "index.html", "tools/capturas.mjs", ".github/workflows/capturas.yml"]
 
 concurrency:
   group: capturas
