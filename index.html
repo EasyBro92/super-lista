@@ -75,7 +75,6 @@
   </section>
   <header>
     <div class="top">
-      <button class="homego" id="homeGo" type="button" aria-label="Inicio" title="Inicio"><img src="icons/icon-192.png" alt="" width="36" height="36"></button>
       <button class="listname" id="listBtn" type="button" aria-haspopup="dialog">
         <span id="listName">Mi lista</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -126,8 +125,10 @@
     </form>
   </div>
   <nav class="tabbar" id="tabbar" aria-label="Secciones">
+    <button type="button" data-tab="home" aria-current="page"><span aria-hidden="true">✨</span>Inicio</button>
     <button type="button" data-tab="list"><span aria-hidden="true">🛒</span>Lista</button>
     <button type="button" data-tab="recipes"><span aria-hidden="true">🍳</span>Recetas</button>
+    <button type="button" data-tab="plan"><span aria-hidden="true">📅</span>Menú</button>
     <button type="button" data-tab="pantry"><span aria-hidden="true">🏠</span>En casa</button>
     <button type="button" data-tab="history"><span aria-hidden="true">🧾</span>Compras</button>
   </nav>

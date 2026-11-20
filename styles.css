@@ -1267,7 +1267,6 @@ body.shop .lres[hidden]{display:none}
 /* Con productos por comprar, debajo de la lista solo la lista: las ideas de recetas están en Recetas. */
 body.has-items #ideas, body.shop #deals, body.shop #ideas{display:none!important}
 .tabbar{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr}
-.tabbar button{font-size:.74rem;padding:7px 0 6px}
 @media (max-width:360px){ .shopgo span{display:none} .shopgo{padding:0 11px} }
 /* Recetas: una sola fila de accesos en vez de cuatro cajas, un banner y dos avisos */
 .cacts{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding:2px 16px}

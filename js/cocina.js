@@ -318,6 +318,7 @@ export async function openRecipes(id, moment, view) {
   await loadRecipes();
   if (!A.sheet.open) return;
   ui.from = null; ui.pickDay = null;
+  if (!view) ui.mode = "todas";
   if (moment && (MOMENT.has(moment) || moment === ALL) && moment !== ui.moment) { ui.moment = moment; ui.tag = "Todas"; ui.scroll = 0; }
   if (view === "plan") return showPlan();
   if (view === "diet") return showDiet();
@@ -1285,6 +1286,9 @@ function showPantry() {
 // Arriba, las recetas que salen con lo que tienes (se actualizan al momento); debajo, cuadros grandes
 // con dibujo para tocar lo que hay en casa. Primero lo más usado en las recetas; el resto, al buscar o con «Ver más».
 let tgMore = false;
+const TG_SYN = { pasta: ["macarrones", "espaguetis", "fideos", "tallarines", "lasana", "gnocchi", "tortellini"], carne: ["ternera", "carne", "cerdo", "lomo", "pollo", "pechuga", "muslos"],
+  pescado: ["merluza", "salmon", "bacalao", "atun", "lubina", "dorada", "sardinas"], fruta: ["platanos", "manzanas", "naranjas", "fresas", "peras", "uvas", "kiwis", "limones"],
+  verdura: ["calabacin", "pimientos", "cebollas", "zanahorias", "tomates", "berenjenas", "espinacas", "brocoli", "lechuga"], legumbres: ["garbanzos", "lentejas", "alubias"] };
 function tgPool() {
   const staples = new Set(STAPLES.map(key)), uses = new Map(), names = new Map();
   for (const r of recipes) if (!r.mine && !r.com) for (const i of r.ings) if (!i.opt && !staples.has(i.k)) { uses.set(i.k, (uses.get(i.k) ?? 0) + 1); names.set(i.k, i.n); }
@@ -1328,7 +1332,9 @@ function showTengo() {
   };
   const grid = () => {
     const { uses, names } = tgPool(), qt = tokens($$("tgq").value);
-    let ks = [...names.keys()].filter((k) => qt.every((w) => k.split(" ").some((t) => t.startsWith(w))));
+    // Palabras de andar por casa: «pasta» encuentra macarrones, espaguetis…
+    const alts = (w) => [w, ...(TG_SYN[w] ?? [])];
+    let ks = [...names.keys()].filter((k) => qt.every((w) => alts(w).some((a) => k.split(" ").some((t) => t.startsWith(a)))));
     ks.sort((a, b) => has(b) - has(a) || uses.get(b) - uses.get(a));
     const limit = qt.length || tgMore ? ks.length : 48;
     const shown = ks.slice(0, limit);

@@ -439,7 +439,7 @@ async function renderHome() {
 $("sheetTabs").innerHTML = $("tabbar").innerHTML;
 function markSheetTab(k) {
   sheet.dataset.sec = k;
-  const cur = k === "tengo" ? "pantry" : k === "plan" ? "recipes" : k;
+  const cur = k === "tengo" ? "pantry" : k;
   for (const b of $("sheetTabs").children) { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); }
 }
 $("sheetTabs").addEventListener("click", (e) => { const t = e.target.closest("[data-tab]")?.dataset.tab; if (t) goSection(t); });
@@ -466,7 +466,7 @@ function render() {
   document.body.classList.toggle("home", home);
   $("home").hidden = !home;
   for (const b of $("tabbar").children) b.toggleAttribute("aria-current", false);
-  if (!home) $("tabbar").querySelector('[data-tab="list"]')?.setAttribute("aria-current", "page");
+  $("tabbar").querySelector(`[data-tab="${home ? "home" : "list"}"]`)?.setAttribute("aria-current", "page");
   document.body.classList.toggle("has-items", l.items.some((i) => !i.done));
   if (home) renderHome();
   renderIdeas($("ideas")).catch(() => {});
@@ -1452,7 +1452,6 @@ $("bar").addEventListener("submit", (e) => {
 $("micBtn").addEventListener("click", () => { if (voice?.on) { voice.stop(); return; } startVoice(); });
 $("scanBtn").addEventListener("click", () => openScan());
 $("listBtn").addEventListener("click", openLists);
-$("homeGo").addEventListener("click", () => { buzz(); showHome(true); });
 $("tabbar").addEventListener("click", (e) => {
   const t = e.target.closest("[data-tab]")?.dataset.tab; if (!t) return;
   if (t === "list" && !home && !sheet.open) { buzz(); return scrollTo({ top: 0, behavior: "smooth" }); }
