@@ -2,7 +2,8 @@
 // Uso: node tools/capturas.mjs http://localhost:8000/ carpeta
 import { chromium } from "playwright";
 const [URL, OUT = "capturas"] = process.argv.slice(2);
-const b = await chromium.launch();
+// Con CHROME, el Chrome del sistema (más reciente, como el de los móviles).
+const b = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, serviceWorkers: "block" });
 const p = await ctx.newPage();
 const shot = (n) => p.screenshot({ path: `${OUT}/${n}.jpg`, quality: 82, type: "jpeg" });
