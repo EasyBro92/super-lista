@@ -1330,7 +1330,7 @@ function showTengo() {
       : `<div class="tg-head"><b>${ready ? `🎉 Puedes hacer ${plural(ready, "receta", "recetas")}` : `Te falta poco para ${plural(rows.length, "receta", "recetas")}`}</b>
           <button type="button" class="lnk" id="tgall">Ver ${rows.length} ›</button></div>
         <div class="tg-row">${rows.slice(0, 12).map(({ r, c }) => `<button type="button" class="tg-card" data-r="${r.id}">
-          <span class="tg-ph" style="--h:${hue(r.n)}${r.foto ? `;background-image:url('${A.esc(r.foto.img)}')` : ""}">${r.foto ? "" : A.esc(r.e)}
+          <span class="tg-ph" style="--h:${hue(r.n)}">${r.foto ? `<img src="${A.esc(r.foto.img)}" alt="" draggable="false">` : A.esc(r.e)}
             <span class="tg-badge${c.missing.length ? "" : " ok"}">${c.missing.length ? `Falta ${c.missing.length}` : "✓ Lo tienes"}</span></span>
           <span class="tg-n">${A.esc(r.n)}</span>
           <span class="tg-m">${c.missing.length ? `<small>Falta: ${A.esc(c.missing.map((i) => i.n).join(", "))}</small>` : `<small>${mins(r.t)}</small>`}</span></button>`).join("")}</div>`;

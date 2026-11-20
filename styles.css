@@ -1320,3 +1320,6 @@ body.has-items #ideas, body.shop #deals, body.shop #ideas{display:none!important
 .tg-grid{grid-template-columns:repeat(3,1fr);gap:10px}
 .tg-l{font-size:.8rem}
 .tg-it[aria-pressed="true"]::after{width:24px;height:24px;font-size:.85rem;line-height:24px;top:8px;right:8px}
+.tg-ph{overflow:hidden}
+.tg-ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;-webkit-touch-callout:none;pointer-events:none}
+.tg-badge{z-index:1}
