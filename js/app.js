@@ -6,7 +6,7 @@ import { readTicket, parseTicket } from "./ticket.js";
 import { webUrl, SELLS_ONLINE, offerTag, offerHTML, offerLineHTML, cheaperAlts, unitPrice, filterBarHTML, filterBarClick, applyFilters, fichaData, priceHistory, fichaSections } from "./ficha.js";
 import { haptic, swipeRows, sheetGestures, pullToRefresh } from "./gestos.js";
 import { avoidSet, conflicts, labelAllergens, ALLER } from "./alergias.js";
-import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL, shareError } from "./sync.js";
+import { initSync, stamp, syncReady, syncCurrent, share, unshare, shareURL, shareError, isLive } from "./sync.js";
 import { initComunidad, openComunidad, openCuenta, comReady, meNow } from "./comunidad.js";
 import { initInstalar, showBanner, canInstall, install, later as installLater } from "./instalar.js";
 import { ready as fotosReady, allFotos, replaceFotos } from "./fotos.js";
@@ -337,6 +337,7 @@ function renderSummary() {
   const view = st.view ?? "list";
   const k = (st.cards ?? []).findIndex((c) => c.store === l.store);
   const acts = [
+    syncReady() ? `<button type="button" class="sum-chip lshare${l.sid ? " on" : ""}" data-share>👥 ${l.sid ? "En directo" : "Compartir"}${l.sid ? '<i class="ldot" aria-hidden="true"></i>' : ""}</button>` : "",
     left.length && pricedStores().length > 1 ? `<button type="button" class="sum-chip" data-compare>⚖️ Comparar súpers</button>` : "",
     new Set(left.map((i) => i.cat)).size > 1 ? `<button type="button" class="sum-chip" data-aisles>🧭 ${st.aisles?.[l.store] ? "Orden de pasillos" : "Ordenar pasillos"}</button>` : "",
     k >= 0 ? `<button type="button" class="sum-chip card" data-showcard="${k}">💳 Tarjeta ${esc(st.cards[k].name)}</button>` : "",
@@ -480,6 +481,7 @@ function render() {
   $("shopBtn").setAttribute("aria-pressed", String(!!st.shop));
   renderStores();
   renderSummary();
+  liveBtn();
   renderFavs();
   $("finishWrap").hidden = !l.items.some((i) => i.done);
   const el = $("list");
@@ -749,45 +751,63 @@ function openLists() {
 }
 
 // ---------- Compartir lista ----------
-// Además de compartirla en directo, se puede mandar una copia (con código, enlace y QR, o a una persona con cuenta).
-const sendCopyBtn = `<p class="note">¿Solo quieres pasar una copia, sin que se cambie en los dos móviles?</p>
-      <div class="row"><button class="btn ghost small" type="button" id="sendCopy">📤 Enviar una copia</button></div>`;
-function openSendList() {
-  openSheet(`Enviar «${list().name}»`, `<p class="note">Le llega una copia de la lista tal como está ahora. Si cambiáis algo después, no se cambia en el otro móvil (para eso, «Compartir esta lista»).</p>
-    ${sendHTML("lista")}${pickupHTML()}`);
-  bindSend(openLists);
+// Una sola hoja: por defecto la lista se comparte en directo (los dos la cambiáis y se ve al momento);
+// quitando la marca se manda solo una copia. Se puede mandar por WhatsApp, con código y QR o a una persona con cuenta.
+// El punto verde de «👥 En directo» se enciende mientras está conectado y recibiendo cambios.
+function liveBtn() {
+  document.querySelector("#summary [data-share]")?.classList.toggle("live", !!list().sid && isLive());
+}
+function openShare() {
+  const l = list();
+  openSheet(`Compartir «${l.name}»`, `${l.sid
+      ? `<div class="share"><p><b>👥 Lista en directo.</b> Lo que añadáis o quitéis cualquiera se ve al momento en todos los móviles que la tienen.</p></div>`
+      : `<label class="env-live"><input type="checkbox" id="envLive" checked><span><b>Que también pueda cambiarla</b>
+          <small>Los dos podréis añadir y quitar productos, y lo veréis al momento. Quita la marca para mandar solo una copia.</small></span></label>`}
+    <div class="env-box" id="shareWaBox"><p><b>💬 Por WhatsApp</b><br>Le mandas un enlace; al abrirlo entra en la lista.</p>
+      <button class="btn" type="button" id="shareWa">Enviar el enlace</button></div>
+    ${sendHTML("lista")}${pickupHTML()}
+    ${l.sid ? `<div class="row"><button class="btn danger small" type="button" id="shareStop">Dejar de compartir</button></div>` : ""}`);
+  bindSend(openShare);
+  const box = $("shareWaBox"), chk = $("envLive"), wa = $("shareWa");
+  const word = () => { box.hidden = !!chk && !chk.checked; };
+  if (chk) chk.onchange = word;
+  word();
+  wa.onclick = async () => {
+    if (!l.sid) {
+      wa.disabled = true; wa.textContent = "Preparando…";
+      if (!(await share(l))) { wa.disabled = false; wa.textContent = "Enviar el enlace"; return setStatus(shareError() ?? "No he podido compartirla. Revisa la conexión y prueba otra vez.", true); }
+      render(); openShare();
+    }
+    sendLink(l);
+  };
+  bindStop(l, openShare);
 }
 function shareHTML(l) {
   if (!syncReady()) return "";
-  return l.sid ? `<div class="share"><p><b>👥 Lista compartida.</b> Quien tenga el enlace ve y cambia «${esc(l.name)}» al momento.</p>
-      <div class="row"><button class="btn ghost small" type="button" id="shareSend">Enviar el enlace</button>
-      <button class="btn danger small" type="button" id="shareStop">Dejar de compartir</button></div>${sendCopyBtn}</div>`
-    : `<div class="share"><p>👥 Comparte «${esc(l.name)}» con tu familia: lo que apunte cualquiera se ve al momento en todos los móviles.</p>
-      <div class="row"><button class="btn ghost small" type="button" id="shareStart">Compartir esta lista</button></div>${sendCopyBtn}</div>`;
+  return `<div class="share"><p>${l.sid ? `<b>👥 Lista en directo.</b> Quien la tenga ve y cambia «${esc(l.name)}» al momento.`
+      : `👥 Comparte «${esc(l.name)}» con tu familia: lo que apunte cualquiera se ve al momento en todos los móviles.`}</p>
+      <div class="row"><button class="btn ghost small" type="button" id="shareOpen">${l.sid ? "Invitar a alguien más" : "Compartir esta lista"}</button>
+      ${l.sid ? `<button class="btn danger small" type="button" id="shareStop">Dejar de compartir</button>` : ""}</div></div>`;
 }
 async function sendLink(l) {
   const url = shareURL(l);
   try {
-    if (navigator.share) { await navigator.share({ title: "Super Lista", text: `Únete a mi lista de la compra «${l.name}»`, url }); return; }
+    if (navigator.share) { await navigator.share({ title: "Super Lista", text: `Únete a mi lista de la compra «${l.name}» y la cambiamos los dos`, url }); return; }
   } catch (e) { if (e?.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(url); setStatus("Enlace copiado: pégalo en WhatsApp o donde quieras."); }
   catch { prompt("Copia este enlace y envíalo:", url); }
 }
-function bindShare() {
-  const l = list();
-  const go = $("shareStart");
-  if (go) go.onclick = async () => {
-    go.disabled = true; go.textContent = "Compartiendo…";
-    if (await share(l)) { render(); openLists(); sendLink(l); }
-    else { go.disabled = false; go.textContent = "Compartir esta lista"; setStatus(shareError() ?? "No he podido compartirla. Revisa la conexión y prueba otra vez.", true); }
-  };
-  const send = $("shareSend"); if (send) send.onclick = () => sendLink(l);
-  const copy = $("sendCopy"); if (copy) copy.onclick = openSendList;
+function bindStop(l, back) {
   const stop = $("shareStop");
   if (stop) stop.onclick = () => {
     if (stop.dataset.sure !== "1") { stop.dataset.sure = "1"; stop.textContent = "Toca otra vez: dejarás de ver sus cambios"; return; }
-    unshare(l); render(); openLists(); setStatus(`«${l.name}» ya no está compartida en este móvil.`);
+    unshare(l); render(); back(); setStatus(`«${l.name}» ya no está compartida en este móvil.`);
   };
+}
+function bindShare() {
+  const l = list();
+  const o = $("shareOpen"); if (o) o.onclick = openShare;
+  bindStop(l, openLists);
 }
 
 // ---------- Comparar el precio de la lista en cada súper ----------
@@ -1521,6 +1541,7 @@ $("deals").addEventListener("click", async (e) => {
   save(); render(); flyIn([it.id]); setStatus(`Apuntado: ${it.label} a ${eur(p.p)} (antes ${eur(p.pb)}).`);
 });
 $("summary").addEventListener("click", (e) => {
+  if (e.target.closest("[data-share]")) { buzz(); return openShare(); }
   if (e.target.closest("[data-compare]")) return openCompare();
   if (e.target.closest("[data-aisles]")) return openAisles();
   const sc = e.target.closest("[data-showcard]"); if (sc) return showCard(+sc.dataset.showcard);
@@ -1820,9 +1841,9 @@ document.addEventListener("error", (e) => {
 }, true);
 
 // ---------- Arranque ----------
-initSync({ st, list, persist, render: () => render(), setStatus, uid });
+initSync({ st, list, persist, render: () => render(), setStatus, uid, mark: (ids) => ids.forEach((id) => fresh.add(id)), liveChanged: () => liveBtn() });
 initComunidad({ st, save, setStatus, buzz, esc, openSheet, sheet, body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
-initEnviar({ st, list, uid, save, setStatus, buzz, esc, openSheet, closeSheet, backupData, restore: restoreBackup,
+initEnviar({ st, list, uid, save, render: () => render(), setStatus, buzz, esc, openSheet, closeSheet, backupData, restore: restoreBackup,
   showList: () => { showHome(false); render(); }, inboxChanged: () => { if (home) renderHome(); } });
 render();
 catalogFor(list().store);

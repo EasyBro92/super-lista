@@ -20,3 +20,10 @@ node e2e-envios.mjs                         # pasar datos con código y enlace, 
 
 - `stub.sql`: lo mínimo de Supabase (roles, `auth.uid()`, tablas de Storage).
 - `fake-sdk.js`: sustituye a `@supabase/supabase-js` en el navegador (la prueba lo inyecta) y habla con `server.mjs`.
+
+Listas en directo (dos móviles con la misma lista; los avisos de tiempo real pasan por `server.mjs`):
+
+```sh
+node server.mjs ../.. 8790 t5 &
+node e2e-directo.mjs                        # añadir, quitar y marcar en un móvil y verlo al momento en el otro; capturas en /tmp/capturas-directo
+```

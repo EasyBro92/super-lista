@@ -1337,3 +1337,16 @@ body.has-items #ideas, body.shop #deals, body.shop #ideas{display:none!important
 .sheet.settings .cgroup{margin-top:14px}
 .sheet.settings .cgroup:first-child{margin-top:2px}
 .sheet.settings .set-link{margin-top:0;margin-bottom:8px}
+
+/* «👥 Compartir» / «👥 En directo» en el resumen de la lista */
+.sum-chip.lshare{position:relative}
+.sum-chip.lshare.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.lshare .ldot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--done);margin-left:6px;vertical-align:middle}
+.lshare.live .ldot{background:#7dffb0;animation:ldot 2s ease-in-out infinite}
+@keyframes ldot{50%{box-shadow:0 0 0 4px rgb(125 255 176 / .35)}}
+@media (prefers-reduced-motion:reduce){.lshare.live .ldot{animation:none}}
+.env-live{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--accent);border-radius:14px;padding:12px;background:var(--accent-soft);margin-bottom:10px;cursor:pointer}
+.env-live input{flex:none;width:22px;height:22px;margin:1px 0 0;accent-color:var(--accent)}
+.env-live span{display:flex;flex-direction:column;gap:3px;line-height:1.4}
+.env-live small{color:var(--muted);font-size:.86rem}
+#shareWaBox[hidden]{display:none}

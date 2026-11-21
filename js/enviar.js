@@ -1,7 +1,7 @@
 // Pasar tus datos o una lista a otro móvil sin archivos: un código de 6 letras (con enlace y QR) que sirve 24 horas,
 // o, con cuenta, mandárselo a una persona por su nombre en la app (le llega a su buzón).
 // Todo pasa por las funciones «env_…» de supabase/envios.sql. El archivo .json de la copia de seguridad sigue igual.
-import { supaCfg, rpc } from "./sync.js";
+import { supaCfg, rpc, share, shareError, joinLive } from "./sync.js";
 import { meNow, comCall, openCuenta } from "./comunidad.js";
 
 let A; // funciones de la app
@@ -27,8 +27,11 @@ async function R(fn, args) {
 const MAX = 3900000;
 async function payload(kind) {
   if (kind === "lista") {
-    const l = A.list();
-    return { note: "", datos: { name: l.name, store: l.store, items: l.items.map(({ t, ...i }) => i) } };
+    // «Que también pueda cambiarla»: la lista pasa a estar en directo y lo que se envía es la invitación.
+    const l = A.list(), live = !!l.sid || !!$("envLive")?.checked;
+    if (live && !l.sid && !(await share(l))) throw new Error(shareError() ?? "No he podido compartirla en directo. Revisa la conexión y prueba otra vez.");
+    if (live) { A.render(); $("envLive")?.setAttribute("disabled", ""); }
+    return { note: "", live, datos: { name: l.name, store: l.store, items: l.items.map(({ t, ...i }) => i), ...(live ? { sid: l.sid } : {}) } };
   }
   const d = await A.backupData();
   if (JSON.stringify(d).length <= MAX) return { note: "", datos: d };
@@ -72,7 +75,7 @@ export function bindSend(back) {
     try {
       const p = await payload(kind);
       const code = await R("env_crear", { p_tipo: kind, p_datos: p.datos });
-      A.buzz?.(20); showCode(code, kind, p.note);
+      A.buzz?.(20); showCode(code, kind, p.note, p.live);
     } catch (e) { b.disabled = false; b.textContent = "Crear código"; A.setStatus(e.message, true); $("envOut").insertAdjacentHTML("beforeend", `<p class="bk-msg warn">${A.esc(e.message)}</p>`); }
   };
   const login = $("envLogin"); if (login) login.onclick = () => openCuenta({ back: null });
@@ -86,12 +89,13 @@ export function bindSend(back) {
       const p = await payload(kind);
       const who = await R("env_enviar", { p_nombre: name, p_tipo: kind, p_datos: p.datos });
       A.buzz?.(20); $("envName").value = "";
-      m.textContent = `Enviado a ${who}: le aparecerá ${kind === "lista" ? `la lista «${A.list().name}»` : "tu copia"} al abrir la app.${p.note ? ` ${p.note}` : ""}`;
+      m.textContent = p.live ? `Enviado a ${who}: al abrir la app podrá unirse a «${A.list().name}» y los dos veréis los cambios al momento.`
+        : `Enviado a ${who}: le aparecerá ${kind === "lista" ? `la lista «${A.list().name}»` : "tu copia"} al abrir la app.${p.note ? ` ${p.note}` : ""}`;
     } catch (err) { m.classList.add("warn"); m.textContent = err.message; }
     btn.disabled = false;
   };
 }
-function showCode(code, kind, note) {
+function showCode(code, kind, note, live) {
   const url = linkOf(code);
   $("envOut").innerHTML = `<div class="env-code" aria-label="Código ${code.split("").join(" ")}">${pretty(code)}</div>
     <div class="env-qr" id="envQr" aria-hidden="true"></div>
@@ -99,7 +103,8 @@ function showCode(code, kind, note) {
     ${note ? `<p class="bk-msg warn">${A.esc(note)}</p>` : ""}
     <div class="bk-row"><button class="btn" type="button" id="envShare">Enviar por WhatsApp…</button><button class="btn ghost" type="button" id="envCopy">Copiar</button></div>`;
   qr(url).then((svg) => { if (svg && $("envQr")) $("envQr").innerHTML = svg; });
-  const text = `Para pasar ${kind === "lista" ? `mi lista «${A.list().name}»` : "mis datos"} de Super Lista: abre este enlace o escribe el código ${pretty(code)} en la app (sirve 24 horas).`;
+  const text = live ? `Únete a mi lista de la compra «${A.list().name}» en Super Lista y la cambiamos los dos: abre este enlace o escribe el código ${pretty(code)} en la app (sirve 24 horas).`
+    : `Para pasar ${kind === "lista" ? `mi lista «${A.list().name}»` : "mis datos"} de Super Lista: abre este enlace o escribe el código ${pretty(code)} en la app (sirve 24 horas).`;
   $("envShare").onclick = async () => {
     try { if (navigator.share) { await navigator.share({ title: "Super Lista", text, url }); return; } }
     catch (e) { if (e?.name === "AbortError") return; }
@@ -146,6 +151,27 @@ async function pickup(code, back, fail, fromInbox = false) {
     A.setStatus(ls.length === 1 ? `Lista «${ls[0].name}» añadida como compartida, con ${n} producto${n === 1 ? "" : "s"}. Tus listas siguen igual.`
       : `${ls.length} listas añadidas como compartidas. Tus listas siguen igual.`);
   };
+  if (r.tipo === "lista" && /^[0-9a-f-]{36}$/i.test(d.sid ?? "")) {
+    // Una invitación a una lista en directo: se une a la misma lista en vez de guardar una copia.
+    A.openSheet("Te invitan a una lista", `<div class="bk-ask"><b>¿Unirte a la lista «${A.esc(d.name || "Lista")}»${de}?</b>
+      <span>👥 Es una lista en directo: lo que añadáis o quitéis cualquiera de los dos se ve al momento en los dos móviles. Tus listas no cambian.</span>
+      <div class="bk-row"><button class="btn" type="button" id="envYes">Sí, unirme</button><button class="btn ghost" type="button" id="envNo">Ahora no</button></div>
+      <p class="bk-msg warn" id="envErr" hidden></p></div>`);
+    $("envNo").onclick = () => (back ? back() : A.closeSheet());
+    $("envYes").onclick = async () => {
+      const y = $("envYes"); y.disabled = true; y.textContent = "Uniéndote…";
+      try {
+        const l = await joinLive(d.sid.toLowerCase(), { from: r.de ? String(r.de).slice(0, 30) : "", got: Date.now() });
+        if (!l) { added([tag(d)]); return A.setStatus("Esa lista ya no se comparte en directo: te la he añadido como copia.", true); }
+        done(); refreshInbox(); A.closeSheet(); A.showList();
+        A.setStatus(`Te has unido a «${l.name}». Lo que apunte cualquiera se ve al momento.`);
+      } catch {
+        y.disabled = false; y.textContent = "Sí, unirme";
+        $("envErr").hidden = false; $("envErr").textContent = "No he podido unirme. Revisa la conexión y prueba otra vez.";
+      }
+    };
+    return;
+  }
   if (r.tipo === "lista") {
     const n = (d.items ?? []).length;
     A.openSheet("Te han enviado una lista", `<div class="bk-ask"><b>¿Añadir la lista «${A.esc(d.name || "Lista")}»${de}?</b>

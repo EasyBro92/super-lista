@@ -76,10 +76,10 @@ function apply(l, m) {
 }
 
 // ---------- Subir y bajar ----------
-const waits = new Map(), busy = new Map();
+const waits = new Map(), busy = new Map(), wantPull = new Set();
 let limitMsg = null; // último aviso de los límites del servidor, para enseñarlo al compartir
 export const shareError = () => limitMsg;
-function later(id, ms = 400) { clearTimeout(waits.get(id)); waits.set(id, setTimeout(() => push(id), ms)); }
+function later(id, ms = 120) { clearTimeout(waits.get(id)); waits.set(id, setTimeout(() => push(id), ms)); }
 async function push(id) {
   const l = A.st.lists.find((x) => x.id === id);
   if (!l?.sid || !cfg()) return;
@@ -97,21 +97,35 @@ async function push(id) {
     if (e?.limit) { limitMsg = e.message; A.setStatus(e.message, true); later(id, 5 * 60000); } // no es la conexión: se reintenta más tarde
     else { offline(true); later(id, 15000); }
   }
-  finally { const again = busy.get(id) === "again"; busy.delete(id); if (again) push(id); }
+  finally {
+    const again = busy.get(id) === "again"; busy.delete(id);
+    if (again) push(id);
+    else if (wantPull.delete(id)) pull(A.st.lists.find((x) => x.id === id));
+  }
 }
 async function pull(l) {
-  if (!l?.sid || !cfg() || busy.get(l.id)) return;
+  if (!l?.sid || !cfg()) return;
+  if (busy.get(l.id)) { wantPull.add(l.id); return; } // se lee en cuanto termine de subir
   try {
     const res = await rpc("leer_lista", { p_id: l.sid });
     offline(false);
     if (!res) { l.rev = 0; return push(l.id); } // no está en el servidor: se vuelve a subir
-    if (res.rev === l.rev && !l.pend) return;
-    const before = sig(docOf(l)), m = merge(l, res.datos ?? {});
-    const mine = sig(m) !== sig(res.datos ?? {}), changed = sig(m) !== before;
-    apply(l, m); l.rev = res.rev; A.persist();
-    if (changed) A.render();
-    if (mine || l.pend) push(l.id);
+    take(l, res.datos, res.rev);
   } catch { offline(true); }
+}
+// Junta lo que llega de otro móvil con lo de aquí; si aquí había algo sin enviar, se sube después.
+function take(l, datos, rev) {
+  if (rev === l.rev && !l.pend) return;
+  const before = new Map(l.items.map((i) => [i.id, i.t ?? 0]));
+  const was = sig(docOf(l)), m = merge(l, datos ?? {});
+  const mine = sig(m) !== sig(datos ?? {}), changed = sig(m) !== was;
+  apply(l, m); l.rev = rev; A.persist();
+  if (changed) {
+    // Lo que ha cambiado el otro se ilumina un momento.
+    A.mark?.(l.items.filter((i) => (i.t ?? 0) > (before.get(i.id) ?? -1)).map((i) => i.id));
+    A.render();
+  }
+  if (mine || l.pend) push(l.id);
 }
 let wasOff = false;
 function offline(off) { if (off && !wasOff) A.setStatus("Sin conexión: los cambios de la lista compartida se enviarán al volver.", true); wasOff = off; }
@@ -131,12 +145,24 @@ async function connect() {
     }
     if (chanSid !== l.sid || chan) return;
     chan = client.channel(`lista-${l.sid}`, { config: { broadcast: { self: false } } });
-    chan.on("broadcast", { event: "cambio" }, () => pull(A.st.lists.find((x) => x.sid === l.sid)));
-    chan.subscribe();
+    // El aviso trae la lista entera (si no es enorme): se aplica sin esperar a leerla del servidor.
+    chan.on("broadcast", { event: "cambio" }, ({ payload: p } = {}) => {
+      const x = A.st.lists.find((y) => y.sid === l.sid);
+      if (!x) return;
+      if (p?.datos && p.rev > (x.rev ?? 0) && !busy.get(x.id)) take(x, p.datos, p.rev);
+      else pull(x);
+    });
+    chan.subscribe((s) => { live = s === "SUBSCRIBED"; A.liveChanged?.(); });
   } catch {}
 }
-function leave() { if (chan) { try { client?.removeChannel(chan); } catch {} } chan = null; chanSid = null; }
-function ping(l) { if (chan && chanSid === l.sid) chan.send({ type: "broadcast", event: "cambio", payload: { at: Date.now() } }).catch?.(() => {}); }
+let live = false;
+export const isLive = () => live && !!A?.list().sid && chanSid === A.list().sid;
+function leave() { if (chan) { try { client?.removeChannel(chan); } catch {} } chan = null; chanSid = null; live = false; A?.liveChanged?.(); }
+function ping(l) {
+  if (!chan || chanSid !== l.sid) return;
+  const datos = docOf(l), big = JSON.stringify(datos).length > 200000; // los avisos tienen un tamaño máximo
+  chan.send({ type: "broadcast", event: "cambio", payload: big ? { rev: l.rev } : { rev: l.rev, datos } }).catch?.(() => {});
+}
 
 // Al cambiar de lista o de pantalla.
 let lastCur = null;
@@ -167,6 +193,17 @@ export function unshare(l) {
   for (const i of l.items) delete i.t;
   snaps.delete(l.id); leave(); lastCur = null;
   A.persist();
+}
+// Unirse a una lista en directo que llega con un código o al buzón. Devuelve la lista, o null si ya no existe.
+export async function joinLive(sid, extra = {}) {
+  const have = A.st.lists.find((l) => l.sid === sid);
+  if (have) { A.st.current = have.id; A.persist(); return have; }
+  const res = await rpc("leer_lista", { p_id: sid });
+  if (!res) return null;
+  const l = { id: A.uid(), name: "Compartida", store: "mercadona", items: [], sid, rev: 0, gone: {}, ...extra };
+  apply(l, merge(l, res.datos ?? {})); l.rev = res.rev;
+  A.st.lists.push(l); A.st.current = l.id; A.persist();
+  return l;
 }
 async function join(sid) {
   history.replaceState(null, "", location.pathname + location.search);

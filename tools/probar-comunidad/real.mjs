@@ -10,6 +10,24 @@ const sb = createClient(url, key, { auth: { persistSession: false } });
 
 const r1 = await sb.rpc("leer_lista", { p_id: "00000000-0000-4000-8000-000000000000" });
 t("listas.sql instalado (leer_lista)", !r1.error, JSON.stringify(r1.error));
+// Listas en directo: lo que manda un móvil le llega al otro al momento (Realtime, Broadcast).
+{
+  const name = `lista-prueba-${Math.random().toString(36).slice(2)}`;
+  const c1 = createClient(url, key, { auth: { persistSession: false } }), c2 = createClient(url, key, { auth: { persistSession: false } });
+  const sub = (c) => new Promise((ok) => { const ch = c.channel(name, { config: { broadcast: { self: false } } }); ch.subscribe((s) => ok([ch, s])); setTimeout(() => ok([ch, "TIMEOUT"]), 10000); });
+  let got = null; const [ch1, s1] = await sub(c1);
+  const [ch2, s2] = await new Promise((ok) => {
+    const ch = c2.channel(name, { config: { broadcast: { self: false } } });
+    ch.on("broadcast", { event: "cambio" }, (m) => { got = { at: Date.now(), m }; });
+    ch.subscribe((s) => ok([ch, s])); setTimeout(() => ok([ch, "TIMEOUT"]), 10000);
+  });
+  t("tiempo real conectado en los dos móviles", s1 === "SUBSCRIBED" && s2 === "SUBSCRIBED", `${s1} / ${s2}`);
+  const t0 = Date.now();
+  await ch1.send({ type: "broadcast", event: "cambio", payload: { rev: 1, datos: { name: "Prueba", items: [{ id: "a", label: "Leche" }] } } });
+  for (let k = 0; k < 100 && !got; k++) await new Promise((r) => setTimeout(r, 50));
+  t(`un cambio llega al otro móvil al momento${got ? ` (${got.at - t0} ms)` : ""}`, got?.m?.payload?.datos?.items?.[0]?.label === "Leche", "no ha llegado en 5 s");
+  await c1.removeChannel(ch1); await c2.removeChannel(ch2);
+}
 const r2 = await sb.rpc("com_recetas", {});
 t("comunidad.sql instalado (com_recetas)", !r2.error && Array.isArray(r2.data), JSON.stringify(r2.error));
 const r5 = await sb.rpc("env_recoger", { p_codigo: "ZZZZZZ" });

@@ -5,6 +5,7 @@ import path from "node:path";
 import pg from "pg";
 const ROOT = process.argv[2], PORT = +process.argv[3] || 8790, DB = process.argv[4] || "t2";
 const pool = new pg.Pool({ host: "/tmp", port: 5433, user: "postgres", database: DB });
+const subsBC = new Map(), bcLog = [];
 const pw = new Map(); // email -> { id, password }
 const files = new Map(); // "fotos/uid/x.jpg" -> { type, buf }
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json" };
@@ -87,6 +88,21 @@ http.createServer(async (req, res) => {
       if (!f) { res.writeHead(404); return res.end(); }
       res.writeHead(200, { "content-type": f.type }); return res.end(f.buf);
     }
+    if (u.pathname.startsWith("/fake/bc/")) { // canal de avisos (Broadcast de Realtime), sin eco al que lo envía
+      const ch = u.pathname.slice(9), me = u.searchParams.get("me");
+      if (req.method === "GET") {
+        res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-store", "access-control-allow-origin": "*" });
+        res.write(": hola\n\n");
+        const s = { me, res }; (subsBC.get(ch) ?? subsBC.set(ch, new Set()).get(ch)).add(s);
+        req.on("close", () => subsBC.get(ch)?.delete(s));
+        return;
+      }
+      const m = (await body(req)).toString();
+      for (const s of subsBC.get(ch) ?? []) if (s.me !== me) s.res.write(`data: ${m}\n\n`);
+      bcLog.push({ ch, at: Date.now(), size: m.length, hasData: m.includes('"datos"') });
+      return json(res, 200, {});
+    }
+    if (u.pathname === "/fake/bclog") return json(res, 200, bcLog);
     if (u.pathname === "/auth/v1/settings") return json(res, 200, { external: { email: true, google: true, apple: false } });
     if (u.pathname === "/fake/files") return json(res, 200, [...files.keys()]);
     let fp = path.join(ROOT, decodeURIComponent(u.pathname));

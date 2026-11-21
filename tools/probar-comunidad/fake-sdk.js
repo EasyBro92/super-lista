@@ -47,11 +47,15 @@ export function createClient(url, key, opts = {}) {
     async list(prefix) { return { data: await post(`/fake/storage-list/${b}`, { prefix }), error: null }; },
     getPublicUrl(p) { return { data: { publicUrl: `${base}/storage/v1/object/public/${b}/${p}` } }; },
   }; } };
+  // Avisos en tiempo real entre móviles distintos (contextos del navegador separados) a través de server.mjs.
   function channel(name) {
-    const bc = new BroadcastChannel(name), hs = [];
-    bc.onmessage = (m) => hs.forEach((h) => h(m.data));
-    const ch = { on(t, f, cb) { hs.push(cb); return ch; }, subscribe() { return ch; }, send(m) { bc.postMessage(m); return Promise.resolve("ok"); }, _bc: bc };
+    const me = Math.random().toString(36).slice(2), hs = [];
+    const es = new EventSource(`${base}/fake/bc/${encodeURIComponent(name)}?me=${me}`);
+    es.onmessage = (m) => { const d = JSON.parse(m.data); hs.forEach((h) => h(d)); };
+    const ch = { on(t, f, cb) { hs.push(cb); return ch; },
+      subscribe(cb) { es.onopen = () => cb?.("SUBSCRIBED"); return ch; },
+      send(m) { return fetch(`${base}/fake/bc/${encodeURIComponent(name)}?me=${me}`, { method: "POST", body: JSON.stringify(m) }).then(() => "ok"); }, _es: es };
     return ch;
   }
-  return { auth, rpc, storage, channel, removeChannel(ch) { ch?._bc?.close(); } };
+  return { auth, rpc, storage, channel, removeChannel(ch) { ch?._es?.close(); } };
 }
