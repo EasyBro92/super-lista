@@ -127,6 +127,7 @@ form.bar input:focus{outline:none}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .lists{display:flex;flex-direction:column;gap:6px}
 .lists button.l{display:flex;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg);cursor:pointer;text-align:left;color:var(--fg)}
+.lists button.l .l-from{display:block;font-size:.75rem;color:var(--accent);font-weight:600;margin-top:2px}
 .lists button.l[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
 .lists .meta{color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
 .hist{display:flex;flex-direction:column;gap:12px}

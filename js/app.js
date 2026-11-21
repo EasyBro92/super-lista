@@ -474,7 +474,7 @@ function render() {
   renderIdeas($("ideas")).catch(() => {});
   renderDeals().catch(() => {});
   if (lfilter) renderLres().catch(() => {});
-  $("listName").textContent = l.sid ? `${l.name} 👥` : l.name;
+  $("listName").textContent = l.sid ? `${l.name} 👥` : l.got ? `${l.name} 📥` : l.name;
   syncCurrent();
   document.body.classList.toggle("shop", !!st.shop);
   $("shopBtn").setAttribute("aria-pressed", String(!!st.shop));
@@ -720,7 +720,8 @@ function openEdit(id, focusName = true) {
 function openLists() {
   const rows = st.lists.map((l) => {
     const left = l.items.filter((i) => !i.done).length;
-    return `<button class="l" type="button" data-list="${l.id}" aria-current="${l.id === st.current}"><span>${esc(l.name)}</span><span class="meta">${left} · ${esc(STORE_NAME[l.store])}</span></button>`;
+    const tag = l.got ? `<small class="l-from">📥 Compartida${l.from ? ` por ${esc(l.from)}` : " contigo"}</small>` : "";
+    return `<button class="l" type="button" data-list="${l.id}" aria-current="${l.id === st.current}"><span>${esc(l.name)}${tag}</span><span class="meta">${left} · ${esc(STORE_NAME[l.store])}</span></button>`;
   }).join("");
   openSheet("Tus listas", `<div class="lists">${rows}</div>
     <label class="field">Nueva lista<input id="newList" placeholder="Cumpleaños, Lidl, Casa de la playa…"></label>
