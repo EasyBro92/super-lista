@@ -54,7 +54,11 @@ await openBackupSheet(bp);
 await bp.fill("#envCode", `${code.slice(0, 3).toLowerCase()} ${code.slice(3)}`);
 await bp.click("#envGet button"); await bp.waitForTimeout(700);
 check("pregunta antes de sustituir", (await bp.textContent("#sheetBody")).includes("2 listas"));
+check("ofrece añadir sus listas sin borrar", await bp.locator("#envAdd").isVisible());
 await shot(bp, "03-recoger-codigo");
+await bp.click("#envYes"); await bp.waitForTimeout(200);
+check("cambiar todo pide un segundo toque", (await bp.textContent("#envYes")).includes("Toca otra vez"));
+await shot(bp, "03b-segundo-toque");
 await Promise.all([bp.waitForEvent("load"), bp.click("#envYes")]); await bp.waitForTimeout(800);
 check("el otro móvil tiene las mismas listas", JSON.stringify(await lists(bp)) === JSON.stringify(["Casa:3", "Cumpleaños:1"]));
 
@@ -62,7 +66,7 @@ check("el otro móvil tiene las mismas listas", JSON.stringify(await lists(bp)) 
 const c2 = await ctx("movil-c");
 await c2.goto(`${BASE}#recoger=${code}`); await c2.waitForTimeout(1000);
 check("el enlace abre directamente la pregunta", await c2.locator("#envYes").isVisible());
-await Promise.all([c2.waitForEvent("load"), c2.click("#envYes")]); await c2.waitForTimeout(800);
+await c2.click("#envYes"); await Promise.all([c2.waitForEvent("load"), c2.click("#envYes")]); await c2.waitForTimeout(800);
 check("con el enlace también llegan", (await lists(c2)).length === 2);
 check("el enlace se quita de la barra", !c2.url().includes("recoger"));
 
@@ -82,6 +86,9 @@ await d2.fill("#envCode", lcode); await d2.click("#envGet button"); await d2.wai
 await shot(d2, "05-anadir-lista");
 await d2.click("#envYes"); await d2.waitForTimeout(500);
 check("la lista se añade sin tocar las suyas", JSON.stringify(await lists(d2)) === JSON.stringify(["Mía:0", "Casa:3"]));
+await d2.click("#listBtn"); await d2.waitForTimeout(300);
+check("sale como compartida", (await d2.textContent(".lists")).includes("Compartida contigo"));
+await d2.keyboard.press("Escape"); await d2.waitForTimeout(200);
 check("código mal escrito avisa", await (async () => {
   await d2.click("#listBtn"); await d2.waitForTimeout(300); await d2.click("#sendCopy"); await d2.waitForTimeout(300);
   await d2.fill("#envCode", "ZZZ999"); await d2.click("#envGet button"); await d2.waitForTimeout(600);
@@ -117,6 +124,28 @@ await d2.click("#envYes"); await d2.waitForTimeout(800);
 check("Luis tiene la lista de Ana", (await lists(d2)).filter((x) => x === "Casa:3").length === 2);
 await d2.goto(BASE); await d2.waitForTimeout(1200);
 check("y el buzón queda vacío", !(await d2.isVisible("#homeBox")));
+await d2.evaluate(() => document.querySelector('.hcard[data-go="list"]').click()); await d2.waitForTimeout(400);
+await d2.click("#listBtn"); await d2.waitForTimeout(300);
+check("dice quién la ha compartido", (await d2.textContent(".lists")).includes("Compartida por Ana"));
+await shot(d2, "09-tus-listas-compartida");
+await d2.keyboard.press("Escape"); await d2.waitForTimeout(200);
+
+// --- 5. Ana le manda TODOS sus datos a Luis: Luis solo añade sus listas, las suyas siguen ---
+const before = await lists(d2);
+await a.keyboard.press("Escape"); await a.goto(BASE); await a.waitForTimeout(800);
+await openBackupSheet(a);
+await a.fill("#envName", "Luis"); await a.click("#envTo button"); await a.waitForTimeout(700);
+check("copia enviada a Luis", (await a.textContent("#envToMsg")).includes("Enviado a Luis"));
+await d2.goto(BASE); await d2.waitForTimeout(1200);
+await d2.click("#homeBox"); await d2.waitForTimeout(400);
+await d2.click("[data-open]"); await d2.waitForTimeout(600);
+check("le ofrece añadir las listas de Ana", (await d2.textContent("#sheetBody")).includes("Datos de Ana"));
+await shot(d2, "10-copia-de-otra-persona");
+await d2.click("#envAdd"); await d2.waitForTimeout(600);
+const after = await lists(d2);
+check("las listas de Luis siguen y se añaden las de Ana", JSON.stringify(after) === JSON.stringify([...before, "Casa:3", "Cumpleaños:1"]));
+check("sin recargar la app ni borrar compras", await d2.evaluate((k) => JSON.parse(localStorage.getItem(k)).lists.filter((l) => l.from === "Ana").length === 3, KEY));
+await shot(d2, "11-lista-anadida");
 
 console.log(errs.length ? `\nErrores en la página:\n${errs.join("\n")}` : "\nSin errores en la página.");
 console.log(`${ok} bien, ${bad} mal · capturas en ${SHOTS}`);
