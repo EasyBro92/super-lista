@@ -1,0 +1,41 @@
+name: Capturas
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/**"]
+    paths: ["js/**", "styles.css", "index.html", "tools/capturas.mjs", ".github/workflows/capturas.yml"]
+
+concurrency:
+  group: capturas
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  capturas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm i --no-save playwright@1.48.2
+      - name: Hacer capturas
+        run: |
+          mkdir -p /tmp/cap
+          (python3 -m http.server 8000 >/dev/null 2>&1 &)
+          sleep 2
+          CHROME="$(command -v google-chrome || true)" node tools/capturas.mjs http://localhost:8000/ /tmp/cap
+      - name: Guardar en la rama «capturas»
+        run: |
+          git config user.name "super-lista-bot"
+          git config user.email "super-lista-bot@users.noreply.github.com"
+          git checkout --orphan capturas
+          git rm -rq --cached . && git clean -fdxq
+          cp /tmp/cap/*.jpg .
+          git add -A
+          git commit -qm "Capturas de ${GITHUB_REF_NAME}"
+          git push -f origin capturas

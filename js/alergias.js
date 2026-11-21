@@ -5,13 +5,13 @@ import { norm } from "./parser.js";
 // [clave, emoji, nombre, explicación corta, «lo lleva», «no lo lleva aunque lo parezca», palabras de las etiquetas de los envases]
 export const ALLERGENS = [
   ["gluten", "🌾", "Gluten", "Celiaquía o intolerancia",
-    /\b(harina(?! de (maiz|arroz|garbanzo|almendra))|pan|pan rallado|macarrones|espaguetis|fideos(?! de arroz)|lasana|canelones|tallarines|gnocchi|tortellini|pasta(?! de (curry|soja|sesamo))|cuscus|bulgur|cerveza|galletas|hojaldre|masa( de pizza| de empanadillas| quebrada)?|bizcochos?|croissants?|tortillas de trigo|pan de pita|cereales|copos de avena|salsa de soja|seitan|picatostes|muesli|granola|gyozas|fideos ramen|trigo|cebada|centeno|espelta)\b/,
+    /\b(harina(?! de (maiz|arroz|garbanzo|almendra))|croquetas|pan|pan rallado|macarrones|espaguetis|fideos(?! de arroz)|lasana|canelones|tallarines|gnocchi|tortellini|pasta(?! de (curry|soja|sesamo))|cuscus|bulgur|cerveza|galletas|hojaldre|masa( de pizza| de empanadillas| quebrada)?|bizcochos?|croissants?|tortillas de trigo|pan de pita|cereales|copos de avena|salsa de soja|seitan|picatostes|muesli|granola|gyozas|fideos ramen|trigo|cebada|centeno|espelta)\b/,
     /\bsin gluten\b|\btamari\b|\bgluten free\b/, /\b(gluten|trigo|cebada|centeno|avena|espelta|kamut)\b/],
   ["lactosa", "🥛", "Lactosa", "Intolerancia: vale lo «sin lactosa»",
-    /\b(leche(?! de (coco|avena|almendras?|soja|arroz))|mantequilla|nata|queso|quesos|yogur|yogures|mozzarella|mascarpone|parmesano|leche condensada|helado|crema de cacao|bechamel|requeson|burrata|cuajada)\b/,
+    /\b(leche(?! de (coco|avena|almendras?|soja|arroz))|mantequilla|nata|queso|quesos|yogur|yogures|mozzarella|mascarpone|parmesano|leche condensada|helado|crema de cacao|bechamel|requeson|burrata|cuajada|quesitos|croquetas)\b/,
     /\bsin lactosa\b|\b0\s?% lactosa\b|\bvegan[oa]?\b|\bvegetal\b|\bbebida de\b|\bde (coco|soja|avena|almendras?|arroz)\b/, /\b(lactosa|leche|lacteos?|lacticos?|nata|queso|mantequilla|suero)\b/],
   ["leche", "🍼", "Leche (alergia)", "Alergia a la proteína: nada de lácteos",
-    /\b(leche(?! de (coco|avena|almendras?|soja|arroz))|mantequilla|nata|queso|quesos|yogur|yogures|mozzarella|mascarpone|parmesano|leche condensada|helado|crema de cacao|bechamel|requeson|burrata|cuajada|ghee)\b/,
+    /\b(leche(?! de (coco|avena|almendras?|soja|arroz))|mantequilla|nata|queso|quesos|yogur|yogures|mozzarella|mascarpone|parmesano|leche condensada|helado|crema de cacao|bechamel|requeson|burrata|cuajada|ghee|quesitos|croquetas)\b/,
     /\bvegan[oa]?\b|\bvegetal\b|\bbebida de\b|\bsin leche\b|\bmargarina\b|\bde (coco|soja|avena|almendras?|arroz)\b/, /\b(leche|lacteos?|lacticos?|lactosa|nata|queso|mantequilla|suero|caseina)\b/],
   ["huevo", "🥚", "Huevo", "Alergia al huevo",
     /\b(huevos?|yemas?|claras?|mayonesa|alioli|bizcochos de soletilla)\b/, /\bsin huevo\b|\bvegan[oa]?\b/, /\b(huevos?|ovoproductos?|albumina)\b/],
