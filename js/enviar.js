@@ -135,28 +135,46 @@ async function pickup(code, back, fail, fromInbox = false) {
   const d = r.datos ?? {}, de = r.de ? ` de ${A.esc(r.de)}` : "";
   const when = new Date(r.creado).toLocaleString("es-ES", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
   const done = () => { if (fromInbox) R("env_borrar", { p_codigo: code }).catch(() => {}); };
+  // Lo que te mandan otros se añade a tus listas, marcado como compartido; las tuyas no se tocan.
+  const tag = (l0) => ({ id: A.uid(), name: String(l0?.name || "Lista").slice(0, 60), store: l0?.store || A.list().store,
+    items: (l0?.items ?? []).filter((i) => i && i.label).map(({ t, ...i }) => ({ ...i, id: A.uid() })),
+    from: r.de ? String(r.de).slice(0, 30) : "", got: Date.now() });
+  const added = (ls) => {
+    const n = ls.reduce((s, l) => s + l.items.length, 0);
+    A.st.lists.push(...ls); A.st.current = ls[0].id; A.save(); done(); refreshInbox();
+    A.closeSheet(); A.showList();
+    A.setStatus(ls.length === 1 ? `Lista «${ls[0].name}» añadida como compartida, con ${n} producto${n === 1 ? "" : "s"}. Tus listas siguen igual.`
+      : `${ls.length} listas añadidas como compartidas. Tus listas siguen igual.`);
+  };
   if (r.tipo === "lista") {
     const n = (d.items ?? []).length;
     A.openSheet("Te han enviado una lista", `<div class="bk-ask"><b>¿Añadir la lista «${A.esc(d.name || "Lista")}»${de}?</b>
-      <span>Tiene ${n} producto${n === 1 ? "" : "s"}. Se añade como una lista nueva; las tuyas no cambian.</span>
+      <span>Tiene ${n} producto${n === 1 ? "" : "s"}. Se añade a tus listas como compartida; las tuyas no cambian.</span>
       <div class="bk-row"><button class="btn" type="button" id="envYes">Sí, añadirla</button><button class="btn ghost" type="button" id="envNo">Ahora no</button></div></div>`);
     $("envNo").onclick = () => (back ? back() : A.closeSheet());
-    $("envYes").onclick = () => {
-      const l = { id: A.uid(), name: String(d.name || "Lista").slice(0, 60), store: d.store || A.list().store, items: (d.items ?? []).filter((i) => i && i.label).map((i) => ({ ...i, id: A.uid() })) };
-      A.st.lists.push(l); A.st.current = l.id; A.save(); done(); refreshInbox();
-      A.closeSheet(); A.showList(); A.setStatus(`Lista «${l.name}» añadida con ${l.items.length} producto${l.items.length === 1 ? "" : "s"}.`);
-    };
+    $("envYes").onclick = () => added([tag(d)]);
     return;
   }
   const s2 = d.state;
   if (d.app !== "superlista" || !Array.isArray(s2?.lists) || !s2.lists.length) return fail("Eso no es una copia de Super Lista.");
-  A.openSheet("Pasar tus datos", `<div class="bk-ask"><b>¿Poner en este móvil los datos${de} del ${A.esc(when)}?</b>
-    <span>Tiene ${s2.lists.length} lista${s2.lists.length === 1 ? "" : "s"}, ${(s2.history ?? []).length} compra${(s2.history ?? []).length === 1 ? "" : "s"} y ${(s2.myR ?? []).length} receta${(s2.myR ?? []).length === 1 ? "" : "s"} tuya${(s2.myR ?? []).length === 1 ? "" : "s"}. <b>Sustituye lo que hay ahora en este móvil.</b></span>
-    <div class="bk-row"><button class="btn" type="button" id="envYes">Sí, ponerlos</button><button class="btn ghost" type="button" id="envNo">Cancelar</button></div>
+  // Una copia entera: lo normal es quedarse solo con sus listas. Cambiar todo el móvil es solo para pasar tus propios datos.
+  const lists = s2.lists.filter((l) => (l?.items ?? []).some((i) => i?.label));
+  const mine = !!r.de && r.de === meNow()?.nombre;
+  const nl = lists.length, nh = (s2.history ?? []).length, nr = (s2.myR ?? []).length;
+  A.openSheet(mine ? "Pasar tus datos" : "Te han enviado sus datos", `<div class="bk-ask"><b>${mine ? `Tus datos del ${A.esc(when)}` : `Datos${de} del ${A.esc(when)}`}</b>
+    <span>Tiene ${s2.lists.length} lista${s2.lists.length === 1 ? "" : "s"}, ${nh} compra${nh === 1 ? "" : "s"} y ${nr} receta${nr === 1 ? "" : "s"} propia${nr === 1 ? "" : "s"}.</span>
+    ${nl ? `<div class="bk-row"><button class="btn${mine ? " ghost" : ""}" type="button" id="envAdd">Añadir sus listas a las mías</button></div>
+    <span class="fine">Se añade${nl === 1 ? " 1 lista" : `n ${nl} listas`} como compartida${nl === 1 ? "" : "s"}. Tus listas, compras y recetas no cambian.</span>` : ""}
+    <div class="bk-row"><button class="btn${mine || !nl ? "" : " ghost"}" type="button" id="envYes">Cambiar todo lo de este móvil</button></div>
+    <span class="fine">Solo si estás pasando tus propios datos a otro móvil: <b>borra lo que hay ahora aquí</b> y pone lo de la copia.</span>
+    <div class="bk-row"><button class="btn ghost" type="button" id="envNo">Cancelar</button></div>
     <p class="bk-msg warn" id="envErr" hidden></p></div>`);
   $("envNo").onclick = () => (back ? back() : A.closeSheet());
+  const add = $("envAdd"); if (add) add.onclick = () => added(lists.map(tag));
   $("envYes").onclick = async () => {
-    $("envYes").disabled = true;
+    const y = $("envYes");
+    if (y.dataset.sure !== "1") { y.dataset.sure = "1"; y.textContent = "Toca otra vez: se borra lo de este móvil"; y.classList.add("danger"); return; }
+    y.disabled = true;
     if (fromInbox) await R("env_borrar", { p_codigo: code }).catch(() => {}); // antes de volver a abrir la app
     const err = await A.restore(d);
     if (err) { $("envErr").hidden = false; $("envErr").textContent = err; }
