@@ -392,6 +392,8 @@ function renderHello() {
   if (!b.hidden) b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>${me ? "Tu nombre" : "Entrar"}</span>`;
 }
 $("homeMe").onclick = () => { buzz(); openCuenta({ back: null }); };
+// Ajustes: la ruedita está siempre a mano, arriba a la derecha (inicio, lista y cualquier ventana).
+for (const id of ["homeGear", "listGear", "sheetGear"]) $(id).onclick = () => { buzz(); markSheetTab("settings"); openSettings(); };
 $("insGo").onclick = () => { buzz(); install(openSheet); };
 $("insLater").onclick = () => { installLater(); $("homeIns").hidden = true; };
 $("fullGo").onclick = () => openBackup();
@@ -844,10 +846,8 @@ function openHistory() {
   const tile = (id, e, t, d) => `<button type="button" class="qa" id="${id}"><span class="qa-e" aria-hidden="true">${e}</span><b>${t}</b><small>${esc(d)}</small></button>`;
   const top = `<div class="qa-grid">
     ${tile("hTicket", "🧾", "Escanear ticket", "Con una foto")}
-    ${tile("hCards", "💳", "Tarjetas", nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir")}
-    ${tile("hBackup", "💾", "Copia", st.lastBackup ? `Última: ${new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}` : "Hacer ahora")}
-    ${tile("hSettings", "⚙️", "Ajustes", `Avisos: ${st.alerts?.on ? "sí" : "no"}`)}</div>`;
-  const wire = () => { $("hTicket").onclick = () => openTicket(); $("hCards").onclick = () => openCards(); $("hBackup").onclick = () => openBackup(); $("hSettings").onclick = () => openSettings(); if ($("spBudget")) wireSpend(); };
+    ${tile("hCards", "💳", "Tarjetas", nc ? `${nc} guardada${nc === 1 ? "" : "s"}` : "Añadir")}</div>`;
+  const wire = () => { $("hTicket").onclick = () => openTicket(); $("hCards").onclick = () => openCards(); if ($("spBudget")) wireSpend(); };
   if (!st.history.length) { openSheet("Compras", `${top}<p class="note">Aquí verás cada compra cuando pulses «Terminar compra» o escanees un ticket.</p>`); wire(); return; }
   openSheet("Compras", `${spendHTML()}${top}<h3 class="cgroup hist-t">Tus compras <span>desliza a la izquierda para borrar</span></h3><div class="hist">${st.history.slice().reverse().map((h, k) => {
     const d = new Date(h.date).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
@@ -1625,15 +1625,24 @@ async function showAlts(p, it, mine) {
 function openSettings() {
   const a = st.alerts ?? {};
   const canNotif = "Notification" in window;
-  openSheet("Ajustes", `<label class="tset"><span><b>Avisos de bajadas de precio</b><small>Al abrir la app te aviso si ha bajado o está de oferta algo que compras a menudo.</small></span>
+  const link = (id, t, d, go = "›") => `<button type="button" class="pantry-btn set-link" id="${id}"><span><b>${t}</b><small>${esc(d)}</small></span><span class="lnk">${go}</span></button>`;
+  const send = sendReady();
+  openSheet("Ajustes", `${comReady() || canInstall() ? `<h3 class="cgroup">Tú</h3>
+    ${comReady() ? link("setAcct", "👤 Tu cuenta", meNow()?.nombre ? `Has entrado como ${meNow().nombre}` : "Entra para valorar, comentar y compartir recetas") : ""}
+    ${canInstall() ? link("setIns", "📲 Instalar la app", "Tenla en tu pantalla de inicio y úsala sin cobertura") : ""}` : ""}
+    <h3 class="cgroup">Avisos</h3>
+    <label class="tset"><span><b>🔔 Bajadas de precio</b><small>Al abrir la app te aviso si ha bajado o está de oferta algo que compras a menudo.</small></span>
       <input type="checkbox" role="switch" id="setAlerts"${a.on ? " checked" : ""}></label>
     ${canNotif ? `<label class="tset"${a.on ? "" : " hidden"} id="setNotifRow"><span><b>También como notificación del móvil</b><small>Sale aunque estés en otra app, solo si Super Lista está abierta o en segundo plano.</small></span>
       <input type="checkbox" role="switch" id="setNotif"${a.notif && Notification.permission === "granted" ? " checked" : ""}></label>` : ""}
     <p class="note" id="setNote"></p>
-    ${comReady() ? `<button type="button" class="pantry-btn set-link" id="setAcct"><span><b>Tu cuenta</b><small>${esc(meNow()?.nombre ? `Has entrado como ${meNow().nombre}` : "Entra para valorar, comentar y compartir recetas")}</small></span><span class="lnk">›</span></button>` : ""}
-    ${canInstall() ? `<button type="button" class="pantry-btn set-link" id="setIns"><span><b>📲 Instalar la app</b><small>Tenla en tu pantalla de inicio y úsala sin cobertura</small></span><span class="lnk">›</span></button>` : ""}
-    <button type="button" class="pantry-btn set-link" id="setDiet"><span><b>🛡️ Alergias y dieta</b><small>${esc(st.diet?.evita?.length ? `Marcadas: ${st.diet.evita.map((k) => ALLER.get(k)?.[2]).filter(Boolean).join(", ")}` : "Marca lo que no puedes tomar y adapto las recetas")}</small></span><span class="lnk">Cambiar ›</span></button>
-    <button type="button" class="pantry-btn set-link" id="setCred"><span><b>Fotos de las recetas</b><small>De dónde salen y su licencia</small></span><span class="lnk">Ver ›</span></button>`);
+    <h3 class="cgroup">Comida</h3>
+    ${link("setDiet", "🛡️ Alergias y dieta", st.diet?.evita?.length ? `Marcadas: ${st.diet.evita.map((k) => ALLER.get(k)?.[2]).filter(Boolean).join(", ")}` : "Marca lo que no puedes tomar y adapto las recetas", "Cambiar ›")}
+    <h3 class="cgroup">Tus datos</h3>
+    ${link("setBackup", send ? "💾 Pasar o guardar tus datos" : "💾 Copia de seguridad", st.lastBackup ? `Última copia: ${new Date(st.lastBackup).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}` : send ? "A otro móvil o a un archivo, por si cambias de móvil" : "Guárdalo todo en un archivo, por si cambias de móvil")}
+    <h3 class="cgroup">Más</h3>
+    ${link("setCred", "📷 Fotos de las recetas", "De dónde salen y su licencia", "Ver ›")}`, "settings");
+  $("setBackup").onclick = () => openBackup();
   $("setCred").onclick = () => openCredits();
   $("setDiet").onclick = () => openRecipes(null, null, "diet");
   if ($("setAcct")) $("setAcct").onclick = () => openCuenta({ back: null });
