@@ -19,11 +19,27 @@ await shot("3-lista-cuadros");
 await p.click('[data-view="list"]').catch(() => {});
 await p.click('#tabbar [data-tab="recipes"]'); await p.waitForTimeout(4000);
 await shot("4-recetas");
-await p.click('#sheetTabs [data-tab="pantry"]'); await p.waitForTimeout(5000);
-await shot("5-tengo-vacio");
-for (const n of ["Huevos", "Patatas", "Tomates", "Cebollas", "Pechuga de pollo", "Arroz", "Leche"]) {
-  const l = p.locator(`.tg-it[data-n="${n}"]`); if (await l.count()) { await l.first().scrollIntoViewIfNeeded(); await l.first().click(); } await p.waitForTimeout(200);
+// «Con lo que tengo»: el asistente paso a paso.
+await p.click('#sheetTabs [data-tab="pantry"]'); await p.waitForTimeout(3000);
+const tap = async (v) => { await p.click(`#aqgrid [data-v="${v}"]`); await p.waitForTimeout(450); };
+for (let i = 0; i < 3; i++) {
+  const t = (await p.locator(".aq-q").textContent().catch(() => "")) ?? "";
+  if (/tu cocina/.test(t)) { await p.click("#aqnext"); await p.waitForTimeout(500); } else if (/alergias/.test(t)) await tap("no"); else break;
 }
-await p.locator("#tggrid").evaluate((e) => e.closest(".tg").scrollTo(0, 0)); await p.waitForLoadState("networkidle").catch(() => {}); await p.waitForTimeout(4000);
-await shot("6-tengo");
+await tap("pollo"); await tap("pasta"); await p.waitForTimeout(2500);
+await shot("5-tengo-1-con-que");
+await p.click("#aqnext"); await p.waitForTimeout(600);
+await tap("casera"); await tap("italiana"); await p.waitForTimeout(2000);
+await shot("6-tengo-2-cocina");
+await p.click("#aqnext"); await p.waitForLoadState("networkidle").catch(() => {}); await p.waitForTimeout(4000);
+for (const i of [0, 1, 2, 4, 5]) { await p.locator("#tggrid .tg-it").nth(i).click(); await p.waitForTimeout(200); }
+await p.locator("#aq").evaluate((e) => e.scrollTo(0, 0)); await p.waitForTimeout(2500);
+await shot("7-tengo-3-en-casa");
+await p.click("#aqnext"); await p.waitForTimeout(600);
+await shot("8-tengo-4-personas");
+await tap("2"); await p.waitForTimeout(500);
+await shot("9-tengo-5-tiempo");
+await tap("30"); await p.waitForTimeout(500);
+await tap("2"); await p.waitForLoadState("networkidle").catch(() => {}); await p.waitForTimeout(4000);
+await shot("10-tengo-6-resultado");
 await b.close();

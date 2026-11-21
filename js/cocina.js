@@ -332,8 +332,11 @@ export async function openRecipes(id, moment, view) {
 // Botón de cerrar, gesto de atrás o deslizar hacia abajo: un paso atrás (paso a paso → receta → recetas o menú).
 export function cookBack() {
   if (ui.view === "cook" || ui.view === "done") { showRecipe(ui.id); return true; }
-  if (ui.view === "recipe" && ui.from === "ask") { showAsk(); return true; }
-  if ((ui.view === "recipe" && ui.from === "tengo") || (ui.view === "list" && ui.mode === "tengo") || (ui.view === "pantry" && ui.pantryBack)) { ui.mode = "todas"; ui.pantryBack = false; showTengo(); return true; }
+  if (ui.view === "recipe" && (ui.from === "ask" || ui.from === "tengo") && ui.tw) { showTw(); return true; }
+  if ((ui.view === "list" && ui.mode === "tengo") || (ui.view === "pantry" && ui.pantryBack)) { ui.mode = "todas"; ui.pantryBack = false; showTw(); return true; }
+  // En el asistente, atrás es la pregunta anterior; desde la primera, se cierra (si vino del inicio) o vuelve a Recetas.
+  if ((ui.view === "ask" || ui.view === "tengo") && twBack()) return true;
+  if (ui.view === "tengo") return false;
   if (ui.view === "diet" && ui.dietBack) { const b = ui.dietBack; ui.dietBack = null; b(); return true; }
   if (ui.view === "kit" && ui.kitBack) { const b = ui.kitBack; ui.kitBack = null; b(); return true; }
   // Comunidad y cuenta: cada pantalla dice adónde vuelve; sin destino, se cierra.
@@ -655,7 +658,7 @@ function showRecipe(id) {
     : `<p class="ready">Ya tienes en la lista todo lo que falta.</p>`;
   const days = nextDays(), inPlan = new Set(plan().filter((e) => e.n === r.n).map((e) => e.d));
   A.body().innerHTML = `
-    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : ui.from === "gen" ? "Menú propuesto" : ui.from === "com" ? "Comunidad" : ui.from === "ask" ? "Tus 3 ideas" : ui.from === "tengo" ? "Con lo que tengo" : "Recetas"}</button>
+    <button type="button" class="back" id="cback">‹ ${ui.from === "plan" ? "Menú de la semana" : ui.from === "gen" ? "Menú propuesto" : ui.from === "com" ? "Comunidad" : ui.from === "ask" ? "Tus ideas" : ui.from === "tengo" ? "Con lo que tengo" : "Recetas"}</button>
     <div class="cdetail">
       ${r.foto ? `<figure class="hero"><span class="hero-img" style="background-image:url('${A.esc(r.foto.img)}')" role="img" aria-label="${A.esc(r.n)}"></span>${heart(r)}</figure>` : ""}
       <div class="rhead">${r.foto ? "" : `<span class="re big" style="--h:${hue(r.n)}">${A.esc(r.e)}</span>${heart(r)}`}
@@ -1278,14 +1281,11 @@ function showPantry() {
   if (pl) pl.onclick = () => { learnPurchase(last.items); A.save(); fill(); A.buzz(); };
   $$("pclear").onclick = () => { A.st.pantry = {}; A.st.exp = {}; A.save(); fill(); };
   $$("cback").onclick = () => { if (!cookBack()) showList(true); };
-  $$("pdone").onclick = () => { ui.pantryBack = false; showTengo(); };
+  $$("pdone").onclick = () => { ui.pantryBack = false; ui.tw ? showTw() : showTengo(); };
 }
 
 
-// ---------- «Con lo que tengo»: una pantalla visual ----------
-// Arriba, las recetas que salen con lo que tienes (se actualizan al momento); debajo, cuadros grandes
-// con dibujo para tocar lo que hay en casa. Primero lo más usado en las recetas; el resto, al buscar o con «Ver más».
-let tgMore = false;
+// Ingredientes para «¿Qué más tienes en casa?» (más abajo). Palabras de andar por casa: «pasta» encuentra macarrones, espaguetis…
 const TG_SYN = { pasta: ["macarrones", "espaguetis", "fideos", "tallarines", "lasana", "gnocchi", "tortellini"], carne: ["ternera", "carne", "cerdo", "lomo", "pollo", "pechuga", "muslos"],
   pescado: ["merluza", "salmon", "bacalao", "atun", "lubina", "dorada", "sardinas"], fruta: ["platanos", "manzanas", "naranjas", "fresas", "peras", "uvas", "kiwis", "limones"],
   verdura: ["calabacin", "pimientos", "cebollas", "zanahorias", "tomates", "berenjenas", "espinacas", "brocoli", "lechuga"], legumbres: ["garbanzos", "lentejas", "alubias"] };
@@ -1295,86 +1295,11 @@ function tgPool() {
   for (const [k, n] of Object.entries(pantry())) if (!names.has(k) && !staples.has(k)) { names.set(k, n); uses.set(k, 0); }
   return { uses, names, staples };
 }
-function tgResults() {
-  const staples = new Set(STAPLES.map(key));
-  const rows = recipes.filter((r) => allowed(r) && !r.com).map((r) => ({ r, c: check(r) }))
-    .filter(({ r, c }) => c.missing.length <= 2 && ingsOf(r).some((i) => !i.opt && !staples.has(i.k) && has(i.k)));
-  rows.sort((a, b) => a.c.missing.length - b.c.missing.length || b.c.have - a.c.have || !!b.r.foto - !!a.r.foto);
-  return rows;
-}
 // Foto real del ingrediente: la del producto del súper (Mercadona si está, que tiene las fotos más claras).
 function photoStore() { const all = P()?.stores() ?? []; return all.includes("mercadona") ? "mercadona" : costStore(); }
 function ingPhoto(n) { const s = photoStore(), f = s && finder(s); return f ? f(n)?.img ?? null : null; }
 // El dibujo queda debajo por si la foto no carga (sin cobertura).
 const ingPic = (n, cls) => { const u = ingPhoto(n); return `<span class="${cls}${u ? " ph" : ""}" aria-hidden="true">${A.esc(guess(n).emoji)}${u ? `<span class="ph-img" style="background-image:url('${A.esc(u)}')"></span>` : ""}</span>`; };
-function showTengo() {
-  keepScroll();
-  setView("tengo");
-  ui.mode = "todas";
-  A.setTitle("Con lo que tengo", false);
-  A.body().innerHTML = `<div class="tg">
-    <div class="tg-res" id="tgres"></div>
-    <div class="tg-tools"><label class="vh" for="tgq">Buscar ingrediente</label>
-      <input id="tgq" class="bsearch" type="search" placeholder="🔍 ¿Qué más tienes? Pollo, arroz…" autocomplete="off" enterkeyhint="search"></div>
-    <p class="tg-hint">Toca lo que tienes en casa</p>
-    <div id="tggrid"></div>
-    <div class="tg-foot">
-      ${A.st.history.at(-1) ? `<button type="button" class="cact" id="tglast">🧾 Lo de mi última compra</button>` : ""}
-      <button type="button" class="cact" id="tgexp">⏰ Caducidades</button>
-      <button type="button" class="cact" id="tgclear">↺ Empezar de cero</button></div></div>`;
-  const res = () => {
-    const rows = tgResults(), ready = rows.filter((x) => !x.c.missing.length).length;
-    const n = Object.keys(pantry()).length - STAPLES.filter((x) => has(key(x))).length;
-    $$("tgres").innerHTML = !n ? `<div class="tg-empty"><span aria-hidden="true">🧺</span><b>¿Qué hay en tu nevera?</b><span>Toca abajo lo que tienes y te enseño qué puedes cocinar.</span></div>`
-      : !rows.length ? `<div class="tg-empty"><span aria-hidden="true">🤔</span><b>Aún no sale ninguna receta</b><span>Toca alguna cosa más: un huevo, pasta, arroz, una verdura…</span></div>`
-      : `<div class="tg-head"><b>${ready ? `🎉 Puedes hacer ${plural(ready, "receta", "recetas")}` : `Te falta poco para ${plural(rows.length, "receta", "recetas")}`}</b>
-          <button type="button" class="lnk" id="tgall">Ver ${rows.length} ›</button></div>
-        <div class="tg-row">${rows.slice(0, 12).map(({ r, c }) => `<button type="button" class="tg-card" data-r="${r.id}">
-          <span class="tg-ph" style="--h:${hue(r.n)}">${r.foto ? `<img src="${A.esc(r.foto.img)}" alt="" draggable="false">` : A.esc(r.e)}
-            <span class="tg-badge${c.missing.length ? "" : " ok"}">${c.missing.length ? `Falta ${c.missing.length}` : "✓ Lo tienes"}</span></span>
-          <span class="tg-n">${A.esc(r.n)}</span>
-          <span class="tg-m">${c.missing.length ? `<small>Falta: ${A.esc(c.missing.map((i) => i.n).join(", "))}</small>` : `<small>${mins(r.t)}</small>`}</span></button>`).join("")}</div>`;
-  };
-  const grid = () => {
-    const { uses, names } = tgPool(), qt = tokens($$("tgq").value);
-    // Palabras de andar por casa: «pasta» encuentra macarrones, espaguetis…
-    const alts = (w) => [w, ...(TG_SYN[w] ?? [])];
-    let ks = [...names.keys()].filter((k) => qt.every((w) => alts(w).some((a) => k.split(" ").some((t) => t.startsWith(a)))));
-    ks.sort((a, b) => has(b) - has(a) || uses.get(b) - uses.get(a));
-    const limit = qt.length || tgMore ? ks.length : 48;
-    const shown = ks.slice(0, limit);
-    const by = {};
-    for (const k of shown) (by[sectionOf(names.get(k))] ??= []).push(k);
-    $$("tggrid").innerHTML = (ORDER.filter((x) => by[x]).map((x) => `<h3 class="tg-sec">${A.esc(x)}</h3><div class="tg-grid">${by[x].map((k) => {
-      const n = names.get(k);
-      return `<button type="button" class="tg-it" data-k="${A.esc(k)}" data-n="${A.esc(n)}" aria-pressed="${has(k)}">${ingPic(n, "tg-e")}<span class="tg-l">${A.esc(n)}</span></button>`;
-    }).join("")}</div>`).join("") || `<p class="note">No encuentro «${A.esc($$("tgq").value)}».</p>`)
-      + (ks.length > limit ? `<button type="button" class="btn ghost tg-more" id="tgmore">Ver más ingredientes (${ks.length - limit})</button>` : "");
-  };
-  res(); grid();
-  // Las fotos salen en cuanto se carga el catálogo del súper.
-  const ps = photoStore();
-  if (ps && !P().cat(ps)) P().load(ps).then(() => { if (ui.view === "tengo" && $$("tggrid")) { grid(); } }).catch(() => {});
-  let tmo;
-  $$("tgq").oninput = () => { clearTimeout(tmo); tmo = setTimeout(grid, 140); };
-  $$("tggrid").onclick = (e) => {
-    if (e.target.closest("#tgmore")) { tgMore = true; return grid(); }
-    const b = e.target.closest("[data-k]"); if (!b) return;
-    const p = pantry(), k = b.dataset.k;
-    if (k in p) { delete p[k]; delete exps()[k]; } else p[k] = b.dataset.n;
-    b.setAttribute("aria-pressed", String(k in p));
-    A.buzz(); A.save(); res();
-  };
-  $$("tgres").onclick = (e) => {
-    if (e.target.closest("#tgall")) { ui.mode = "tengo"; ui.moment = ALL; ui.tag = "Todas"; ui.q = ""; ui.scroll = 0; return showList(); }
-    const c = e.target.closest("[data-r]"); if (c) { ui.from = "tengo"; showRecipe(+c.dataset.r); }
-  };
-  const last = $$("tglast");
-  if (last) last.onclick = () => { learnPurchase(A.st.history.at(-1).items); A.save(); A.buzz(); res(); grid(); A.setStatus("Marcado lo de tu última compra."); };
-  $$("tgexp").onclick = () => { ui.pantryBack = true; ui.pmode = "exp"; showPantry(); };
-  $$("tgclear").onclick = () => { const p = A.st.pantry; A.st.pantry = null; pantry(); A.st.exp = {}; A.save(); res(); grid();
-    A.setStatus(`Desmarcado: ${plural(Object.keys(p ?? {}).length, "ingrediente", "ingredientes")}.`); };
-}
 
 // ---------- Precio de cada receta ----------
 // Con los precios del súper de tu lista (si no tiene precios, Mercadona): lo que gastas de cada ingrediente,
@@ -1567,166 +1492,279 @@ function showDone(id) {
   $$("dsave").onclick = () => { save(); A.setStatus(`¡Que aproveche! Guardado en «Ya hechas».`); showRecipe(id); };
 }
 
-// ---------- Te pregunto y te digo qué cocinar ----------
-// Una pregunta por pantalla con cuadrados grandes que se tocan (sin escribir) y al final 3 recetas que encajan.
-// Lo de la cocina y las alergias solo se pregunta la primera vez.
-const GANA_E = { "Dulce": "🍰", "Salado": "🥪", "Saludable": "🥗", "Batidos y zumos": "🥤", "Huevos": "🍳", "Tostadas y bocadillos": "🥪", "Horneados": "🥐",
-  "Arroces": "🥘", "Pasta": "🍝", "Legumbres y guisos": "🍲", "Carne": "🥩", "Pescado": "🐟", "Verduras y ensaladas": "🥦", "Internacional": "🌍", "Postres": "🍮",
-  "Bizcochos y repostería": "🧁", "Dulce rápido": "🍫", "Fruta y batidos": "🍓", "Ligera": "🥗", "Sopas y cremas": "🥣", "Para picar": "🧀", "Pizza y hamburguesas": "🍕" };
+// ---------- «Con lo que tengo»: te pregunto paso a paso ----------
+// Una pregunta por pantalla con fotos grandes que se tocan: con qué quieres cocinar, qué cocina, qué más tienes,
+// para cuántos, cuánto tiempo y si puedes comprar algo. Al final, las recetas que mejor encajan con todo eso.
+// Lo de los aparatos y las alergias solo se pregunta la primera vez. «Ayúdame a elegir» en Recetas abre lo mismo.
+const STAPLE_N = new Set(STAPLES.map(norm));
+const SWEET = /Dulce|Bizcocho|Postres|Batidos/;
+const isDulce = (r) => { const ts = Object.values(r.m ?? {}).flat(); return r.tags.includes("Postres") || (ts.length > 0 && ts.every((t) => SWEET.test(t))); };
+// El nombre y los 3 primeros ingredientes de verdad: lo que manda en el plato.
+const mainOf = (r) => (r._main ??= norm([r.n, ...r.i.map((x) => x[0]).filter((n) => !STAPLE_N.has(norm(n))).slice(0, 3)].join(" | ")));
+// [valor, texto, icono, cómo se reconoce, receta de la que sale la foto]
+const TW_CON = [
+  ["pollo", "Pollo", "🍗", /pollo|pechuga|muslo|alitas|pavo/, "Pollo al ajillo"],
+  ["carne", "Carne", "🥩", /ternera|cerdo|lomo|carne|chuleta|costilla|cordero|solomillo|hamburguesa|chorizo|salchich|albondiga|secreto|presa|panceta|bacon/, "Estofado de ternera"],
+  ["pescado", "Pescado y marisco", "🐟", /merluza|salmon|bacalao|atun|lubina|dorada|sardina|gamba|langostino|calamar|mejillon|pulpo|sepia|boqueron|pescado|marisco|almeja|rape|caballa|emperador/, "Merluza en salsa verde"],
+  ["huevos", "Huevos", "🥚", /huevo/, "Huevos rotos con jamón"],
+  ["pasta", "Pasta", "🍝", /pasta|macarr|espagu|fideo|tallar|lasana|noqui|gnocchi|tortellini|penne|tagliatel|spaghetti|ramen|noodle/, "Espaguetis a la carbonara"],
+  ["arroz", "Arroz", "🍚", /arroz|paella|risotto/, "Paella de marisco"],
+  ["legumbres", "Legumbres", "🫘", /garbanzo|lenteja|alubia|judion|habas|hummus|falafel/, "Lentejas con chorizo"],
+  ["verdura", "Verduras", "🥦", /calabac|berenjena|pimiento|espinaca|brocoli|coliflor|champin|seta|calabaza|alcachofa|puerro|judias verdes|zanahoria|lechuga|pepino|esparrago|verdura|acelga|guisante|aguacate/, "Pisto manchego"],
+  ["patata", "Patatas", "🥔", /patata/, "Patatas bravas"],
+  ["queso", "Queso y jamón", "🧀", /queso|jamon|mozzarella|brie|parmesano/, "Croquetas de jamón"],
+  ["dulce", "Algo dulce", "🍰", null, "Tarta de queso al horno"],
+  ["*", "Sorpréndeme", "✨", null, null],
+];
+const TW_CON_M = new Map(TW_CON.map((c) => [c[0], c]));
+const inZ = (...zs) => (r) => zs.includes(r.z);
+const TW_COC = [
+  ["casera", "Casera", "🇪🇸", (r) => r.tags.includes("Española") || (!r.z && !r.tags.includes("Internacional")), "Tortilla de patatas"],
+  ["italiana", "Italiana", "🇮🇹", inZ("Italia"), "Pizza margarita"],
+  ["asia", "Asiática", "🥢", inZ("China", "Japón", "Tailandia", "India", "Corea del Sur", "Vietnam", "Indonesia", "Filipinas", "Hawái"), "Pad thai de gambas"],
+  ["latina", "Mexicana y latina", "🌮", inZ("México", "Perú", "Venezuela", "Argentina", "Brasil", "Cuba", "Colombia", "Chile", "Jamaica"), "Tacos al pastor"],
+  ["arabe", "Árabe y griega", "🧆", inZ("Marruecos", "Túnez", "Líbano", "Turquía", "Egipto", "Grecia", "Senegal"), "Falafel con salsa de yogur"],
+  ["mundo", "Americana y europea", "🍔", inZ("Estados Unidos", "Francia", "Reino Unido", "Suecia", "Portugal", "Hungría", "Austria", "Polonia"), "Hamburguesa clásica casera"],
+  ["*", "Me da igual", "🌍", null, null],
+];
+const TW_COC_M = new Map(TW_COC.map((c) => [c[0], c]));
+const conOK = (r, sel = ["*"]) => sel.some((v) => v === "*" ? !isDulce(r) : v === "dulce" ? isDulce(r) : !isDulce(r) && TW_CON_M.get(v)?.[3].test(mainOf(r)));
+const cocOK = (r, sel = ["*"]) => sel.some((v) => v === "*" || TW_COC_M.get(v)?.[3](r));
 const PAX_E = ["🙋", "👫", "👨‍👩‍👦", "👨‍👩‍👧‍👦", "👨‍👩‍👧‍👦", "🎉"];
-// Cada pregunta: lo que dice la cocinera, la pregunta, una ayuda, si se pueden elegir varias y los cuadrados [valor, texto, icono, detalle].
-function askQ(id) {
-  const a = ui.ask.a;
+const TW_ICON = { kit: "🍳", alg: "🛡️", con: "🍽️", coc: "🌍", casa: "🧺", pax: "👥", t: "⏱️", compra: "🛒" };
+const fotoOf = (n) => n && recipes.find((r) => r.n === n)?.foto?.img;
+const twBase = () => recipes.filter((r) => !r.com && allowed(r));
+const twFits = (a) => twBase().filter((r) => conOK(r, a.con) && cocOK(r, a.coc));
+// Lo que gastas de lo que tienes en casa (sin contar sal, aceite…): cuanto más, mejor.
+const usesHome = (r) => { const st = new Set(STAPLES.map(key)); return ingsOf(r).filter((i) => !i.opt && !st.has(i.k) && has(i.k)).length; };
+
+function twQ(id) {
+  const a = ui.tw.a;
   if (id === "kit") return { say: "¡Hola! Te hago unas preguntas rápidas y te digo qué cocinar.", q: "¿Qué tienes en tu cocina?", hint: "Toca todo lo que tengas. Solo te lo pregunto esta vez.", multi: true, cols: 3,
     opts: KIT.map(([k, e, t]) => [k, t, e]) };
   if (id === "alg") return { say: "Así no te enseño nada que no podáis comer.", q: "¿Alguien tiene alergias o no come algo?", cols: 2,
     opts: [["no", "Comemos de todo", "🍽️"], ["si", "Sí, quiero marcarlo", "🛡️"]] };
-  if (id === "mo") return { say: "¡Vamos allá!", q: "¿Para qué momento es?", cols: 3, opts: MOMENTS.map(([m, e]) => [m, m, e]) };
+  if (id === "con") return { say: "¡Vamos a cocinar! 👋", q: "¿Con qué quieres cocinar?", hint: "Puedes tocar varias.", multi: true, cols: 3, pics: true,
+    opts: TW_CON.map(([v, l, e, , f]) => [v, l, e, "", f]) };
+  if (id === "coc") {
+    const base = twBase().filter((r) => conOK(r, a.con));
+    return { say: "¿De qué te apetece hoy?", q: "¿Qué tipo de cocina?", hint: "Puedes tocar varias.", multi: true, cols: 2, pics: true,
+      opts: TW_COC.map(([v, l, e, fn, f]) => { const n = v === "*" ? base.length : base.filter(fn).length; return [v, l, e, plural(n, "receta", "recetas"), f, !n]; }) };
+  }
   if (id === "pax") return { say: "Así te calculo las cantidades.", q: "¿Para cuántas personas?", cols: 3,
     opts: [1, 2, 3, 4, 5, 6].map((n) => [String(n), n === 6 ? "6 o más" : n === 1 ? "Solo yo" : `${n} personas`, PAX_E[n - 1]]) };
-  if (id === "t") return { say: "Sin agobios.", q: "¿Cuánto tiempo tienes?", cols: 2,
-    opts: [["15", "Rapidito", "⚡", "15 minutos"], ["30", "Media hora", "⏱️", "30 minutos"], ["60", "Una hora", "🕐", "60 minutos"], ["999", "Sin prisa", "😌", "Lo que haga falta"]] };
-  if (id === "gana") return { say: "Lo mejor de todo…", q: "¿Qué te apetece?", hint: "Puedes tocar varias.", multi: true, cols: 3,
-    opts: [...MOMENT.get(a.mo ?? "Comida")[3].filter((t) => t !== "Postres" || a.mo === "Cena").map((t) => [t, t, GANA_E[t] ?? "🍽️"]), ["veggie", "Sin carne ni pescado", "🥕"], ["*", "Me da igual", "🤷"]] };
-  if (id === "casa") return { say: "Para no gastar de más.", q: "¿Tiro de lo que tienes en casa?", cols: 2,
-    opts: [["si", "Sí, comprar lo mínimo", "🏠"], ["no", "Me da igual ir a comprar", "🛒"]] };
-  if (id === "eur") return { say: "Última pregunta.", q: "¿Miro el precio?", cols: 2,
-    opts: [["bar", "Que sea barato", "💶"], ["*", "Me da igual", "👌"]] };
+  if (id === "t") return { say: "Sin agobios.", q: "¿Lo quieres rápido?", cols: 2,
+    opts: [["15", "Rapidísimo", "⚡", "15 min o menos"], ["30", "Rápido", "⏱️", "Media hora"], ["60", "Con calma", "🕐", "Una hora"], ["999", "Sin prisa", "😌", "Lo que haga falta"]] };
+  if (id === "compra") return { say: "Última pregunta.", q: "¿Puedes comprar algo?", cols: 2,
+    opts: [["0", "No, solo lo que tengo", "🏠", "Sin salir de casa"], ["2", "Sí, si es poquito", "🛒", "Hasta 2 cosas"], ["9", "Me da igual", "🛍️", "Compro lo que haga falta"]] };
 }
-function startAsk() {
-  const d = diet();
-  const qs = [...(A.st.kit ? [] : ["kit"]), ...(d.asked || d.evita.length || d.tipo ? [] : ["alg"]), "mo", "pax", "t", "gana", "casa", "eur"];
-  ui.ask = { qs, i: 0, a: {}, labels: {}, seed: Date.now() % 100000, shown: [], sel: {}, kit: A.st.kit ? [...A.st.kit] : ["fuego", "horno", "micro"] };
+
+function startTengo(home = false) {
+  const d = diet(), last = A.st.tw ?? {};
+  const qs = [...(A.st.kit ? [] : ["kit"]), ...(d.asked || d.evita.length || d.tipo ? [] : ["alg"]), "con", "coc", "casa", "pax", "t", "compra"];
+  // Lo de la última vez sale ya marcado para ir más rápido.
+  ui.tw = { qs, i: 0, a: {}, labels: {}, sel: { con: [...(last.con ?? [])], coc: [...(last.coc ?? [])] }, last, home, seed: Date.now() % 100000, n: 10,
+    kit: A.st.kit ? [...A.st.kit] : ["fuego", "horno", "micro"], more: false };
   keepScroll();
-  showAsk();
+  showTw();
 }
-function answer(id, v, label) {
-  const k = ui.ask;
-  k.a[id] = v; k.labels[id] = label; k.res = null;
-  if (id === "mo") { delete k.a.gana; delete k.labels.gana; delete k.sel.gana; }
+const startAsk = () => startTengo(false);
+const showTengo = () => startTengo(true);
+function twAnswer(id, v, label) {
+  const k = ui.tw;
+  k.a[id] = v; k.labels[id] = label; k.n = 10;
   if (id === "alg") { diet().asked = true; A.save(); }
+  if (["con", "coc", "pax", "t", "compra"].includes(id)) { A.st.tw = { ...(A.st.tw ?? {}), [id]: v }; A.save(); }
   // Sigue por la siguiente sin contestar; si ya estaban todas (se cambió una desde el final), al resultado.
   const at = k.qs.indexOf(id), next = k.qs.findIndex((q, j) => j > at && k.a[q] == null);
   k.i = next < 0 ? k.qs.length : next;
-  if (id === "alg" && v === "si") { ui.dietBack = showAsk; return showDiet(); }
-  showAsk();
+  if (id === "alg" && v === "si") { ui.dietBack = showTw; return showDiet(); }
+  showTw();
 }
-function askPick() {
-  const k = ui.ask, a = k.a, t = +a.t, pax = +a.pax, store = costStore();
-  const all = recipes.filter((r) => !r.com && allowed(r) && r.m?.[a.mo]);
-  // «Me da igual» en comida o cena: un plato, no un postre.
-  const dish = (r) => !(/Comida|Cena/.test(a.mo) && r.m[a.mo].every((x) => x === "Postres"));
-  const g = [].concat(a.gana ?? "*");
-  const want = (r) => g.includes("*") ? dish(r) : g.some((x) => x === "veggie" ? r.filters.includes("Vegetariana") : r.m[a.mo].includes(x));
-  let pool = all.filter((r) => r.t <= t && want(r)), relaxed = "";
-  if (pool.length < 3) { pool = all.filter(want); relaxed = "tiempo"; }
-  if (pool.length < 3) { pool = all.filter((r) => r.t <= t); relaxed = "gana"; }
-  if (pool.length < 3) { pool = all; relaxed = "todo"; }
-  const rand = rng(k.seed * 7919 + k.shown.length * 31);
-  const rows = pool.map((r) => {
-    const miss = check(r).missing.length, c = a.eur === "bar" ? costOf(r, store, pax) : null, me = cooked()[r.n];
-    let s = a.casa === "si" ? -miss * 2.5 : -miss * 0.3;
-    if (a.eur === "bar") s -= c?.ok ? c.per * 2.2 : 3;
-    if (isFav(r)) s += 1.5;
-    if (me?.stars) s += me.stars - 3;
-    if (me?.last && (Date.now() - new Date(me.last)) / 864e5 < 7) s -= 2;
-    if (r.foto) s += 0.5;
-    return { r, s: s + rand() * 2, miss };
-  }).sort((x, y) => y.s - x.s);
-  const fresh = rows.filter((x) => !k.shown.includes(x.r.n)), src = fresh.length >= 3 ? fresh : rows;
-  // Si has tocado varias (pasta y pescado), una de cada antes de repetir.
-  const kinds = g.filter((x) => x !== "*"), out = [];
-  if (kinds.length > 1 && !relaxed) {
-    for (let j = 0; out.length < 3 && j < 6; j++) {
-      const x = kinds[j % kinds.length];
-      const hit = src.find((y) => !out.includes(y) && (x === "veggie" ? y.r.filters.includes("Vegetariana") : y.r.m[a.mo].includes(x)));
-      if (hit) out.push(hit);
-    }
-  }
-  for (const y of src) if (out.length < 3 && !out.includes(y)) out.push(y);
-  return { list: out, relaxed };
+// Un paso atrás dentro del asistente; false si ya estás en el primero.
+function twBack() {
+  const k = ui.tw; if (!k || !k.i) return false;
+  k.i--; A.buzz(); showTw(); return true;
 }
-const tileHTML = (q, [v, l, e, sub], k, on) => `<button type="button" class="aq-t" data-v="${A.esc(v)}" data-l="${A.esc(l)}" aria-pressed="${on}" style="--h:${(k * 47 + 140) % 360}">
-  <span class="aq-ck" aria-hidden="true">✓</span><span class="aq-ic" aria-hidden="true">${e}</span><b>${A.esc(l)}</b>${sub ? `<small>${A.esc(sub)}</small>` : ""}</button>`;
-async function showAsk() {
-  const k = ui.ask; if (!k) return startAsk();
-  setView("ask");
-  A.setTitle("Te ayudo a elegir", true);
-  // Si se volvió de marcar alergias, esa pregunta ya está contestada.
-  if (k.qs[k.i] === "alg" && diet().asked && k.a.alg == null) { k.a.alg = "si"; k.labels.alg = "Sí, quiero marcarlo"; k.i++; }
-  const cur = k.qs[k.i], n = k.qs.length;
-  const bar = `<div class="aq-top"><span class="aq-bar"><span style="width:${Math.round((Math.min(k.i, n) / n) * 100)}%"></span></span><span class="aq-n">${cur ? `${k.i + 1} de ${n}` : "¡Listo!"}</span></div>`;
-  if (cur) {
-    const q = askQ(cur);
-    // En las de elegir varias se recuerda lo marcado; la de aparatos empieza con lo más normal.
-    const sel = q.multi ? (cur === "kit" ? k.kit : (k.sel[cur] ??= [].concat(k.a[cur] ?? []))) : null;
-    const on = (v) => q.multi ? sel.includes(v) : k.a[cur] === v;
-    A.body().innerHTML = `
-      <button type="button" class="back" id="cback">‹ Recetas</button>
-      <div class="aq" id="aq">${bar}
-        <div class="aq-chef"><span class="aq-av" aria-hidden="true">👩‍🍳</span><p>${A.esc(q.say)}</p></div>
-        <h2 class="aq-q">${A.esc(q.q)}</h2>${q.hint ? `<p class="aq-hint">${A.esc(q.hint)}</p>` : ""}
-        <div class="aq-grid c${q.cols}" id="aqgrid" role="group" aria-label="${A.esc(q.q)}">${q.opts.map((o, j) => tileHTML(q, o, j, on(o[0]))).join("")}</div>
-      </div>
-      <div class="bfoot"><button type="button" class="btn ghost" id="aqprev"${k.i ? "" : " disabled"}>‹ Atrás</button>
-        ${q.multi ? `<button type="button" class="btn" id="aqnext"${sel.length ? "" : " disabled"}>Siguiente ›</button>` : `<span>Toca una opción</span>`}</div>`;
-    $$("cback").onclick = () => cookBack();
-    $$("aqprev").onclick = () => { if (!k.i) return; k.i--; k.res = null; A.buzz(); showAsk(); };
-    $$("aqgrid").onclick = (e) => {
-      const b = e.target.closest("[data-v]"); if (!b) return;
-      const v = b.dataset.v;
-      A.buzz();
-      if (!q.multi) {
-        for (const x of $$("aqgrid").children) x.setAttribute("aria-pressed", String(x === b));
-        $$("aqgrid").classList.add("chosen");
-        setTimeout(() => answer(cur, v, b.dataset.l), 260);
-        return;
-      }
-      // «Me da igual» quita lo demás, y al revés.
-      if (v === "*") sel.splice(0, sel.length, "*");
-      else { const z = sel.indexOf("*"); if (z >= 0) sel.splice(z, 1); const i = sel.indexOf(v); if (i >= 0) sel.splice(i, 1); else sel.push(v); }
-      for (const x of $$("aqgrid").children) x.setAttribute("aria-pressed", String(sel.includes(x.dataset.v)));
-      $$("aqnext").disabled = !sel.length;
-    };
-    if ($$("aqnext")) $$("aqnext").onclick = () => {
-      if (!sel.length) return;
-      A.buzz();
-      const names = q.opts.filter((o) => sel.includes(o[0])).map((o) => o[1]);
-      if (cur === "kit") { A.st.kit = [...sel]; A.save(); return answer("kit", "ok", sel.length === KIT.length ? "Tengo de todo" : names.join(", ")); }
-      answer(cur, [...sel], names.join(", "));
-    };
-    return;
+function twPick() {
+  const k = ui.tw, a = k.a, T = +a.t, max = +a.compra, rand = rng(k.seed);
+  const fits = twFits(a).map((r) => ({ r, c: check(r) }));
+  const ok = (x, t, m) => x.r.t <= t && x.c.missing.length <= m;
+  let pool = fits.filter((x) => ok(x, T, max)), relaxed = "";
+  if (pool.length < 4 && max < 9) { pool = fits.filter((x) => ok(x, T, max + 2)); relaxed = "compra"; }
+  if (pool.length < 4 && T < 999) { pool = fits.filter((x) => ok(x, 999, max + 2)); relaxed = "tiempo"; }
+  if (pool.length < 4) { pool = twBase().filter((r) => conOK(r, a.con)).map((r) => ({ r, c: check(r) })).filter((x) => ok(x, T, max + 2)); relaxed = "cocina"; }
+  if (pool.length < 4) { pool = fits.length >= 4 ? fits : twBase().map((r) => ({ r, c: check(r) })); relaxed = "todo"; }
+  for (const x of pool) {
+    const me = cooked()[x.r.n];
+    x.u = usesHome(x.r);
+    x.s = -x.c.missing.length * 3 + x.u * 1.2 + (isFav(x.r) ? 1.5 : 0) + (me?.stars ? me.stars - 3 : 0) + (x.r.foto ? 0.8 : 0)
+      - (me?.last && (Date.now() - new Date(me.last)) / 864e5 < 7 ? 2 : 0) + rand() * 1.5;
   }
-  // Resultado: lo que has contestado (se toca para cambiarlo) y 3 recetas.
+  pool.sort((x, y) => y.s - x.s);
+  return { names: pool.map((x) => x.r.n), relaxed };
+}
+const twTile = ([v, l, e, sub, foto, off], j, on, pics) => {
+  const img = pics && fotoOf(foto);
+  return `<button type="button" class="aq-t${pics ? " pic" : ""}${img ? "" : " nopic"}${v === "*" ? " any" : ""}" data-v="${A.esc(v)}" data-l="${A.esc(l)}" aria-pressed="${on}"${off ? " data-off" : ""} style="--h:${(j * 47 + 140) % 360}">
+  ${img ? `<span class="aq-img" style="background-image:url('${A.esc(img)}')"></span>` : ""}<span class="aq-ck" aria-hidden="true">✓</span><span class="aq-ic" aria-hidden="true">${e}</span><b>${A.esc(l)}</b>${sub ? `<small>${A.esc(sub)}</small>` : ""}</button>`;
+};
+function twTop(k) {
+  const shown = k.qs.filter((q) => q !== "kit" && q !== "alg"), cur = k.qs[k.i];
+  const at = cur ? shown.indexOf(cur) : shown.length;
+  return `<div class="tw-steps" role="img" aria-label="${!cur ? "Listo" : at >= 0 ? `Paso ${at + 1} de ${shown.length}` : "Antes de empezar"}">${shown.map((q, j) =>
+    `<span class="tw-st${j < at ? " done" : j === at ? " cur" : ""}">${j < at ? "✓" : TW_ICON[q]}</span>`).join(`<i class="tw-ln" aria-hidden="true"></i>`)}</div>`;
+}
+
+// Cada pregunta empieza arriba del todo.
+const twScroll = () => { A.body().scrollTop = 0; const q = $$("aq"); if (q) q.scrollTop = 0; };
+function showTw() {
+  const k = ui.tw; if (!k) return startTengo(true);
+  setView(k.home ? "tengo" : "ask");
+  const cur = k.qs[k.i];
+  A.setTitle(k.home ? "Con lo que tengo" : "Te ayudo a elegir", !!k.i || !k.home);
+  if (cur === "alg" && diet().asked && k.a.alg == null) { k.a.alg = "si"; k.labels.alg = "Sí, quiero marcarlo"; k.i++; return showTw(); }
+  if (!cur) return showTwRes();
+  if (cur === "casa") return showTwCasa();
+  const q = twQ(cur);
+  const sel = q.multi ? (cur === "kit" ? k.kit : (k.sel[cur] ??= [].concat(k.a[cur] ?? []))) : null;
+  const was = k.a[cur] ?? k.last[cur];
+  const on = (v) => q.multi ? sel.includes(v) : was === v;
   A.body().innerHTML = `
-    <button type="button" class="back" id="cback">‹ Recetas</button>
-    <div class="aq" id="aq">${bar}
-      <div class="aq-chef"><span class="aq-av" aria-hidden="true">👩‍🍳</span><p>Un momento, que lo miro…</p></div></div>`;
-  $$("cback").onclick = () => cookBack();
-  if (k.a.eur === "bar" && costStore()) await P().load(costStore());
-  if (ui.view !== "ask" || !$$("aq")) return;
-  if (!k.res) { const got = askPick(); k.res = { names: got.list.map((x) => x.r.n), relaxed: got.relaxed }; k.shown.push(...k.res.names); }
-  const relaxed = k.res.relaxed, list = k.res.names.map((nm) => recipes.find((r) => r.n === nm)).filter(Boolean).map((r) => ({ r, miss: check(r).missing.length }));
-  const pax = +k.a.pax;
-  const why = (r, miss) => {
-    const c = costOf(r, costStore(), pax), me = cooked()[r.n];
-    return [`⏱ ${mins(r.t)}`, miss ? `🛒 Faltan ${miss}` : "✓ Lo tienes todo", c?.ok ? `💶 ${P().eur(c.per)}/ración` : "", isFav(r) ? "❤️ Favorita" : "", me?.stars ? `★ ${me.stars}` : ""].filter(Boolean);
+    <div class="aq tw" id="aq">${twTop(k)}
+      <div class="aq-chef"><span class="aq-av" aria-hidden="true">👩‍🍳</span><p>${A.esc(q.say)}</p></div>
+      <h2 class="aq-q">${A.esc(q.q)}</h2>${q.hint ? `<p class="aq-hint">${A.esc(q.hint)}</p>` : ""}
+      <div class="aq-grid c${q.cols}${q.pics ? " pics" : ""}" id="aqgrid" role="group" aria-label="${A.esc(q.q)}">${q.opts.map((o, j) => twTile(o, j, on(o[0]), q.pics)).join("")}</div>
+    </div>
+    <div class="bfoot"><button type="button" class="btn ghost" id="aqprev"${k.i ? "" : " disabled"}>‹ Atrás</button>
+      ${q.multi ? `<button type="button" class="btn" id="aqnext"${sel.length ? "" : " disabled"}>Siguiente ›</button>` : `<span>Toca una opción</span>`}</div>`;
+  twScroll();
+  $$("aqprev").onclick = () => twBack();
+  $$("aqgrid").onclick = (e) => {
+    const b = e.target.closest("[data-v]"); if (!b) return;
+    const v = b.dataset.v;
+    A.buzz();
+    if (!q.multi) {
+      for (const x of $$("aqgrid").children) x.setAttribute("aria-pressed", String(x === b));
+      $$("aqgrid").classList.add("chosen");
+      setTimeout(() => twAnswer(cur, v, b.dataset.l), 260);
+      return;
+    }
+    // «Me da igual» quita lo demás, y al revés.
+    if (v === "*") sel.splice(0, sel.length, "*");
+    else { const z = sel.indexOf("*"); if (z >= 0) sel.splice(z, 1); const i = sel.indexOf(v); if (i >= 0) sel.splice(i, 1); else sel.push(v); }
+    for (const x of $$("aqgrid").children) x.setAttribute("aria-pressed", String(sel.includes(x.dataset.v)));
+    $$("aqnext").disabled = !sel.length;
   };
-  const note = { tiempo: "No hay tantas tan rápidas de eso: te pongo las más rápidas que encajan.", gana: "De eso no hay tantas con ese tiempo: te pongo otras que sí te dan tiempo.", todo: "Con todo lo que me has dicho hay pocas: mira estas." }[relaxed];
+  if ($$("aqnext")) $$("aqnext").onclick = () => {
+    if (!sel.length) return;
+    A.buzz();
+    const names = q.opts.filter((o) => sel.includes(o[0])).map((o) => o[1]);
+    if (cur === "kit") { A.st.kit = [...sel]; A.save(); return twAnswer("kit", "ok", sel.length === KIT.length ? "Tengo de todo" : names.join(", ")); }
+    twAnswer(cur, [...sel], names.length > 2 ? `${names.slice(0, 2).join(", ")} +${names.length - 2}` : names.join(" y "));
+  };
+}
+
+// «¿Qué más tienes en casa?»: los ingredientes que salen en las recetas que encajan, con su foto.
+// Arriba se ve al momento cuántas recetas te salen ya.
+function showTwCasa() {
+  const k = ui.tw, fits = twFits(k.a), st = new Set(STAPLES.map(key));
+  const uses = new Map(), names = new Map();
+  for (const r of fits) for (const i of ingsOf(r)) if (!i.opt && !st.has(i.k)) { uses.set(i.k, (uses.get(i.k) ?? 0) + 1); names.set(i.k, i.n); }
+  const { names: allN } = tgPool();
+  for (const [kk, n] of allN) if (!names.has(kk)) { names.set(kk, n); uses.set(kk, 0); }
+  // El orden se fija al entrar (lo que ya tienes primero) para que no salten al tocar.
+  const order = [...names.keys()].sort((x, y) => has(y) - has(x) || uses.get(y) - uses.get(x));
+  A.body().innerHTML = `
+    <div class="aq tw" id="aq">${twTop(k)}
+      <div class="aq-chef"><span class="aq-av" aria-hidden="true">👩‍🍳</span><p>Ahora mira tu nevera y tu despensa.</p></div>
+      <h2 class="aq-q">¿Qué más tienes en casa?</h2><p class="aq-hint">Toca lo que tengas. Me acuerdo para la próxima vez.</p>
+      <div class="tw-live" id="twlive" aria-live="polite"></div>
+      <label class="vh" for="tgq">Buscar ingrediente</label>
+      <input id="tgq" class="bsearch" type="search" placeholder="🔍 Busca: pollo, arroz, tomate…" autocomplete="off" enterkeyhint="search">
+      <div class="tg-grid tw-ings" id="tggrid"></div>
+      <div class="tg-foot">
+        ${A.st.history.at(-1) ? `<button type="button" class="cact" id="tglast">🧾 Lo de mi última compra</button>` : ""}
+        <button type="button" class="cact" id="tgexp">⏰ Caducidades</button></div>
+    </div>
+    <div class="bfoot"><button type="button" class="btn ghost" id="aqprev">‹ Atrás</button><button type="button" class="btn" id="aqnext">Siguiente ›</button></div>`;
+  twScroll();
+  const live = () => {
+    const rows = fits.map((r) => check(r).missing.length), ready = rows.filter((m) => !m).length, close = rows.filter((m) => m > 0 && m <= 2).length;
+    $$("twlive").innerHTML = ready ? `<span class="tw-big">🎉 ${ready}</span><span>${ready === 1 ? "receta que ya puedes hacer" : "recetas que ya puedes hacer"}${close ? ` · y ${close} si compras 1 o 2 cosas` : ""}</span>`
+      : close ? `<span class="tw-big">🛒 ${close}</span><span>${close === 1 ? "receta" : "recetas"} comprando solo 1 o 2 cosas. ¡Toca más cosas!</span>`
+      : `<span class="tw-big">🧺</span><span>Toca lo que tienes y te digo cuántas recetas salen.</span>`;
+  };
+  const grid = () => {
+    const qt = tokens($$("tgq").value), alts = (w) => [w, ...(TG_SYN[w] ?? [])];
+    const ks = order.filter((kk) => qt.every((w) => alts(w).some((x) => kk.split(" ").some((t) => t.startsWith(x)))));
+    const limit = qt.length || k.more ? ks.length : 18;
+    $$("tggrid").innerHTML = ks.slice(0, limit).map((kk) => {
+      const n = names.get(kk);
+      return `<button type="button" class="tg-it" data-k="${A.esc(kk)}" data-n="${A.esc(n)}" aria-pressed="${has(kk)}">${ingPic(n, "tg-e")}<span class="tg-l">${A.esc(n)}</span></button>`;
+    }).join("") + (!ks.length ? `<p class="note">No encuentro «${A.esc($$("tgq").value)}».</p>` : "")
+      + (ks.length > limit ? `<button type="button" class="btn ghost tg-more" id="tgmore">Ver más ingredientes (${ks.length - limit})</button>` : "");
+  };
+  live(); grid();
+  const ps = photoStore();
+  if (ps && !P().cat(ps)) P().load(ps).then(() => { if (ui.tw?.qs[ui.tw.i] === "casa" && $$("tggrid")) grid(); }).catch(() => {});
+  let tmo;
+  $$("tgq").oninput = () => { clearTimeout(tmo); tmo = setTimeout(grid, 140); };
+  $$("tggrid").onclick = (e) => {
+    if (e.target.closest("#tgmore")) { k.more = true; return grid(); }
+    const b = e.target.closest("[data-k]"); if (!b) return;
+    const p = pantry(), kk = b.dataset.k;
+    if (kk in p) { delete p[kk]; delete exps()[kk]; } else p[kk] = b.dataset.n;
+    b.setAttribute("aria-pressed", String(kk in p));
+    A.buzz(); A.save(); live();
+  };
+  const last = $$("tglast");
+  if (last) last.onclick = () => { learnPurchase(A.st.history.at(-1).items); A.save(); A.buzz(); live(); grid(); A.setStatus("Marcado lo de tu última compra."); };
+  $$("tgexp").onclick = () => { ui.pantryBack = true; ui.pmode = "exp"; showPantry(); };
+  $$("aqprev").onclick = () => twBack();
+  $$("aqnext").onclick = () => {
+    A.buzz();
+    const n = Object.keys(pantry()).filter((kk) => !st.has(kk)).length;
+    twAnswer("casa", "ok", n ? `🧺 ${plural(n, "cosa", "cosas")} en casa` : "🧺 Nada en casa");
+  };
+}
+
+function showTwRes() {
+  const k = ui.tw, a = k.a, pax = +a.pax;
+  if (!k.res) k.res = twPick();
+  const list = k.res.names.map((nm) => recipes.find((r) => r.n === nm)).filter(Boolean), shown = list.slice(0, k.n);
+  const store = costStore();
+  const ready = list.filter((r) => !check(r).missing.length).length;
+  const note = { compra: "Con lo que tienes no llega: te pongo las que necesitan muy poquito.", tiempo: "No hay tantas tan rápidas: te pongo también alguna más larga.",
+    cocina: "De esa cocina hay pocas: te pongo de otras.", todo: "Con todo lo que me has dicho hay pocas: mira estas." }[k.res.relaxed];
   const chips = k.qs.filter((id) => id !== "kit" && id !== "alg").map((id) => `<button type="button" class="aq-chip" data-go="${id}">${A.esc(k.labels[id] ?? "")}</button>`).join("");
-  $$("aq").innerHTML = `${bar}
-    <div class="aq-chef"><span class="aq-av" aria-hidden="true">👩‍🍳</span><p>${list.length ? `¡Listo! Para ${plural(pax, "persona", "personas")}, te propongo estas ${list.length}.` : "Vaya, con eso no encuentro ninguna receta. Toca una respuesta para cambiarla."}${note ? ` <small>${note}</small>` : ""}</p></div>
-    <div class="aq-chips" aria-label="Tus respuestas (toca para cambiar)">${chips}</div>
-    <div class="ask-res">${list.map(({ r, miss }) => `<button type="button" class="ask-card" data-r="${r.id}">
-        <span class="ask-ph${r.foto ? "" : " noph"}" style="${r.foto ? `background-image:url('${A.esc(r.foto.img)}')` : `--h:${hue(r.n)}`}">${r.foto ? "" : A.esc(r.e)}</span>
-        <span class="ask-in"><b>${A.esc(r.n)}</b><span class="ask-why">${why(r, miss).map((w) => `<span>${A.esc(w)}</span>`).join("")}</span></span></button>`).join("")}</div>
-    <div class="ask-more"><button type="button" class="btn ghost" id="askagain">🔄 Otras 3</button><button type="button" class="btn ghost" id="askreset">Empezar de nuevo</button></div>`;
+  const card = (r) => {
+    const c = check(r), miss = c.missing.filter((i) => !i.gone), co = store && P().cat(store) ? costOf(r, store, pax) : null;
+    return `<button type="button" class="tw-card" data-r="${r.id}">
+      <span class="tw-ph${r.foto ? "" : " noph"}" style="${r.foto ? `background-image:url('${A.esc(r.foto.img)}')` : `--h:${hue(r.n)}`}">${r.foto ? "" : `<i>${A.esc(r.e)}</i>`}
+        <span class="tw-badge${miss.length ? "" : " ok"}">${miss.length ? `🛒 Falta ${miss.length}` : "✓ Lo tienes todo"}</span>${r.z ? `<span class="tw-flag">${FLAGS[r.z] ?? "🌍"}</span>` : ""}</span>
+      <span class="tw-in"><b>${A.esc(r.n)}</b>
+        <span class="tw-meta"><span>⏱ ${mins(r.t)}</span>${co?.ok ? `<span>💶 ${P().eur(co.per)}/ración</span>` : ""}${isFav(r) ? "<span>❤️</span>" : ""}</span>
+        ${miss.length ? `<small class="tw-miss">Te falta: ${A.esc(miss.map((i) => i.n.toLowerCase()).join(", "))}</small>` : ""}</span></button>`;
+  };
+  A.body().innerHTML = `
+    <div class="aq tw" id="aq">${twTop(k)}
+      <div class="aq-chef"><span class="aq-av" aria-hidden="true">👩‍🍳</span><p>${list.length ? `¡Listo! ${ready ? `<b>${plural(ready, "receta", "recetas")}</b> sin comprar nada. ` : ""}Para ${plural(pax, "persona", "personas")}, mira estas.` : "Vaya, con eso no encuentro ninguna receta. Toca una respuesta para cambiarla."}${note ? ` <small>${note}</small>` : ""}</p></div>
+      <div class="aq-chips" aria-label="Tus respuestas (toca para cambiar)">${chips}</div>
+      <div class="tw-res">${shown.map(card).join("")}</div>
+      <div class="ask-more">${list.length > shown.length ? `<button type="button" class="btn ghost" id="twmore">Ver más (${list.length - shown.length})</button>` : ""}
+        <button type="button" class="btn ghost" id="twagain">🔄 Otras ideas</button><button type="button" class="btn ghost" id="twreset">Empezar de nuevo</button></div>
+    </div>`;
+  twScroll();
+  // Los precios salen en cuanto se carga el súper.
+  if (store && !P().cat(store)) P().load(store).then(() => { if (ui.tw === k && !k.qs[k.i] && $$("aq")) showTwRes(); }).catch(() => {});
   $$("aq").onclick = (e) => {
     const b = e.target.closest("[data-r]");
     if (b) { const r = recipes[+b.dataset.r]; ui.from = "ask"; setServ(r, pax); return showRecipe(r.id); }
     const g = e.target.closest("[data-go]");
-    if (g) { A.buzz(); k.i = k.qs.indexOf(g.dataset.go); k.res = null; return showAsk(); }
-    if (e.target.closest("#askagain")) { A.buzz(); k.seed++; k.res = null; return showAsk(); }
-    if (e.target.closest("#askreset")) { A.buzz(); return startAsk(); }
+    if (g) { A.buzz(); k.i = k.qs.indexOf(g.dataset.go); k.res = null; return showTw(); }
+    if (e.target.closest("#twmore")) { A.buzz(); k.n += 10; const y = $$("aq").scrollTop; showTwRes(); $$("aq").scrollTop = y; return; }
+    if (e.target.closest("#twagain")) { A.buzz(); k.seed++; k.n = 10; k.res = null; showTwRes(); $$("aq").scrollTop = 0; return; }
+    if (e.target.closest("#twreset")) { A.buzz(); return startTengo(k.home); }
   };
 }

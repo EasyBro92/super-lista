@@ -1337,3 +1337,55 @@ body.has-items #ideas, body.shop #deals, body.shop #ideas{display:none!important
 .sheet.settings .cgroup{margin-top:14px}
 .sheet.settings .cgroup:first-child{margin-top:2px}
 .sheet.settings .set-link{margin-top:0;margin-bottom:8px}
+
+/* ---------- «Con lo que tengo» paso a paso (2026-11-21): fotos grandes, pasos con dibujo y recetas en cuadrícula ---------- */
+.tw-steps{display:flex;align-items:center;justify-content:center;gap:0;padding:2px 0}
+.tw-st{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:16px;background:var(--surface);border:2px solid var(--line);
+  filter:grayscale(1);opacity:.55;transition:transform .3s cubic-bezier(.34,1.56,.64,1),background-color .2s}
+.tw-st.done{filter:none;opacity:1;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font:800 .85rem var(--body)}
+.tw-st.cur{filter:none;opacity:1;border-color:var(--accent);background:var(--accent-soft);transform:scale(1.22)}
+.tw-ln{flex:1;max-width:26px;height:3px;border-radius:2px;background:var(--line)}
+.tw .aq-q{font-size:1.5rem}
+.aq-grid.pics{gap:9px}
+.aq-t.pic{aspect-ratio:.92;justify-content:flex-end;padding:8px 6px;overflow:hidden;color:#fff;background:hsl(var(--h) 45% 42%);background-clip:padding-box;border-color:var(--surface)}
+.aq-grid.c2 .aq-t.pic{aspect-ratio:1.3}
+.aq-img{position:absolute;inset:0;background:center/cover no-repeat;transition:transform .35s cubic-bezier(.32,.72,0,1)}
+.aq-img::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgb(0 0 0 / 0) 35%,rgb(0 0 0 / .72))}
+.aq-t.pic .aq-ic{position:absolute;top:7px;left:7px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:17px;background:rgb(255 255 255 / .92);box-shadow:0 1px 4px rgb(0 0 0 / .2)}
+.aq-t.pic b,.aq-t.pic small{position:relative;text-shadow:0 1px 3px rgb(0 0 0 / .6)}
+.aq-t.pic b{font-size:.92rem}
+.aq-grid.c2 .aq-t.pic b{font-size:1.02rem}
+.aq-t.pic small{color:rgb(255 255 255 / .9);font-weight:600}
+.aq-t.pic[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft),0 6px 16px rgb(31 122 77 / .3)}
+.aq-t.pic[aria-pressed="true"] .aq-img{transform:scale(1.07)}
+.aq-t.pic[aria-pressed="true"] .aq-ic{transform:none}
+/* Sin foto («Sorpréndeme», «Me da igual»): un degradado con el dibujo grande. */
+.aq-t.pic.nopic{justify-content:center;color:var(--fg);background:linear-gradient(135deg,hsl(var(--h) 70% 90%),hsl(calc(var(--h) + 60) 70% 86%))}
+.aq-t.pic.nopic .aq-ic{position:static;width:auto;height:auto;background:none;box-shadow:none;font-size:40px}
+.aq-t.pic.nopic b,.aq-t.pic.nopic small{text-shadow:none}
+.aq-t.pic.nopic small{color:var(--muted)}
+.aq-t[data-off]{opacity:.5}
+/* La última sola en su fila ocupa todo el ancho y es más baja. */
+.aq-grid.c2>.aq-t:last-child:nth-child(odd){grid-column:1/-1;aspect-ratio:auto;min-height:70px;flex-direction:row;gap:10px}
+.aq-grid.c2>.aq-t:last-child:nth-child(odd) .aq-ic{font-size:30px}
+.tw-live{display:flex;align-items:center;gap:10px;background:var(--accent-soft);border-radius:16px;padding:10px 14px;font-size:.9rem;line-height:1.25;min-height:54px}
+.tw-big{flex:none;font:800 1.5rem var(--display);color:var(--accent)}
+.tw-ings{margin-top:2px}
+.tw-res{display:grid;grid-template-columns:1fr 1fr;gap:12px;animation:bubIn .4s .1s cubic-bezier(.32,.72,0,1) both}
+.tw-card{display:flex;flex-direction:column;gap:6px;border:0;background:none;padding:0;text-align:left;color:var(--fg);cursor:pointer;min-width:0}
+.tw-card:active{transform:scale(.97)}
+.tw-ph{position:relative;display:block;aspect-ratio:1;border-radius:18px;background:center/cover no-repeat;box-shadow:0 3px 12px rgb(0 0 0 / .12)}
+.tw-ph.noph{display:grid;place-items:center;background:hsl(var(--h) 70% 88%)}
+.tw-ph.noph i{font-style:normal;font-size:3rem}
+.tw-badge{position:absolute;left:7px;bottom:7px;background:rgb(0 0 0 / .68);color:#fff;border-radius:999px;padding:3px 9px;font:700 .74rem var(--body)}
+.tw-badge.ok{background:var(--accent);color:var(--accent-ink)}
+.tw-flag{position:absolute;top:7px;right:7px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgb(255 255 255 / .92);font-size:16px}
+.tw-in{display:flex;flex-direction:column;gap:3px;min-width:0}
+.tw-in b{font:800 .95rem/1.2 var(--body);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tw-meta{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:.78rem;color:var(--muted)}
+.tw-miss{font-size:.76rem;color:var(--warn);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tw .ask-more{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+@media (prefers-color-scheme: dark){
+  .aq-t.pic{background:hsl(var(--h) 30% 30%)}
+  .aq-t.pic.nopic{background:linear-gradient(135deg,hsl(var(--h) 30% 24%),hsl(calc(var(--h) + 60) 30% 20%))}
+}
