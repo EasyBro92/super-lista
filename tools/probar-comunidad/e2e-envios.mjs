@@ -33,7 +33,14 @@ async function ctx(name, state) {
 }
 const shot = (p, n) => p.screenshot({ path: `${SHOTS}/${n}.png` });
 const lists = (p) => p.evaluate((k) => JSON.parse(localStorage.getItem(k) || "null")?.lists?.map((l) => `${l.name}:${l.items.length}`) ?? [], KEY);
-const openBackupSheet = async (p) => { await p.click('.hcard[data-go="history"]'); await p.waitForTimeout(400); await p.click("#hBackup"); await p.waitForTimeout(300); };
+const openBackupSheet = async (p) => { await p.click("#homeGear"); await p.waitForTimeout(400); await p.click("#setBackup"); await p.waitForTimeout(300); };
+// Hoja «Compartir» de la lista, quitando la marca de «Que también pueda cambiarla» (solo una copia).
+const openShareSheet = async (p) => {
+  if (await p.locator("#summary [data-share]").isVisible()) await p.click("#summary [data-share]");
+  else { await p.click("#listBtn"); await p.waitForTimeout(300); await p.click("#shareOpen"); } // lista vacía: desde «Tus listas»
+  await p.waitForTimeout(300);
+};
+const copySheet = async (p) => { await openShareSheet(p); if (await p.locator("#envLive").count()) await p.uncheck("#envLive"); };
 
 // --- 1. Todo a otro móvil con un código ---
 const a = await ctx("movil-a", STATE);
@@ -73,15 +80,14 @@ check("el enlace se quita de la barra", !c2.url().includes("recoger"));
 // --- 3. Una lista suelta con código ---
 await a.keyboard.press("Escape"); await a.waitForTimeout(300);
 await a.evaluate(() => document.querySelector('.hcard[data-go="list"]').click()); await a.waitForTimeout(400);
-await a.click("#listBtn"); await a.waitForTimeout(300);
-await a.click("#sendCopy"); await a.waitForTimeout(300);
+await copySheet(a);
 await shot(a, "04-enviar-lista");
 await a.click("#envMake"); await a.waitForTimeout(800);
 const lcode = (await a.textContent(".env-code")).replace(/\s/g, "");
 const d2 = await ctx("movil-d", { ...STATE, lists: [{ id: "x", name: "Mía", store: "dia", items: [] }], current: "x" });
 await d2.goto(BASE); await d2.waitForTimeout(800);
 await d2.evaluate(() => document.querySelector('.hcard[data-go="list"]').click()); await d2.waitForTimeout(400);
-await d2.click("#listBtn"); await d2.waitForTimeout(300); await d2.click("#sendCopy"); await d2.waitForTimeout(300);
+await copySheet(d2);
 await d2.fill("#envCode", lcode); await d2.click("#envGet button"); await d2.waitForTimeout(700);
 await shot(d2, "05-anadir-lista");
 await d2.click("#envYes"); await d2.waitForTimeout(500);
@@ -90,7 +96,7 @@ await d2.click("#listBtn"); await d2.waitForTimeout(300);
 check("sale como compartida", (await d2.textContent(".lists")).includes("Compartida contigo"));
 await d2.keyboard.press("Escape"); await d2.waitForTimeout(200);
 check("código mal escrito avisa", await (async () => {
-  await d2.click("#listBtn"); await d2.waitForTimeout(300); await d2.click("#sendCopy"); await d2.waitForTimeout(300);
+  await copySheet(d2);
   await d2.fill("#envCode", "ZZZ999"); await d2.click("#envGet button"); await d2.waitForTimeout(600);
   return (await d2.textContent("#envGetMsg")).includes("No encuentro");
 })());
@@ -108,7 +114,7 @@ await signUp(a, "Ana", `ana.${Date.now()}@envios.es`);
 await signUp(d2, "Luis", `luis.${Date.now()}@envios.es`);
 await a.keyboard.press("Escape");
 await a.evaluate(() => document.querySelector('.hcard[data-go="list"]').click()); await a.waitForTimeout(400);
-await a.click("#listBtn"); await a.waitForTimeout(300); await a.click("#sendCopy"); await a.waitForTimeout(300);
+await copySheet(a);
 await a.fill("#envName", "Nadie"); await a.click("#envTo button"); await a.waitForTimeout(600);
 check("nombre que no existe avisa", (await a.textContent("#envToMsg")).includes("No hay nadie"));
 await a.fill("#envName", "luis"); await a.click("#envTo button"); await a.waitForTimeout(700);
