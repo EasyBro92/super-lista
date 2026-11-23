@@ -336,21 +336,40 @@ function renderSummary() {
   const pct = Math.round((inCart / l.items.length) * 100);
   const view = st.view ?? "list";
   const k = (st.cards ?? []).findIndex((c) => c.store === l.store);
-  const acts = [
-    left.length && pricedStores().length > 1 ? `<button type="button" class="sum-chip" data-compare>⚖️ Comparar súpers</button>` : "",
-    new Set(left.map((i) => i.cat)).size > 1 ? `<button type="button" class="sum-chip" data-aisles>🧭 ${st.aisles?.[l.store] ? "Orden de pasillos" : "Ordenar pasillos"}</button>` : "",
-    k >= 0 ? `<button type="button" class="sum-chip card" data-showcard="${k}">💳 Tarjeta ${esc(st.cards[k].name)}</button>` : "",
-  ].filter(Boolean).join("");
+  const sl = l.store === "any" ? `<span class="clogo any" aria-hidden="true">🛒</span>` : `<span class="clogo" style="background-image:url('img/logos/${l.store}.png')" aria-hidden="true"></span>`;
+  // Todo lo que antes eran botones sueltos (comparar, pasillos, vista, tarjeta) va junto en «Más».
   el.innerHTML = `<div class="sum-top">
       <div class="sum-ring" style="--p:${pct}" role="img" aria-label="${inCart} de ${l.items.length} en el carro"><span>${inCart}/${l.items.length}</span></div>
       <div class="sum-txt"><b>${left.length ? `${left.length} por comprar` : "¡Todo en el carro!"}</b>
         <span>${priced.length ? `≈ <b class="sum-eur">${eur(total)}</b>${left.length > priced.length ? ` · ${left.length - priced.length} sin precio` : ""}` : inCart ? `${inCart} en el carro` : "Sin precios en este súper"}</span></div>
-      <div class="seg mini views" role="group" aria-label="Cómo ver la lista">
-        <button type="button" data-view="grid" aria-pressed="${view === "grid"}" aria-label="En cuadros" title="En cuadros"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></button>
-        <button type="button" data-view="list" aria-pressed="${view === "list"}" aria-label="Uno debajo de otro" title="Uno debajo de otro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+      <button type="button" class="sum-store" data-stores aria-expanded="${document.body.classList.contains("st-open")}">${sl}<span>${esc(STORE_NAME[l.store])}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
-    ${acts ? `<div class="sum-acts">${acts}</div>` : ""}
+    <div class="sum-main">
+      <button type="button" class="sum-go${st.shop ? " on" : ""}" data-shop><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>${st.shop ? "Salir del modo súper" : "Estoy en el súper"}</button>
+      <button type="button" class="sum-more" data-more aria-label="Más opciones"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/></svg>Más</button>
+    </div>
     ${budgetLine(total)}`;
+}
+// «Más» de la lista: las opciones agrupadas en una hoja, grandes y con explicación.
+function openListMore() {
+  const l = list(), left = l.items.filter((i) => !i.done), view = st.view ?? "list";
+  const k = (st.cards ?? []).findIndex((c) => c.store === l.store);
+  const row = (attr, emo, t, sub, off) => off ? "" : `<button type="button" class="more-row" ${attr}><span class="mr-e" aria-hidden="true">${emo}</span><span class="mr-t"><b>${t}</b><small>${sub}</small></span><span class="mr-go" aria-hidden="true">›</span></button>`;
+  openSheet("Más opciones", `<div class="more-list">
+    ${row("data-compare", "⚖️", "Comparar súpers", "Mira en qué súper te sale más barata esta lista", !(left.length && pricedStores().length > 1))}
+    ${row("data-aisles", "🧭", st.aisles?.[l.store] ? "Orden de pasillos" : "Ordenar por pasillos", "Pon la lista en el orden en que recorres el súper", new Set(left.map((i) => i.cat)).size < 2)}
+    ${row(`data-view="${view === "grid" ? "list" : "grid"}"`, view === "grid" ? "📃" : "🔲", view === "grid" ? "Ver uno debajo de otro" : "Ver en cuadros", "Cambia cómo se ven los productos")}
+    ${row(`data-showcard="${k}"`, "💳", `Tarjeta ${k >= 0 ? esc(st.cards[k].name) : ""}`, "Enséñala en la caja", k < 0)}
+    ${row("data-lists", "📝", "Tus listas", "Cambia de lista, crea otra o compártela")}
+  </div>`, "more");
+  $("sheetBody").querySelector(".more-list").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.compare != null) return openCompare();
+    if (b.dataset.aisles != null) return openAisles();
+    if (b.dataset.showcard != null) return showCard(+b.dataset.showcard);
+    if (b.dataset.lists != null) return openLists();
+    if (b.dataset.view) { st.view = b.dataset.view; persist(); render(); buzz(); closeSheet(); }
+  };
 }
 // Aviso del tope de gasto del mes (como el presupuesto de Listonic).
 function budgetLine(total) {
@@ -1478,6 +1497,7 @@ $("shopBtn").addEventListener("click", () => {
 });
 $("stores").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-s]"); if (!b) return;
+  setTimeout(() => document.body.classList.remove("st-open"), 350);
   const l = list(), s = b.dataset.s;
   if (s === l.store) return;
   const m = meta?.stores?.[s], name = STORE_NAME[s];
@@ -1521,11 +1541,16 @@ $("deals").addEventListener("click", async (e) => {
   save(); render(); flyIn([it.id]); setStatus(`Apuntado: ${it.label} a ${eur(p.p)} (antes ${eur(p.pb)}).`);
 });
 $("summary").addEventListener("click", (e) => {
-  if (e.target.closest("[data-compare]")) return openCompare();
-  if (e.target.closest("[data-aisles]")) return openAisles();
-  const sc = e.target.closest("[data-showcard]"); if (sc) return showCard(+sc.dataset.showcard);
-  const v = e.target.closest("[data-view]");
-  if (v && v.dataset.view !== (st.view ?? "list")) { st.view = v.dataset.view; persist(); render(); buzz(); }
+  if (e.target.closest("[data-more]")) return openListMore();
+  if (e.target.closest("[data-shop]")) return $("shopBtn").click();
+  const sb = e.target.closest("[data-stores]");
+  if (sb) { const on = document.body.classList.toggle("st-open"); sb.setAttribute("aria-expanded", String(on)); buzz(); }
+});
+// Lupa de la cabecera: el buscador de la lista solo sale cuando se pide.
+$("lsBtn").addEventListener("click", () => {
+  const on = document.body.classList.toggle("ls-open");
+  $("lsBtn").setAttribute("aria-pressed", String(on));
+  if (on) $("lq").focus(); else if ($("lq").value) { $("lq").value = ""; $("lq").dispatchEvent(new Event("input")); }
 });
 $("list").addEventListener("keydown", (e) => {
   const li = e.target.closest?.("li.gt"); if (!li || (e.key !== "Enter" && e.key !== " ")) return;

@@ -403,6 +403,8 @@ function showList(restore = false) {
     : ui.mode === "tengo" ? `<div class="pickbar tg-bar"><span>🏠 Con lo que tienes en casa</span><button type="button" class="lnk" id="ctgx">Ver todas</button></div>`
     : `<div class="cacts" id="cacts">
       <button type="button" class="cact main" id="cask">👩‍🍳 Ayúdame a elegir</button>
+      <button type="button" class="cact cmore" id="cmore" aria-expanded="${!!ui.more}">Más<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>${diet().asked || diet().evita.length || diet().tipo ? "" : `<i class="cdot" aria-label="sin marcar"></i>`}</button></div>
+      <div class="cacts cacts2${ui.more ? " open" : ""}" id="cacts2">
       <button type="button" class="cact" id="cplan">📅 Menú${np ? ` <b>${np}</b>` : ""}</button>
       <button type="button" class="cact${diet().evita.length || diet().tipo ? " on" : ""}" id="cdiet">🛡️ ${diet().evita.length || diet().tipo ? A.esc(shortDiet()) : "Alergias"}${diet().asked || diet().evita.length || diet().tipo ? "" : `<i class="cdot" aria-label="sin marcar"></i>`}</button>
       <button type="button" class="cact${A.st.kit ? " on" : ""}" id="ckit">🍳 Aparatos</button>
@@ -438,6 +440,7 @@ function showList(restore = false) {
   else if ($$("cacts")) {
     $$("cplan").onclick = showPlan; $$("cdiet").onclick = () => { diet().asked = true; A.save(); showDiet(); }; $$("ckit").onclick = () => showKit();
     $$("cask").onclick = () => startAsk();
+    $$("cmore").onclick = () => { ui.more = !ui.more; $$("cacts2").classList.toggle("open", ui.more); $$("cmore").setAttribute("aria-expanded", String(ui.more)); A.buzz(); };
   }
   if ($$("ccom")) $$("ccom").onclick = () => { keepScroll(); openComunidad({ from: "recipes" }); };
   $$("cnew").onclick = () => showEdit(null);
