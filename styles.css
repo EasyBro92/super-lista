@@ -1455,3 +1455,12 @@ li.done .check{animation:checkPop .45s cubic-bezier(.34,1.56,.64,1)}
   body.ls-open .lsearch,body.st-open .stores,.more-row,.cacts2.open,.cacts2 .cact,li.done .check,.tabbar button[aria-current="page"] span{animation:none}
   button,button:active:not(:disabled){transition:none;transform:none}
 }
+
+/* Hojas a pantalla completa: todas ocupan casi toda la pantalla (solo asoma una franja arriba)
+   y conservan la barrita para cerrarlas deslizando hacia abajo. */
+.sheet,.sheet[data-sec],.sheet.browsing{height:calc(100vh - 14px);height:calc(100dvh - max(env(safe-area-inset-top,0px),6px) - 8px);max-height:none}
+.sheet .sheet-in{min-height:100%}
+.sheet:not(.browsing) #sheetBody{flex:1 0 auto}
+.sheet.peeking{height:auto;max-height:94vh}
+.sheet.peeking .sheet-in{min-height:0}
+.grab{width:44px;margin-bottom:2px}
