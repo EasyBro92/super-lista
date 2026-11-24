@@ -1464,3 +1464,9 @@ li.done .check{animation:checkPop .45s cubic-bezier(.34,1.56,.64,1)}
 .sheet.peeking{height:auto;max-height:94vh}
 .sheet.peeking .sheet-in{min-height:0}
 .grab{width:44px;margin-bottom:2px}
+
+/* Secciones (Recetas, Menú, En casa, Compras): a pantalla completa como la Lista, sin franja arriba.
+   La barrita sigue para cerrarlas deslizando hacia abajo. */
+.sheet[data-sec]{height:100vh;height:100dvh;margin:0 auto;border-radius:0;box-shadow:none}
+.sheet[data-sec] .sheet-in{padding-top:calc(env(safe-area-inset-top,0px) + 10px)}
+.sheet[data-sec]::backdrop{background:var(--bg)}
