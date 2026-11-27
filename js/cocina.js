@@ -145,6 +145,7 @@ function prep(r, idx) {
   r.toks = new Set(tokens(`${r.n} ${r.z ?? ""} ${r.i.map((x) => x[0]).join(" ")}`));
   r.filters = [...r.tags, ...(r.t <= 20 ? ["Rápidas"] : []), ...(r.tags.includes("Vegana") ? ["Vegetariana"] : []), ...(r.z ? ["Del mundo"] : [])];
   r.lleva = allergens(r);
+  r.llevaOpt = allergens(r, true).filter((a) => !r.lleva.includes(a));
   r.kit = needsOf(r);
   const heat = r.kit.flat().filter((k) => k !== "batidora");
   if (!heat.length) r.filters.push("Sin fuego");
@@ -189,8 +190,8 @@ function loadRecipes() {
 
 // ---------- Dieta y alergias ----------
 // Se deduce de los ingredientes (js/alergias.js); es una ayuda, no sustituye mirar las etiquetas.
-function allergens(r) {
-  return [...new Set(r.i.filter(([n]) => !r.o?.includes(n)).flatMap(([n]) => allergensOf(n)))];
+function allergens(r, opt = false) {
+  return [...new Set(r.i.filter(([n]) => !!r.o?.includes(n) === opt).flatMap(([n]) => allergensOf(n)))];
 }
 // st.diet = { tipo: "" | "vegetariana" | "vegana", evita: [alergias], modo: "adaptar" | "ocultar", asked: ya se preguntó }
 const diet = () => { const d = (A.st.diet ??= { tipo: "", evita: [] }); d.modo ??= "adaptar"; return d; };
@@ -216,6 +217,17 @@ function adapt(r) {
   return (r._ad = out);
 }
 const ingsOf = (r) => adapt(r).ings;
+// Si la receta adaptada quita o cambia algo que sale en un paso, se avisa en ese paso («Saltea las gambas…» sin gambas).
+function stepNote(r, step) {
+  const t = ` ${norm(step)} `, bits = [];
+  for (const i of ingsOf(r)) {
+    if (!i.from) continue;
+    const f = norm(i.from), w = f.split(" ")[0];
+    if (!(t.includes(` ${f} `) || (w.length >= 4 && t.includes(` ${w}`)))) continue;
+    bits.push(i.gone ? `sin ${i.from.toLowerCase()}: sáltate esa parte` : `usa ${shopName(i.n).toLowerCase()} en vez de ${i.from.toLowerCase()}`);
+  }
+  return bits.length ? `🛡️ Adaptada para ti: ${bits.join("; ")}.` : "";
+}
 // Para la lista de la compra, sin la explicación entre paréntesis: «Tamari (salsa de soja sin gluten)» → «Tamari».
 const shopName = (n) => n.replace(/\s*\(.*\)\s*$/, "");
 function allowed(r) { return allowedDiet(r) && kitOK(r); }
@@ -240,7 +252,7 @@ function showDiet() {
   const ALG = ALLERGENS.filter(([k]) => k !== "cerdo");
   const btn = ([k, e, t, x]) => `<button type="button" class="dbtn" data-evita="${k}" aria-pressed="${d.evita.includes(k)}"><span aria-hidden="true">${e}</span>${A.esc(t)}<small>${A.esc(x)}</small></button>`;
   A.body().innerHTML = `
-    <button type="button" class="back" id="cback">‹ Recetas</button>
+    <button type="button" class="back" id="cback">‹ ${A.esc((ui.dietBack && ui.dietLabel) || "Recetas")}</button>
     <div class="plan diet">
       <h3 class="cgroup">¿Qué no puedes tomar? <span>toca para marcar</span></h3>
       <div class="dgrid" id="devita">${ALG.map(btn).join("")}</div>
@@ -313,7 +325,7 @@ export function learnPurchase(items) {
 }
 
 // Se vuelve a abrir donde lo dejaste: mismos filtros, búsqueda y posición.
-export async function openRecipes(id, moment, view) {
+export async function openRecipes(id, moment, view, back = null, backLabel = "") {
   A.openSheet("Recetas", `<p class="note">Cargando recetas…</p>`, "browsing cooking");
   await loadRecipes();
   if (!A.sheet.open) return;
@@ -321,7 +333,7 @@ export async function openRecipes(id, moment, view) {
   if (!view) ui.mode = "todas";
   if (moment && (MOMENT.has(moment) || moment === ALL) && moment !== ui.moment) { ui.moment = moment; ui.tag = "Todas"; ui.scroll = 0; }
   if (view === "plan") return showPlan();
-  if (view === "diet") return showDiet();
+  if (view === "diet") { ui.dietBack = back; ui.dietLabel = backLabel; return showDiet(); }
   if (view === "pantry") return showPantry();
   if (view === "tengo") return showTengo();
   if (view?.startsWith("use:")) { ui.q = view.slice(4); ui.mode = "todas"; ui.moment = ALL; ui.tag = "Todas"; return showList(); }
@@ -668,7 +680,7 @@ function showRecipe(id) {
         <div><p class="rm">${A.esc(meta(r, sv))}</p><p class="rtags">${r.tags.map(A.esc).join(" · ")}</p>
           ${r.nut ? `<p class="rnut"><b>≈ ${kcal(r.nut.kcal)}</b> por ración · ${r.nut.p} g proteína · ${r.nut.h} g hidratos · ${r.nut.g} g grasa</p>` : ""}
           ${r.kit?.length ? `<p class="rkit">Necesitas: ${A.esc(kitText(r))}</p>` : ""}
-          ${r.lleva.length ? `<p class="rlleva">Lleva${ad.changes.length ? " (la original)" : ""}: ${r.lleva.filter((a) => a !== "leche").map((a) => `${ALLER.get(a)[1]} ${algName(a)}`).join(" · ")}</p>` : ""}
+          ${r.lleva.length || r.llevaOpt?.length ? `<p class="rlleva">Lleva${ad.changes.length ? " (la original)" : ""}: ${[...r.lleva.filter((a) => a !== "leche").map((a) => `${ALLER.get(a)[1]} ${algName(a)}`), ...(r.llevaOpt ?? []).filter((a) => a !== "leche").map((a) => `${ALLER.get(a)[1]} ${algName(a)} (si pones lo opcional)`)].join(" · ")}</p>` : ""}
           ${r.m ? `<p class="rmo">${Object.keys(r.m).filter((m) => MOMENT.has(m)).map((m) => `<button type="button" class="mo-tag" data-go-moment="${m}">${MOMENT.get(m)[1]} ${m}</button>`).join("")}</p>` : ""}</div></div>
       <div class="rtools">
         <div class="serv" role="group" aria-label="Raciones"><span>Raciones</span>
@@ -688,7 +700,7 @@ function showRecipe(id) {
       <div class="row">${btn}</div>
       <h3 class="cgroup">Preparación</h3>
       <button class="btn cookgo" type="button" id="ccook">👩‍🍳 Cocinar paso a paso</button>
-      <ol class="steps">${r.p.map((s) => `<li>${A.esc(s)}</li>`).join("")}</ol>
+      <ol class="steps">${r.p.map((s) => { const nt = stepNote(r, s); return `<li>${A.esc(s)}${nt ? `<br><small>${A.esc(nt)}</small>` : ""}</li>`; }).join("")}</ol>
       <section class="rdone-box" id="rdonebox" aria-label="La he hecho">${doneBoxHTML(r)}</section>
       <section class="social" id="csocial" aria-label="Opiniones"></section>
     </div>`;
@@ -846,6 +858,7 @@ function showCook(id, step) {
       <div class="cook-top"><span>Paso ${ui.step + 1} de ${n}</span><span class="cook-bar"><span style="width:${((ui.step + 1) / n) * 100}%"></span></span></div>
       <div class="ctimers" id="ctimers" hidden></div>
       <p class="cook-t">${A.esc(s)}</p>
+      ${stepNote(r, s) ? `<p class="note">${A.esc(stepNote(r, s))}</p>` : ""}
       ${tms.length ? `<div class="cook-tm">${tms.map((t) => `<button type="button" class="btn ghost" data-timer="${t}">⏱ Temporizador ${fmtDur(t)}</button>`).join("")}</div>` : ""}
       <details class="cook-ings"${ui.step === 0 ? " open" : ""}><summary>Ingredientes para ${plural(sv, "ración", "raciones")}</summary>
         <ul>${ingsOf(r).filter((i) => !i.gone).map((i) => `<li><span>${A.esc(i.n)}${i.from ? ` <em>(en vez de ${A.esc(i.from.toLowerCase())})</em>` : ""}</span><small>${A.esc(scaleQty(i.q, f) || "")}</small></li>`).join("")}</ul></details>
@@ -881,6 +894,8 @@ function addMine() {
   const fotos = allFotos();
   for (const m of A.st.myR ?? []) {
     const r = prep(structuredClone(m), recipes.length);
+    // «com» en tus recetas es el número de la compartida, no una receta de la comunidad: sin esto desaparecían de «Mis recetas».
+    delete r.com; delete r.comFoto; delete r.comFotoK;
     r.mine = true; r.foto = fotos[m.uid] ? { img: fotos[m.uid] } : null;
     recipes.push(r);
   }
@@ -1185,7 +1200,7 @@ function showGen() {
     // Sustituye lo que hubiera esos días en las comidas elegidas; lo demás se queda.
     const days = new Set(g.menu.map((d) => d.d)), p = plan();
     A.st.plan = p.filter((e) => !(days.has(e.d) && (!e.m || g.slots.includes(e.m))));
-    for (const d of g.menu) for (const m of d.meals) if (m.r) A.st.plan.push({ d: d.d, n: m.r.n, s: servOf(m.r), m: m.s });
+    for (const d of g.menu) for (const m of d.meals) if (m.r) A.st.plan.push({ d: d.d, n: m.r.n, s: ui.serv[m.r.id] ?? (+A.st.tw?.pax || m.r.r), m: m.s }); // para las personas que dijiste en el asistente
     A.st.plan.sort((a, b) => a.d.localeCompare(b.d));
     A.save(); A.buzz(20);
     A.setStatus(`📅 Menú ${t.n.toLowerCase()} guardado: ${plural(total, "receta", "recetas")}.`);
@@ -1433,7 +1448,8 @@ function showKit(back = null) {
 // st.cooked = { nombre: { n: veces, last: "2026-11-18", stars: 1-5, note: "menos sal" } }
 const cooked = () => (A.st.cooked ??= {});
 const doneOf = (r) => { const c = cooked()[r.n]; return c?.n ? c : null; };
-function markCooked(r) { const c = (cooked()[r.n] ??= { n: 0 }); c.n++; c.last = ymd(); A.save(); }
+// Una vez al día como mucho: acabar el paso a paso y luego tocar «La he hecho hoy» no la cuenta dos veces.
+function markCooked(r) { const c = (cooked()[r.n] ??= { n: 0 }); if (c.last === ymd() && c.n) return false; c.n++; c.last = ymd(); A.save(); return true; }
 const dayTxt = (d) => d === ymd() ? "hoy" : new Date(`${d}T12:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" });
 const starsHTML = (v, big) => `<div class="stars${big ? " big" : ""}" role="group" aria-label="Tus estrellas">${[1, 2, 3, 4, 5].map((k) =>
   `<button type="button" data-star="${k}" aria-pressed="${k <= (v ?? 0)}" aria-label="${k} ${k === 1 ? "estrella" : "estrellas"}">★</button>`).join("")}</div>`;
@@ -1456,7 +1472,7 @@ function wireDoneBox(r, box, after) {
       if (!c.n) { c.n = 1; c.last = ymd(); }
       A.buzz(); A.save(); after ? after() : repaint(); return;
     }
-    if (e.target.closest("[data-did]")) { markCooked(r); A.buzz(20); A.setStatus(`👩‍🍳 Apuntado: has hecho ${r.n}.`); repaint(); return; }
+    if (e.target.closest("[data-did]")) { const nw = markCooked(r); A.buzz(20); A.setStatus(nw ? `👩‍🍳 Apuntado: has hecho ${r.n}.` : `👩‍🍳 Ya estaba apuntado que la has hecho hoy.`); repaint(); return; }
     if (e.target.closest("[data-undid]")) { const c = cooked()[r.n]; c.n = Math.max(0, c.n - 1); A.save(); repaint(); }
   };
   let t;

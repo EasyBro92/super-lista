@@ -485,12 +485,13 @@ export async function mountSocial(el, r, back) {
   wireComposer("xf", key, () => mountSocial(el, r, back));
   $("xcmts").onclick = (e) => onAction(e, () => mountSocial(el, r, back));
   if ($("xolder")) $("xolder").onclick = async (e) => {
-    e.currentTarget.disabled = true;
+    const btn = e.currentTarget; // después del await, e.currentTarget ya es null
+    btn.disabled = true;
     try {
       const old = await call("com_comentarios", { p_hilo: key, p_antes: cmts.at(-1).creado });
       cmts.push(...old); $("xcmts").insertAdjacentHTML("beforeend", old.map((c) => commentHTML(c)).join(""));
-      if (old.length < 40) e.currentTarget.remove(); else e.currentTarget.disabled = false;
-    } catch (err) { A.setStatus(err.message, true); }
+      if (old.length < 40) btn.remove(); else btn.disabled = false;
+    } catch (err) { btn.disabled = false; A.setStatus(err.message, true); }
   };
   if ($("xsave")) $("xsave").onclick = (e) => {
     if (!saveCopy(r)) return A.setStatus("Ya la tienes en «Mis recetas».");
@@ -509,8 +510,9 @@ export async function mountSocial(el, r, back) {
   };
   if ($("xrepr")) $("xrepr").onclick = async (e) => {
     if (!withMe(redo)) return;
-    if (!sure(e.currentTarget, "¿Seguro? Toca otra vez para denunciarla")) return;
-    try { await call("com_denunciar", { p_tipo: "receta", p_id: r.com.id, p_motivo: "receta" }); e.currentTarget.textContent = "Denunciada. Gracias por avisar."; e.currentTarget.disabled = true; }
+    const btn = e.currentTarget;
+    if (!sure(btn, "¿Seguro? Toca otra vez para denunciarla")) return;
+    try { await call("com_denunciar", { p_tipo: "receta", p_id: r.com.id, p_motivo: "receta" }); btn.textContent = "Denunciada. Gracias por avisar."; btn.disabled = true; }
     catch (err) { A.setStatus(err.message, true); }
   };
 }

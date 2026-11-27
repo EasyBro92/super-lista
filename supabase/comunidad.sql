@@ -131,6 +131,9 @@ declare u uuid := auth.uid(); n text := btrim(regexp_replace(coalesce(p_nombre, 
 begin
   if u is null then raise exception 'Tienes que entrar en tu cuenta.' using errcode = 'P0001'; end if;
   if char_length(n) < 2 or char_length(n) > 30 then raise exception 'El nombre debe tener entre 2 y 30 letras.' using errcode = 'P0001'; end if;
+  if exists (select 1 from public.perfiles where id = u and bloqueado) then raise exception 'Tu cuenta está bloqueada por incumplir las normas.' using errcode = 'P0001'; end if;
+  -- Nadie puede hacerse pasar por la app ni por quien la modera.
+  if lower(n) ~ '(super ?lista|equipo|soporte|moderador|administrador|\madmin)' and not public.com_es_mod() then raise exception 'Ese nombre no se puede usar. Prueba con otro.' using errcode = 'P0001'; end if;
   if exists (select 1 from public.perfiles where lower(nombre) = lower(n) and id <> u) then
     raise exception 'Ese nombre ya lo usa otra persona. Prueba con otro.' using errcode = 'P0001';
   end if;

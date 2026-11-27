@@ -5,7 +5,7 @@ import { norm } from "./parser.js";
 // [clave, emoji, nombre, explicación corta, «lo lleva», «no lo lleva aunque lo parezca», palabras de las etiquetas de los envases]
 export const ALLERGENS = [
   ["gluten", "🌾", "Gluten", "Celiaquía o intolerancia",
-    /\b(harina(?! de (maiz|arroz|garbanzo|almendra))|croquetas|pan|pan rallado|macarrones|espaguetis|fideos(?! de arroz)|lasana|canelones|tallarines|gnocchi|tortellini|pasta(?! de (curry|soja|sesamo))|cuscus|bulgur|cerveza|galletas|hojaldre|masa( de pizza| de empanadillas| quebrada)?|bizcochos?|croissants?|tortillas de trigo|pan de pita|cereales|copos de avena|salsa de soja|seitan|picatostes|muesli|granola|gyozas|fideos ramen|trigo|cebada|centeno|espelta)\b/,
+    /\b(harina(?! de (maiz|arroz|garbanzo|almendra))|croquetas|pan|pan rallado|macarrones|espaguetis|fideos(?! de arroz)|lasana|canelones|tallarines|gnocchi|tortellini|pasta(?! de (curry|soja|sesamo))|cuscus|bulgur|cerveza|galletas|hojaldre|masa( de pizza| de empanadillas| quebrada)?|bizcochos?|croissants?|tortillas de trigo|pan de pita|cereales|copos de avena|salsa de soja|salsa hoisin|seitan|picatostes|muesli|granola|gyozas|fideos ramen|trigo|cebada|centeno|espelta)\b/,
     /\bsin gluten\b|\btamari\b|\bgluten free\b/, /\b(gluten|trigo|cebada|centeno|avena|espelta|kamut)\b/],
   ["lactosa", "🥛", "Lactosa", "Intolerancia: vale lo «sin lactosa»",
     /\b(leche(?! de (coco|avena|almendras?|soja|arroz))|mantequilla|nata|queso|quesos|yogur|yogures|mozzarella|mascarpone|parmesano|leche condensada|helado|crema de cacao|bechamel|requeson|burrata|cuajada|quesitos|croquetas)\b/,
@@ -106,7 +106,7 @@ const SUBS = {
     "Cacahuetes": ["Garbanzos tostados"], "Frutos secos": ["Pipas de girasol peladas"], "Pesto": ["Pesto sin frutos secos"],
     "Crema de cacahuete": ["Crema de pipas de girasol"], "Crema de cacao": ["Cacao en polvo", ""],
   },
-  marisco: { "Salsa de ostras": ["Salsa hoisin", "Salsa de soja"] },
+  marisco: { "Salsa de ostras": ["Salsa hoisin", "Salsa de soja", "Tamari (salsa de soja sin gluten)"] },
   pescado: { "Caldo de pescado": ["Caldo de verduras"], "Salsa de pescado": ["Salsa de soja", "Tamari (salsa de soja sin gluten)"] },
   soja: {
     "Salsa de soja": ["Salsa de aminos de coco"], "Tamari (salsa de soja sin gluten)": ["Salsa de aminos de coco"], "Edamame": ["Guisantes"],

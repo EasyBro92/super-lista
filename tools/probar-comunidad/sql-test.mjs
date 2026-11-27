@@ -24,10 +24,11 @@ await t("sin cuenta no se puede comentar", () => fails(as(null, "select public.c
 await t("con cuenta pero sin nombre no se publica", () => fails(as(ana, "select public.com_comentar('charla','hola')"), /Elige primero tu nombre/));
 await t("nombre muy corto", () => fails(as(ana, "select public.com_perfil('A')"), /entre 2 y 30/));
 await t("crear perfiles", async () => {
-  for (const [u, n] of [[ana, "Ana"], [luis, "Luis"], [marta, "Marta"], [pepe, "Pepe"], [mod, "Moderador"]]) await as(u, "select public.com_perfil($1)", [n]);
+  for (const [u, n] of [[ana, "Ana"], [luis, "Luis"], [marta, "Marta"], [pepe, "Pepe"], [mod, "Isabel"]]) await as(u, "select public.com_perfil($1)", [n]);
   eq((await as(ana, "select public.com_yo()")).nombre, "Ana");
 });
 await t("nombre repetido (sin mayúsculas)", () => fails(as(luis, "select public.com_perfil('  ana ')"), /ya lo usa otra persona/));
+await t("nadie se llama como la app", () => fails(as(pepe, "select public.com_perfil('Equipo Super Lista')"), /no se puede usar/));
 await t("cambiar tu propio nombre", async () => { await as(ana, "select public.com_perfil('Ana  García')"); eq((await as(ana, "select public.com_yo()")).nombre, "Ana García"); });
 
 let rid;
@@ -91,6 +92,7 @@ await t("bloquear: se oculta todo y no puede publicar", async () => {
   eq((await as(null, "select public.com_comentarios('charla')")).length, 0);
   await fails(as(luis, "select public.com_comentar('charla', 'hola')"), /bloqueada/);
   await fails(as(luis, "select public.com_valorar('r:Tortilla de patatas', 1)"), /bloqueada/);
+  await fails(as(luis, "select public.com_perfil('Luis Nuevo')"), /bloqueada/);
 });
 await t("no se puede bloquear a un moderador", async () => {
   await as(mod, "select public.com_comentar('charla', 'Bienvenidos')");

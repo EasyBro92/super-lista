@@ -74,6 +74,7 @@ language plpgsql security definer set search_path = public as $$
 declare u uuid := auth.uid(); a uuid; n text;
 begin
   if u is null then raise exception 'Entra en tu cuenta para enviar a una persona.' using errcode = 'P0001'; end if;
+  if exists (select 1 from public.perfiles where id = u and bloqueado) then raise exception 'Tu cuenta está bloqueada por incumplir las normas.' using errcode = 'P0001'; end if;
   select id, nombre into a, n from public.perfiles where lower(nombre) = lower(btrim(coalesce(p_nombre, '')));
   if a is null then raise exception 'No hay nadie con ese nombre en la app. Revisa cómo lo ha escrito.' using errcode = 'P0001'; end if;
   perform public.env_comprobar(p_tipo, p_datos);
