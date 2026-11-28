@@ -126,9 +126,12 @@ async function paintProviders() {
 // ---------- Utilidades ----------
 const $ = (id) => document.getElementById(id);
 const esc = (s) => A.esc(s);
-const fotoURL = (p) => (p ? `${supaCfg().url.replace(/\/+$/, "")}/storage/v1/object/public/fotos/${p.split("/").map(encodeURIComponent).join("/")}` : "");
+// «app:foto.jpg» = una foto de las recetas de la propia app (la usan las cuentas de IA).
+const fotoURL = (p) => (p?.startsWith("app:") ? `img/recetas/${encodeURIComponent(p.slice(4))}` : p ? `${supaCfg().url.replace(/\/+$/, "")}/storage/v1/object/public/fotos/${p.split("/").map(encodeURIComponent).join("/")}` : "");
 const hue = (s) => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
-const avatar = (n) => `<span class="avatar" style="--h:${hue(n)}" aria-hidden="true">${esc(String(n || "?").trim().charAt(0).toUpperCase())}</span>`;
+const avatar = (n, ia = false) => `<span class="avatar${ia ? " is-ia" : ""}" style="--h:${hue(n)}" aria-hidden="true">${esc(String(n || "?").trim().charAt(0).toUpperCase())}${ia ? "<i>IA</i>" : ""}</span>`;
+// Las cuentas de IA llevan la marca a la vista en todas partes: icono, nombre, recetas y comentarios.
+const iaTag = (ia) => (ia ? ` <span class="ia-tag" title="Cuenta de inteligencia artificial: no es una persona">🤖 IA</span>` : "");
 function ago(t) {
   const s = (Date.now() - new Date(t)) / 1000;
   if (s < 60) return "ahora";
@@ -154,7 +157,7 @@ async function upload(blob) {
   if (error) throw new ComError(/fetch|network/i.test(error.message ?? "") ? OFFLINE : "No he podido subir la foto. Si has subido muchas seguidas, espera un rato y prueba otra vez.");
   return path;
 }
-async function dropFoto(p) { if (p) try { await (await sb()).storage.from("fotos").remove([p]); } catch {} }
+async function dropFoto(p) { if (p && !p.startsWith("app:")) try { await (await sb()).storage.from("fotos").remove([p]); } catch {} }
 // Botones que piden un segundo toque antes de hacer algo que no se puede deshacer.
 function sure(b, txt) {
   if (b.dataset.sure === "1") return true;
@@ -352,7 +355,7 @@ function recipeCard(x) {
   const nota = x.votos ? `★ ${num(x.media)} (${x.votos})` : "Sin votos aún";
   return `<div class="rcw"><button type="button" class="rc" data-cid="${esc(x.id)}">
     <span class="re${img ? " has-foto" : ""}" style="--h:${hue(d.n)}${img ? `;background-image:url('${esc(img)}')` : ""}">${img ? "" : esc(d.e ?? "🍲")}</span>
-    <span class="ri"><span class="rn">${esc(d.n)}</span><span class="rm">de ${esc(x.autor)} · ${esc(d.t ?? "?")} min</span>
+    <span class="ri"><span class="rn">${esc(d.n)}</span><span class="rm">de ${esc(x.autor)}${iaTag(x.autor_ia)} · ${esc(d.t ?? "?")} min</span>
     <span class="rh com-meta"><span class="cstars">${nota}</span>${x.comentarios ? ` · 💬 ${x.comentarios}` : ""}${x.oculto ? ` · <b class="hid">Oculta</b>` : ""}</span></span></button></div>`;
 }
 async function paneRecipes(more = false) {
@@ -456,7 +459,8 @@ export async function mountSocial(el, r, back) {
   const mia = r.com?.mia;
   const canMod = me?.moderador;
   el.innerHTML = `
-    ${r.com ? `<div class="com-by">${avatar(r.com.autor)}<span>Receta de <b>${esc(r.com.autor)}</b> · ${esc(ago(r.com.creado))}</span></div>
+    ${r.com ? `<div class="com-by">${avatar(r.com.autor, r.com.ia)}<span>Receta de <b>${esc(r.com.autor)}</b>${iaTag(r.com.ia)} · ${esc(ago(r.com.creado))}</span></div>
+      ${r.com.ia ? `<p class="note ia-note">🤖 La ha escrito una inteligencia artificial, no una persona: nadie la ha probado todavía. Si la haces, cuéntalo abajo.</p>` : ""}
       <div class="row"><button type="button" class="btn ghost small" id="xsave">📥 Guardar en mis recetas</button>
       ${mia || canMod ? `<button type="button" class="btn danger small" id="xdelr">Quitar de la comunidad</button>` : ""}
       ${!mia ? `<button type="button" class="lnk muted" id="xrepr">Denunciar receta</button>` : ""}</div>` : ""}
@@ -548,8 +552,8 @@ function commentHTML(c, chat = false) {
     canMod && !c.mio ? `<button type="button" class="lnk muted" data-act="${c.oculto ? "show" : "hide"}" data-id="${esc(c.id)}">${c.oculto ? "Mostrar" : "Ocultar"}</button>` : "",
   ].join("");
   return `<article class="cmt${c.mio ? " mine" : ""}${chat ? " chat-msg" : ""}${c.oculto ? " is-hidden" : ""}" data-cmt="${esc(c.id)}">
-    ${chat && c.mio ? "" : avatar(c.autor)}
-    <div class="cmt-b"><p class="cmt-h"><b>${esc(c.mio ? "Tú" : c.autor)}</b><small>${esc(ago(c.creado))}${c.oculto ? " · oculto" : ""}</small></p>
+    ${chat && c.mio ? "" : avatar(c.autor, c.autor_ia)}
+    <div class="cmt-b"><p class="cmt-h"><b>${esc(c.mio ? "Tú" : c.autor)}</b>${iaTag(c.autor_ia && !c.mio)}<small>${esc(ago(c.creado))}${c.oculto ? " · oculto" : ""}</small></p>
       ${c.texto ? `<p class="cmt-t">${esc(c.texto)}</p>` : ""}
       ${img ? `<a class="cmt-img" href="${esc(img)}" target="_blank" rel="noopener"><img src="${esc(img)}" alt="Foto de ${esc(c.autor)}" loading="lazy"></a>` : ""}
       <p class="cmt-acts">${acts}</p></div></article>`;
