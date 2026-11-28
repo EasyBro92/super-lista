@@ -169,12 +169,14 @@ async function addItem({ query, qty = "", count = 1 }, forcedProd) {
   st.freq[fk] = { ...f, label, count: f.count + 1, last: Date.now(), prod, emoji: g.emoji };
   return it;
 }
+// «quita el pan» quita el Pan y no la Panceta: primero lo que se llama así; si no hay, lo que empieza así.
 function matchItems(query) {
   const q = tokens(query);
-  return list().items.filter((i) => {
-    const t = tokens(`${i.label} ${i.prod?.n ?? ""}`);
-    return q.length && q.every((w) => t.some((x) => x === w || x.startsWith(w)));
-  });
+  if (!q.length) return [];
+  const by = (txt, pre) => list().items.filter((i) => { const t = tokens(txt(i)); return q.every((w) => t.some((x) => x === w || (pre && x.startsWith(w)))); });
+  const label = (i) => i.label, all = (i) => `${i.label} ${i.prod?.n ?? ""}`;
+  for (const [txt, pre] of [[label, false], [all, false], [label, true], [all, true]]) { const m = by(txt, pre); if (m.length) return m; }
+  return [];
 }
 
 async function handle(text, { quiet = false } = {}) {
@@ -183,12 +185,11 @@ async function handle(text, { quiet = false } = {}) {
   const acts = parseCommand(text);
   if (!acts.length) return setStatus("No he entendido qué apuntar.", true);
   setStatus("Buscando productos…");
-  const added = [], removed = [], checked = [], addedIds = [];
+  const added = [], removed = [], checked = [], addedIds = [], removedItems = [];
   for (const a of acts) {
     if (a.op === "remove") {
       const m = matchItems(a.query);
-      list().items = list().items.filter((i) => !m.includes(i));
-      if (m.length) removed.push(...m.map((i) => i.label));
+      if (m.length) { removedItems.push(...m); removed.push(...m.map((i) => i.label)); }
     } else if (a.op === "check") {
       for (const i of matchItems(a.query)) { i.done = true; checked.push(i.label); }
     } else {
@@ -197,6 +198,8 @@ async function handle(text, { quiet = false } = {}) {
     }
   }
   save(); render(); flyIn(addedIds);
+  // Lo que se quita hablando se puede deshacer, como al quitarlo deslizando.
+  if (removedItems.length) withUndo(`Quitado: ${removed.join(", ")}`, () => { list().items = list().items.filter((i) => !removedItems.includes(i)); });
   const bits = [];
   if (added.length) bits.push(`Apuntado: ${added.join(", ")}`);
   if (removed.length) bits.push(`Quitado: ${removed.join(", ")}`);
@@ -255,7 +258,8 @@ async function flyOne(id) {
 }
 
 // ---------- Deshacer ----------
-let undoSnap = null, toastTimer = null, undoAfter = null;
+let undoSnap = null, toastTimer = null, undoAfter = null, undoIds = null;
+const allItemIds = () => new Set(st.lists.flatMap((l) => l.items.map((i) => i.id)));
 function snapshot() { return JSON.stringify({ lists: st.lists, history: st.history }); }
 // Con una ventana abierta (p. ej. Compras) el aviso se pone dentro de ella; si no, quedaría tapado.
 function placeToast() {
@@ -266,7 +270,7 @@ function withUndo(msg, fn, after = null) {
   const snap = snapshot();
   fn();
   save(); render();
-  undoSnap = snap; undoAfter = after;
+  undoSnap = snap; undoAfter = after; undoIds = allItemIds();
   const t = $("toast");
   $("toastMsg").textContent = msg;
   placeToast();
@@ -276,7 +280,11 @@ function withUndo(msg, fn, after = null) {
 }
 function undo() {
   if (!undoSnap) return;
+  // Lo que se apuntó después (mientras salía el aviso) no se pierde al deshacer.
+  const later = st.lists.flatMap((l) => l.items.filter((i) => !undoIds?.has(i.id)).map((i) => [l.id, i]));
   Object.assign(st, JSON.parse(undoSnap));
+  const had = allItemIds();
+  for (const [lid, i] of later) if (!had.has(i.id)) (st.lists.find((l) => l.id === lid) ?? st.lists[0]).items.push(i);
   if (!st.lists.some((l) => l.id === st.current)) st.current = st.lists[0].id;
   undoSnap = null; $("toast").hidden = true;
   save(); render(); buzz();
@@ -388,7 +396,18 @@ function showHome(on, push = true) {
   scrollTo({ top: 0 });
 }
 // Botón «atrás» del móvil desde la lista: vuelve al inicio.
-addEventListener("popstate", () => { if (!home && !sheet.open) showHome(true, false); });
+// Con una hoja abierta, «atrás» hace lo mismo que la flecha de la hoja (paso anterior o cerrar) en vez de salir de la app.
+let sheetHist = false, skipPop = false;
+addEventListener("popstate", () => {
+  if (skipPop) { skipPop = false; return; }
+  if (sheet.open) {
+    sheetHist = false;
+    sheetBack();
+    if (sheet.open) { history.pushState({ v: "hoja" }, ""); sheetHist = true; }
+    return;
+  }
+  if (!home) showHome(true, false);
+});
 // Nombre de la foto de cada tarjeta en recetas-fotos.json (sin el prefijo «Inicio »)
 const FOTO_NAME = { list: "Lista", recipes: "Recetas", plan: "Menú", tengo: "En casa", history: "Compras" };
 // Encuadre de las fotos apaisadas en la tarjeta vertical (por defecto, el centro)
@@ -639,11 +658,16 @@ function bigImg(u) {
 function openSheet(title, html, cls = "") {
   sheet.className = `sheet ${cls}`.trim();
   setSheetBack(false);
-  $("sheetTitle").textContent = title;
+  setSheetTitle(title);
   $("sheetBody").innerHTML = html;
-  if (!sheet.open) sheet.showModal();
+  if (!sheet.open) {
+    sheet.showModal();
+    if (!sheetHist) { history.pushState({ v: "hoja" }, ""); sheetHist = true; }
+  }
 }
 function closeSheet() { if (sheet.open) sheet.close(); }
+// Los nombres largos («Flan de huevo al baño maría de mi suegra…») van en letra más pequeña y en 2 líneas como mucho.
+function setSheetTitle(t) { const h = $("sheetTitle"); h.textContent = t; h.classList.toggle("long", String(t).length > 34); h.title = String(t).length > 34 ? t : ""; }
 // En recetas, cerrar una receta vuelve a la lista de recetas en vez de salir del todo.
 const CLOSE_SVG = $("sheetClose").innerHTML;
 const BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
@@ -656,7 +680,7 @@ $("sheetClose").addEventListener("click", sheetBack);
 sheet.addEventListener("cancel", (e) => { if (sheet.classList.contains("cooking") && cookBack()) e.preventDefault(); });
 sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSheet(); });
 // Si la hoja se ha vuelto a abrir con otro contenido (p. ej. del menú a «Editar»), no se borra.
-sheet.addEventListener("close", () => { if (sheet.open) return; placeToast(); delete sheet.dataset.sec; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
+sheet.addEventListener("close", () => { if (sheet.open) return; if (sheetHist) { sheetHist = false; skipPop = true; history.back(); } placeToast(); delete sheet.dataset.sec; stopScan(); $("sheetBody").innerHTML = ""; renderIdeas($("ideas")).catch(() => {}); if (home) renderHome(); });
 
 async function openPicker(id, query) {
   const l = list();
@@ -717,7 +741,7 @@ function openEdit(id, focusName = true) {
   $("qPlus").onclick = () => upd(1);
   const doSave = async () => {
     const t = $("qText").value.trim();
-    it.qty = t; it.count = /^\d+$/.test(t) ? +t : c;
+    it.qty = /^0+$/.test(t) ? "1" : t; it.count = /^\d+$/.test(t) && +t > 0 ? +t : c;
     const note = $("eNote").value.trim(); if (note) it.note = note; else delete it.note;
     const name = capital($("eName").value.trim());
     closeSheet();
@@ -1488,7 +1512,7 @@ initCocina({ st, list, addItem, markGeneric, save, render, setStatus, buzz, esc,
   // Precios para saber lo que cuesta cada receta (Aldi solo tiene el folleto: no vale para esto).
   prices: { stores: () => (meta ? pricedStores().filter((s) => !meta.stores[s].partial) : []), cat: (s) => catalogs.get(s) ?? null, load: loadStore,
     best: bestProd, mem: (q, s) => st.memory[memKey(q, s)] ?? null, name: STORE_NAME, eur },
-  body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
+  body: () => $("sheetBody"), setTitle: (t, sub) => { setSheetTitle(t); setSheetBack(!!sub); } });
 $("finishBtn").addEventListener("click", finishShopping);
 $("shopBtn").addEventListener("click", () => {
   st.shop = !st.shop; save(); render();
@@ -1669,7 +1693,7 @@ function openSettings() {
     ${link("setCred", "📷 Fotos de las recetas", "De dónde salen y su licencia", "Ver ›")}`, "settings");
   $("setBackup").onclick = () => openBackup();
   $("setCred").onclick = () => openCredits();
-  $("setDiet").onclick = () => openRecipes(null, null, "diet");
+  $("setDiet").onclick = () => openRecipes(null, null, "diet", openSettings, "Ajustes");
   if ($("setAcct")) $("setAcct").onclick = () => openCuenta({ back: null });
   if ($("setIns")) $("setIns").onclick = () => install(openSheet);
   $("setAlerts").onchange = (e) => {
@@ -1846,7 +1870,7 @@ document.addEventListener("error", (e) => {
 
 // ---------- Arranque ----------
 initSync({ st, list, persist, render: () => render(), setStatus, uid });
-initComunidad({ st, save, setStatus, buzz, esc, openSheet, sheet, body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
+initComunidad({ st, save, setStatus, buzz, esc, openSheet, sheet, body: () => $("sheetBody"), setTitle: (t, sub) => { setSheetTitle(t); setSheetBack(!!sub); } });
 initEnviar({ st, list, uid, save, setStatus, buzz, esc, openSheet, closeSheet, backupData, restore: restoreBackup,
   showList: () => { showHome(false); render(); }, inboxChanged: () => { if (home) renderHome(); } });
 render();

@@ -351,7 +351,7 @@ function recipeCard(x) {
   const d = x.datos ?? {}, img = fotoURL(x.foto);
   const nota = x.votos ? `★ ${num(x.media)} (${x.votos})` : "Sin votos aún";
   return `<div class="rcw"><button type="button" class="rc" data-cid="${esc(x.id)}">
-    <span class="re" style="--h:${hue(d.n)}${img ? `;background-image:url('${esc(img)}')` : ""}">${img ? "" : esc(d.e ?? "🍲")}</span>
+    <span class="re${img ? " has-foto" : ""}" style="--h:${hue(d.n)}${img ? `;background-image:url('${esc(img)}')` : ""}">${img ? "" : esc(d.e ?? "🍲")}</span>
     <span class="ri"><span class="rn">${esc(d.n)}</span><span class="rm">de ${esc(x.autor)} · ${esc(d.t ?? "?")} min</span>
     <span class="rh com-meta"><span class="cstars">${nota}</span>${x.comentarios ? ` · 💬 ${x.comentarios}` : ""}${x.oculto ? ` · <b class="hid">Oculta</b>` : ""}</span></span></button></div>`;
 }
@@ -467,10 +467,10 @@ export async function mountSocial(el, r, back) {
       ${mia ? "" : `<div class="rate-mine"><span>Tu nota</span><div class="stars-in" id="xstars" role="radiogroup" aria-label="Tu nota">${[1, 2, 3, 4, 5].map((s) =>
         `<button type="button" role="radio" data-s="${s}" aria-checked="${nota.mia === s}" aria-label="${s} ${s === 1 ? "estrella" : "estrellas"}" class="${(nota.mia ?? 0) >= s ? "on" : ""}">★</button>`).join("")}</div></div>`}
     </div>
+    ${cmts.length === 40 ? `<button type="button" class="lnk" id="xolder">Ver comentarios anteriores</button>` : ""}
+    <div class="cmts" id="xcmts">${cmts.length ? [...cmts].reverse().map((c) => commentHTML(c)).join("") : `<p class="note">Nadie ha comentado todavía.</p>`}</div>
     ${needLogin() ? `<button type="button" class="btn ghost" id="xlogin">Entra para valorar y comentar</button>`
-      : me.bloqueado ? "" : composer("xf", "¿La has hecho? Cuenta qué tal te salió…")}
-    <div class="cmts" id="xcmts">${cmts.length ? cmts.map((c) => commentHTML(c)).join("") : `<p class="note">Nadie ha comentado todavía.</p>`}</div>
-    ${cmts.length === 40 ? `<button type="button" class="lnk" id="xolder">Ver comentarios anteriores</button>` : ""}`;
+      : me.bloqueado ? "" : composer("xf", "¿La has hecho? Cuenta qué tal te salió…")}`;
   const redo = () => back();
   if ($("xlogin")) $("xlogin").onclick = () => openCuenta({ back: redo, mode: "crear" });
   if ($("xstars")) $("xstars").onclick = async (e) => {
@@ -479,18 +479,23 @@ export async function mountSocial(el, r, back) {
     const s = +b.dataset.s === nota.mia ? 0 : +b.dataset.s; // tocar tu misma nota la quita
     A.buzz(15);
     for (const x of $("xstars").children) x.classList.toggle("on", +x.dataset.s <= s);
-    try { await call("com_valorar", { p_receta: key, p_estrellas: s }); mountSocial(el, r, back); A.setStatus(s ? `Has puesto ${s} ${s === 1 ? "estrella" : "estrellas"} a ${r.n}.` : "Nota quitada."); }
+    try {
+      await call("com_valorar", { p_receta: key, p_estrellas: s });
+      // Con la comunidad hay una sola fila de estrellas: tu nota también vale para «Tus ideas».
+      if (!r.com) { const ck = (A.st.cooked ??= {}); if (ck[r.n] || s) { (ck[r.n] ??= { n: 0 }).stars = s; A.save(); } }
+      mountSocial(el, r, back); A.setStatus(s ? `Has puesto ${s} ${s === 1 ? "estrella" : "estrellas"} a ${r.n}.` : "Nota quitada."); }
     catch (err) { A.setStatus(err.message, true); mountSocial(el, r, back); }
   };
   wireComposer("xf", key, () => mountSocial(el, r, back));
   $("xcmts").onclick = (e) => onAction(e, () => mountSocial(el, r, back));
   if ($("xolder")) $("xolder").onclick = async (e) => {
-    e.currentTarget.disabled = true;
+    const btn = e.currentTarget; // después del await, e.currentTarget ya es null
+    btn.disabled = true;
     try {
       const old = await call("com_comentarios", { p_hilo: key, p_antes: cmts.at(-1).creado });
-      cmts.push(...old); $("xcmts").insertAdjacentHTML("beforeend", old.map((c) => commentHTML(c)).join(""));
-      if (old.length < 40) e.currentTarget.remove(); else e.currentTarget.disabled = false;
-    } catch (err) { A.setStatus(err.message, true); }
+      cmts.push(...old); $("xcmts").insertAdjacentHTML("afterbegin", [...old].reverse().map((c) => commentHTML(c)).join(""));
+      if (old.length < 40) btn.remove(); else btn.disabled = false;
+    } catch (err) { btn.disabled = false; A.setStatus(err.message, true); }
   };
   if ($("xsave")) $("xsave").onclick = (e) => {
     if (!saveCopy(r)) return A.setStatus("Ya la tienes en «Mis recetas».");
@@ -509,8 +514,9 @@ export async function mountSocial(el, r, back) {
   };
   if ($("xrepr")) $("xrepr").onclick = async (e) => {
     if (!withMe(redo)) return;
-    if (!sure(e.currentTarget, "¿Seguro? Toca otra vez para denunciarla")) return;
-    try { await call("com_denunciar", { p_tipo: "receta", p_id: r.com.id, p_motivo: "receta" }); e.currentTarget.textContent = "Denunciada. Gracias por avisar."; e.currentTarget.disabled = true; }
+    const btn = e.currentTarget;
+    if (!sure(btn, "¿Seguro? Toca otra vez para denunciarla")) return;
+    try { await call("com_denunciar", { p_tipo: "receta", p_id: r.com.id, p_motivo: "receta" }); btn.textContent = "Denunciada. Gracias por avisar."; btn.disabled = true; }
     catch (err) { A.setStatus(err.message, true); }
   };
 }

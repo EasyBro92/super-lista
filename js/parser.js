@@ -37,6 +37,8 @@ export function parseQty(text) {
   const m = text.trim().match(QTY_RE);
   if (!m) return { query: text.trim(), qty: "", count: 1 };
   const n = NUMW[m[1].toLowerCase()] ?? parseFloat(m[1].replace(",", "."));
+  // «0 yogures» es un despiste: se apunta uno.
+  if (!(n > 0)) return { query: m[3].trim(), qty: "", count: 1 };
   const unit = m[2] ? m[2].toLowerCase() : "";
   const count = !unit || /paquete|bote|bolsa|lata|botella|caja|bandeja|brik|brick|pack|tarro|barra|malla|rollo|unidad|pieza/.test(unit) ? n : 1;
   return { query: m[3].trim(), qty: unit ? `${String(n).replace(".", ",")} ${unit}` : `${n}`, count };
@@ -45,7 +47,8 @@ export function parseQty(text) {
 // Devuelve una lista de acciones: { op: "add" | "remove" | "check", query, qty, count }
 export function parseCommand(text) {
   const acts = [];
-  const clean = String(text).replace(/[.!¡¿?]+/g, " ").trim();
+  // «1,5 kg» o «1.5 kg» es un número con decimales, no dos cosas: la coma se guarda aparte para no cortar ahí.
+  const clean = String(text).replace(/(\d)[.,](\d)/g, "$1\u0001$2").replace(/(^|[\s,;])-\s*(?=\d)/g, "$1").replace(/[.!¡¿?]+/g, " ").trim();
   for (let clause of clean.split(VERB_SPLIT).filter((c) => c && c.trim())) {
     clause = clause.trim();
     let op = "add";
@@ -55,7 +58,7 @@ export function parseCommand(text) {
     const parts = clause.split(/\s*(?:,|;|\by\b|\be\b|\bmas\b|\bmás\b|\btambien\b|\btambién\b)\s*/i)
       .map((p) => p.replace(/^(de|del|la|las|el|los|unos|unas)\s+/i, "").trim())
       .filter(Boolean);
-    for (const p of parts) acts.push({ op, ...parseQty(p) });
+    for (const p of parts) acts.push({ op, ...parseQty(p.replace(/\u0001/g, ",")) });
   }
   return acts;
 }
