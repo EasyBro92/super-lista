@@ -28,6 +28,7 @@ await t("crear perfiles", async () => {
   eq((await as(ana, "select public.com_yo()")).nombre, "Ana");
 });
 await t("nombre repetido (sin mayúsculas)", () => fails(as(luis, "select public.com_perfil('  ana ')"), /ya lo usa otra persona/));
+await t("nadie se llama «… IA»", () => fails(as(pepe, "select public.com_perfil('Pepe IA')"), /no se puede usar/));
 await t("nadie se llama como la app", () => fails(as(pepe, "select public.com_perfil('Equipo Super Lista')"), /no se puede usar/));
 await t("cambiar tu propio nombre", async () => { await as(ana, "select public.com_perfil('Ana  García')"); eq((await as(ana, "select public.com_yo()")).nombre, "Ana García"); });
 
@@ -158,6 +159,17 @@ await t("fotos: si el cajón llega a 800 MB no se sube más", async () => {
   await pool.query("insert into storage.objects (bucket_id, name, metadata) values ('fotos', 'x/grande.jpg', jsonb_build_object('size', 800 * 1024 * 1024))");
   await fails(foto(mod, "despues"), /row-level security/);
   await pool.query("delete from storage.objects where name = 'x/grande.jpg'");
+});
+await t("las estrellas de una cuenta IA no cuentan en la media", async () => {
+  const k = "r:Prueba IA";
+  await as(ana, "select public.com_valorar($1, 4)", [k]);
+  const bot = await user("bot@x.es");
+  await pool.query("insert into public.perfiles (id, nombre, ia) values ($1, 'Lola · IA', true)", [bot]);
+  await as(bot, "select public.com_valorar($1, 1)", [k]);
+  const n = await as(null, "select public.com_notas(array[$1])", [k]);
+  eq([+n[k].m, n[k].v], [4, 1]);
+  const c = await as(bot, "select public.com_comentar('charla', 'Hola, soy IA')");
+  eq(c.autor_ia, true);
 });
 console.log(`\n${ok} bien, ${bad} mal`);
 await pool.end();

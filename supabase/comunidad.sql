@@ -15,6 +15,8 @@ create table if not exists public.perfiles (
   creado timestamptz not null default now()
 );
 create unique index if not exists perfiles_nombre on public.perfiles (lower(nombre));
+-- Cuentas de IA: llevan la marca «IA» a la vista de todos y sus estrellas no cuentan en la media.
+alter table public.perfiles add column if not exists ia boolean not null default false;
 
 -- Quien está aquí puede ocultar, borrar y bloquear. Para hacerte moderador, mira el final del archivo.
 create table if not exists public.moderadores (
@@ -71,6 +73,12 @@ alter table public.denuncias enable row level security;
 revoke all on table public.perfiles, public.moderadores, public.recetas_com, public.valoraciones, public.comentarios, public.denuncias from anon, authenticated;
 
 -- ---------- Ayudas internas ----------
+-- ¿Es una cuenta de IA? (sus estrellas no cuentan en la media)
+create or replace function public.com_ia(u uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select ia from public.perfiles where id = u), false);
+$$;
+
 create or replace function public.com_es_mod() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.moderadores where id = auth.uid());
@@ -133,7 +141,7 @@ begin
   if char_length(n) < 2 or char_length(n) > 30 then raise exception 'El nombre debe tener entre 2 y 30 letras.' using errcode = 'P0001'; end if;
   if exists (select 1 from public.perfiles where id = u and bloqueado) then raise exception 'Tu cuenta está bloqueada por incumplir las normas.' using errcode = 'P0001'; end if;
   -- Nadie puede hacerse pasar por la app ni por quien la modera.
-  if lower(n) ~ '(super ?lista|equipo|soporte|moderador|administrador|\madmin)' and not public.com_es_mod() then raise exception 'Ese nombre no se puede usar. Prueba con otro.' using errcode = 'P0001'; end if;
+  if lower(n) ~ '(super ?lista|equipo|soporte|moderador|administrador|\madmin|\mia\M|inteligencia artificial)' and not public.com_es_mod() then raise exception 'Ese nombre no se puede usar. Prueba con otro.' using errcode = 'P0001'; end if;
   if exists (select 1 from public.perfiles where lower(nombre) = lower(n) and id <> u) then
     raise exception 'Ese nombre ya lo usa otra persona. Prueba con otro.' using errcode = 'P0001';
   end if;
@@ -182,9 +190,9 @@ end $$;
 create or replace function public.com_receta_json(r public.recetas_com) returns jsonb
 language sql stable security definer set search_path = public as $$
   select jsonb_build_object('id', r.id, 'datos', r.datos, 'foto', r.foto, 'creado', r.creado, 'oculto', r.oculto,
-    'autor', coalesce(p.nombre, 'Alguien'), 'mia', coalesce(r.autor = auth.uid(), false),
-    'media', (select round(avg(estrellas)::numeric, 1) from public.valoraciones where receta = 'c:' || r.id::text),
-    'votos', (select count(*) from public.valoraciones where receta = 'c:' || r.id::text),
+    'autor', coalesce(p.nombre, 'Alguien'), 'autor_ia', coalesce(p.ia, false), 'mia', coalesce(r.autor = auth.uid(), false),
+    'media', (select round(avg(estrellas)::numeric, 1) from public.valoraciones where receta = 'c:' || r.id::text and not public.com_ia(autor)),
+    'votos', (select count(*) from public.valoraciones where receta = 'c:' || r.id::text and not public.com_ia(autor)),
     'comentarios', (select count(*) from public.comentarios where hilo = 'c:' || r.id::text and not oculto))
   from (select 1) x left join public.perfiles p on p.id = r.autor;
 $$;
@@ -197,7 +205,7 @@ language sql stable security definer set search_path = public as $$
     select r.id, row_number() over (order by case when p_orden = 'mejores' then v.m end desc nulls last,
                                              case when p_orden = 'mejores' then v.c else 0 end desc, r.creado desc) as k
     from public.recetas_com r
-    left join lateral (select avg(estrellas) as m, count(*) as c from public.valoraciones where receta = 'c:' || r.id::text) v on true
+    left join lateral (select avg(estrellas) as m, count(*) as c from public.valoraciones where receta = 'c:' || r.id::text and not public.com_ia(autor)) v on true
     where (not r.oculto or r.autor = auth.uid() or public.com_es_mod())
       and (coalesce(p_buscar, '') = '' or r.datos->>'n' ilike '%' || replace(replace(p_buscar, '%', ''), '_', '') || '%'
            or (r.datos->'i')::text ilike '%' || replace(replace(p_buscar, '%', ''), '_', '') || '%')
@@ -233,8 +241,8 @@ end $$;
 create or replace function public.com_notas(p_recetas text[]) returns jsonb
 language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_object_agg(k, jsonb_build_object(
-      'm', (select round(avg(estrellas)::numeric, 1) from public.valoraciones where receta = k),
-      'v', (select count(*) from public.valoraciones where receta = k),
+      'm', (select round(avg(estrellas)::numeric, 1) from public.valoraciones where receta = k and not public.com_ia(autor)),
+      'v', (select count(*) from public.valoraciones where receta = k and not public.com_ia(autor)),
       'mia', (select estrellas from public.valoraciones where receta = k and autor = auth.uid()),
       'c', (select count(*) from public.comentarios where hilo = k and not oculto))), '{}'::jsonb)
   from unnest(p_recetas[1:200]) k;
@@ -244,7 +252,7 @@ $$;
 create or replace function public.com_comentario_json(c public.comentarios) returns jsonb
 language sql stable security definer set search_path = public as $$
   select jsonb_build_object('id', c.id, 'hilo', c.hilo, 'texto', c.texto, 'foto', c.foto, 'creado', c.creado, 'oculto', c.oculto,
-    'autor', coalesce((select nombre from public.perfiles where id = c.autor), 'Alguien'), 'mio', coalesce(c.autor = auth.uid(), false));
+    'autor', coalesce((select nombre from public.perfiles where id = c.autor), 'Alguien'), 'autor_ia', public.com_ia(c.autor), 'mio', coalesce(c.autor = auth.uid(), false));
 $$;
 
 create or replace function public.com_comentar(p_hilo text, p_texto text, p_foto text default null) returns jsonb
@@ -351,7 +359,7 @@ end $$;
 
 -- ---------- Permisos de las funciones ----------
 do $$ declare f text; begin
-  foreach f in array array['com_es_mod()', 'com_puede_subir()', 'com_quien()', 'com_hilo_ok(text)', 'com_foto_ok(text, uuid)', 'com_receta_json(public.recetas_com)',
+  foreach f in array array['com_ia(uuid)', 'com_es_mod()', 'com_puede_subir()', 'com_quien()', 'com_hilo_ok(text)', 'com_foto_ok(text, uuid)', 'com_receta_json(public.recetas_com)',
     'com_comentario_json(public.comentarios)', 'com_yo()', 'com_perfil(text)', 'com_borrar_cuenta()', 'com_publicar(jsonb, text, uuid)',
     'com_recetas(text, int, text)', 'com_receta(uuid)', 'com_valorar(text, int)', 'com_notas(text[])', 'com_comentar(text, text, text)',
     'com_comentarios(text, timestamptz)', 'com_borrar(text, uuid)', 'com_denunciar(text, uuid, text)', 'com_pendientes()', 'com_moderar(text, uuid, text)'] loop

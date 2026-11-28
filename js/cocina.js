@@ -773,7 +773,7 @@ export async function openShared(row, back) {
   const idx = k0 >= 0 ? k0 : recipes.length;
   const r = prep({ n: String(d.n ?? "Receta"), e: d.e ?? "🍲", t: +d.t || 30, r: +d.r || 2, d: d.d ?? "Fácil", tags: (d.tags ?? []).filter((t) => typeof t === "string"),
     m: d.m && typeof d.m === "object" ? d.m : {}, i: (d.i ?? []).filter((x) => Array.isArray(x)).map(([n, q]) => [String(n), String(q ?? "")]), p: (d.p ?? []).map(String) }, idx);
-  r.com = { id: row.id, autor: row.autor, mia: row.mia, creado: row.creado };
+  r.com = { id: row.id, autor: row.autor, ia: !!row.autor_ia, mia: row.mia, creado: row.creado };
   r.src = d;
   r.foto = row.fotoURL ? { img: row.fotoURL } : null;
   recipes[idx] = r;
