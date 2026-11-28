@@ -971,11 +971,12 @@ html{overscroll-behavior-y:contain}
 .acct-me .avatar{width:46px;height:46px;font-size:1.2rem}
 /* Cuentas de IA: marca morada en el icono y junto al nombre */
 .avatar{position:relative}
-.avatar.is-ia{box-shadow:0 0 0 2px #7c4dff}
-.avatar.is-ia i{position:absolute;right:-7px;bottom:-5px;font:800 .55rem/1 var(--body);font-style:normal;color:#fff;background:#7c4dff;border-radius:6px;padding:2px 3px;letter-spacing:.02em}
-.ia-tag{display:inline-block;font:800 .68rem/1.2 var(--body);color:#5b2bd6;background:#ede6ff;border-radius:999px;padding:1px 6px;vertical-align:1px;white-space:nowrap}
+.avatar.is-ia{box-shadow:0 0 0 2px #7c4dff;background:#ede6ff;font-size:0}
+.avatar.is-ia::before{content:"🤖";font-size:17px;line-height:1}
+.avatar.is-ia i{display:none}
+.ia-tag{display:inline-block;font:800 .68rem/1.2 var(--body);color:#fff;background:#7c4dff;border-radius:999px;padding:1px 6px;vertical-align:1px;white-space:nowrap}
 .ia-note{color:#5b2bd6}
-@media (prefers-color-scheme: dark){.ia-tag{color:#d9ccff;background:#3a2a6b}.ia-note{color:#cdbbff}}
+@media (prefers-color-scheme: dark){.avatar.is-ia{background:#3a2a6b}.ia-note{color:#cdbbff}}
 .acct-me>div{display:flex;flex-direction:column;min-width:0}
 .acct-me small{color:var(--muted);font-size:.82rem;overflow:hidden;text-overflow:ellipsis}
 .badge{margin-left:auto;flex:none;font:700 .72rem var(--body);background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:4px 8px}
