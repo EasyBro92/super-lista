@@ -1457,7 +1457,7 @@ function doneBoxHTML(r) {
   const c = cooked()[r.n], d = doneOf(r);
   return `<h3 class="cgroup">¿La has hecho?</h3><div class="rdone-in">
     <p class="rdone-t">${d ? `✓ La has hecho <b>${plural(d.n, "vez", "veces")}</b> · la última ${dayTxt(d.last)}` : "Márcala y apunta cómo te ha salido para la próxima vez."}</p>
-    ${starsHTML(c?.stars)}
+    ${comReady() && !r.mine ? "" : starsHTML(c?.stars)}
     <label class="vh" for="rnote">Tu nota</label><textarea id="rnote" class="rnote" rows="2" placeholder="Tu nota: menos sal, 5 minutos más de horno…">${A.esc(c?.note ?? "")}</textarea>
     <div class="row"><button type="button" class="btn ghost small" data-did>✓ La he hecho hoy</button>${d ? `<button type="button" class="lnk" data-undid>Quitar una vez</button>` : ""}</div></div>`;
 }

@@ -658,7 +658,7 @@ function bigImg(u) {
 function openSheet(title, html, cls = "") {
   sheet.className = `sheet ${cls}`.trim();
   setSheetBack(false);
-  $("sheetTitle").textContent = title;
+  setSheetTitle(title);
   $("sheetBody").innerHTML = html;
   if (!sheet.open) {
     sheet.showModal();
@@ -666,6 +666,8 @@ function openSheet(title, html, cls = "") {
   }
 }
 function closeSheet() { if (sheet.open) sheet.close(); }
+// Los nombres largos («Flan de huevo al baño maría de mi suegra…») van en letra más pequeña y en 2 líneas como mucho.
+function setSheetTitle(t) { const h = $("sheetTitle"); h.textContent = t; h.classList.toggle("long", String(t).length > 34); h.title = String(t).length > 34 ? t : ""; }
 // En recetas, cerrar una receta vuelve a la lista de recetas en vez de salir del todo.
 const CLOSE_SVG = $("sheetClose").innerHTML;
 const BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
@@ -1510,7 +1512,7 @@ initCocina({ st, list, addItem, markGeneric, save, render, setStatus, buzz, esc,
   // Precios para saber lo que cuesta cada receta (Aldi solo tiene el folleto: no vale para esto).
   prices: { stores: () => (meta ? pricedStores().filter((s) => !meta.stores[s].partial) : []), cat: (s) => catalogs.get(s) ?? null, load: loadStore,
     best: bestProd, mem: (q, s) => st.memory[memKey(q, s)] ?? null, name: STORE_NAME, eur },
-  body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
+  body: () => $("sheetBody"), setTitle: (t, sub) => { setSheetTitle(t); setSheetBack(!!sub); } });
 $("finishBtn").addEventListener("click", finishShopping);
 $("shopBtn").addEventListener("click", () => {
   st.shop = !st.shop; save(); render();
@@ -1868,7 +1870,7 @@ document.addEventListener("error", (e) => {
 
 // ---------- Arranque ----------
 initSync({ st, list, persist, render: () => render(), setStatus, uid });
-initComunidad({ st, save, setStatus, buzz, esc, openSheet, sheet, body: () => $("sheetBody"), setTitle: (t, sub) => { $("sheetTitle").textContent = t; setSheetBack(!!sub); } });
+initComunidad({ st, save, setStatus, buzz, esc, openSheet, sheet, body: () => $("sheetBody"), setTitle: (t, sub) => { setSheetTitle(t); setSheetBack(!!sub); } });
 initEnviar({ st, list, uid, save, setStatus, buzz, esc, openSheet, closeSheet, backupData, restore: restoreBackup,
   showList: () => { showHome(false); render(); }, inboxChanged: () => { if (home) renderHome(); } });
 render();

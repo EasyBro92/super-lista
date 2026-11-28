@@ -467,10 +467,10 @@ export async function mountSocial(el, r, back) {
       ${mia ? "" : `<div class="rate-mine"><span>Tu nota</span><div class="stars-in" id="xstars" role="radiogroup" aria-label="Tu nota">${[1, 2, 3, 4, 5].map((s) =>
         `<button type="button" role="radio" data-s="${s}" aria-checked="${nota.mia === s}" aria-label="${s} ${s === 1 ? "estrella" : "estrellas"}" class="${(nota.mia ?? 0) >= s ? "on" : ""}">★</button>`).join("")}</div></div>`}
     </div>
+    ${cmts.length === 40 ? `<button type="button" class="lnk" id="xolder">Ver comentarios anteriores</button>` : ""}
+    <div class="cmts" id="xcmts">${cmts.length ? [...cmts].reverse().map((c) => commentHTML(c)).join("") : `<p class="note">Nadie ha comentado todavía.</p>`}</div>
     ${needLogin() ? `<button type="button" class="btn ghost" id="xlogin">Entra para valorar y comentar</button>`
-      : me.bloqueado ? "" : composer("xf", "¿La has hecho? Cuenta qué tal te salió…")}
-    <div class="cmts" id="xcmts">${cmts.length ? cmts.map((c) => commentHTML(c)).join("") : `<p class="note">Nadie ha comentado todavía.</p>`}</div>
-    ${cmts.length === 40 ? `<button type="button" class="lnk" id="xolder">Ver comentarios anteriores</button>` : ""}`;
+      : me.bloqueado ? "" : composer("xf", "¿La has hecho? Cuenta qué tal te salió…")}`;
   const redo = () => back();
   if ($("xlogin")) $("xlogin").onclick = () => openCuenta({ back: redo, mode: "crear" });
   if ($("xstars")) $("xstars").onclick = async (e) => {
@@ -479,7 +479,11 @@ export async function mountSocial(el, r, back) {
     const s = +b.dataset.s === nota.mia ? 0 : +b.dataset.s; // tocar tu misma nota la quita
     A.buzz(15);
     for (const x of $("xstars").children) x.classList.toggle("on", +x.dataset.s <= s);
-    try { await call("com_valorar", { p_receta: key, p_estrellas: s }); mountSocial(el, r, back); A.setStatus(s ? `Has puesto ${s} ${s === 1 ? "estrella" : "estrellas"} a ${r.n}.` : "Nota quitada."); }
+    try {
+      await call("com_valorar", { p_receta: key, p_estrellas: s });
+      // Con la comunidad hay una sola fila de estrellas: tu nota también vale para «Tus ideas».
+      if (!r.com) { const ck = (A.st.cooked ??= {}); if (ck[r.n] || s) { (ck[r.n] ??= { n: 0 }).stars = s; A.save(); } }
+      mountSocial(el, r, back); A.setStatus(s ? `Has puesto ${s} ${s === 1 ? "estrella" : "estrellas"} a ${r.n}.` : "Nota quitada."); }
     catch (err) { A.setStatus(err.message, true); mountSocial(el, r, back); }
   };
   wireComposer("xf", key, () => mountSocial(el, r, back));
@@ -489,7 +493,7 @@ export async function mountSocial(el, r, back) {
     btn.disabled = true;
     try {
       const old = await call("com_comentarios", { p_hilo: key, p_antes: cmts.at(-1).creado });
-      cmts.push(...old); $("xcmts").insertAdjacentHTML("beforeend", old.map((c) => commentHTML(c)).join(""));
+      cmts.push(...old); $("xcmts").insertAdjacentHTML("afterbegin", [...old].reverse().map((c) => commentHTML(c)).join(""));
       if (old.length < 40) btn.remove(); else btn.disabled = false;
     } catch (err) { btn.disabled = false; A.setStatus(err.message, true); }
   };

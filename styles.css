@@ -1332,6 +1332,7 @@ body.has-items #ideas, body.shop #deals, body.shop #ideas{display:none!important
 .gear:active{opacity:.7}
 .home-top .gear{margin-top:4px}
 .sheet-head h2{flex:1;min-width:0}
+.sheet-head h2.long{font-size:1.12rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sheet-head .gear{width:38px;height:38px}
 .sheet.settings #sheetGear{display:none}
 .sheet.settings .cgroup{margin-top:14px}
