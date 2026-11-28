@@ -351,7 +351,7 @@ function recipeCard(x) {
   const d = x.datos ?? {}, img = fotoURL(x.foto);
   const nota = x.votos ? `★ ${num(x.media)} (${x.votos})` : "Sin votos aún";
   return `<div class="rcw"><button type="button" class="rc" data-cid="${esc(x.id)}">
-    <span class="re" style="--h:${hue(d.n)}${img ? `;background-image:url('${esc(img)}')` : ""}">${img ? "" : esc(d.e ?? "🍲")}</span>
+    <span class="re${img ? " has-foto" : ""}" style="--h:${hue(d.n)}${img ? `;background-image:url('${esc(img)}')` : ""}">${img ? "" : esc(d.e ?? "🍲")}</span>
     <span class="ri"><span class="rn">${esc(d.n)}</span><span class="rm">de ${esc(x.autor)} · ${esc(d.t ?? "?")} min</span>
     <span class="rh com-meta"><span class="cstars">${nota}</span>${x.comentarios ? ` · 💬 ${x.comentarios}` : ""}${x.oculto ? ` · <b class="hid">Oculta</b>` : ""}</span></span></button></div>`;
 }
